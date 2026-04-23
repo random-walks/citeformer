@@ -88,7 +88,7 @@ class NatureFormatter(CitationFormatter):
         if authors:
             chunks.append(ensure_period(authors))
         if title:
-            chunks.append(f"{title}.")
+            chunks.append(ensure_period(title))
         if journal:
             journal_chunk = journal
             if volume:
@@ -119,7 +119,7 @@ class NatureFormatter(CitationFormatter):
             elif year:
                 chunks.append(f"{title} ({year}).")
             else:
-                chunks.append(f"{title}.")
+                chunks.append(ensure_period(title))
         return " ".join(chunks)
 
     def _chapter(self, item: CSLItem) -> str:
@@ -135,7 +135,7 @@ class NatureFormatter(CitationFormatter):
         if authors:
             chunks.append(ensure_period(authors))
         if title:
-            chunks.append(f"{title}.")
+            chunks.append(ensure_period(title))
         tail_parts: list[str] = []
         if book:
             tail_parts.append(f"In {book}")
@@ -164,7 +164,7 @@ class NatureFormatter(CitationFormatter):
         if authors:
             chunks.append(ensure_period(authors))
         if title:
-            chunks.append(f"{title}.")
+            chunks.append(ensure_period(title))
         detail: list[str] = [genre]
         if publisher:
             detail.append(publisher)
@@ -184,7 +184,7 @@ class NatureFormatter(CitationFormatter):
         if authors:
             chunks.append(ensure_period(authors))
         if title:
-            chunks.append(f"{title}.")
+            chunks.append(ensure_period(title))
         if site:
             if year:
                 chunks.append(f"{site} ({year}).")

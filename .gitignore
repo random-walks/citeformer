@@ -96,6 +96,9 @@ Thumbs.db
 dmypy.json
 .ruff_cache/
 
+# Claude Code runtime artefacts
+.claude/scheduled_tasks.lock
+
 # Hugging Face cache (large; point to a system dir if you want to share across projects)
 .hf_cache/
 

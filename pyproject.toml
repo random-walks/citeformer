@@ -93,10 +93,12 @@ dev = [
     "pytest-asyncio",
     "pytest-regressions>=2",
     "pytest-vcr",
+    "hypothesis>=6",
     "ruff>=0.6",
     "mypy>=1.10",
     "pre-commit>=3",
     "hatch",
+    "matplotlib>=3.8",
 ]
 
 [project.scripts]

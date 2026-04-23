@@ -158,6 +158,25 @@ def ensure_period(text: str) -> str:
     return text if text.endswith((".", "!", "?")) else text + "."
 
 
+def collapse_periods(text: str) -> str:
+    """Collapse runs of `..` / `...` / etc. into a single period.
+
+    Used as a final post-processing step in the render layer — the per-style
+    formatters have many sites that stack ``.`` on top of user-supplied
+    CSL-JSON values that themselves end in ``.`` (journal names, publishers,
+    URLs, titles). Rather than audit every emission site, we collapse
+    pathological sequences at the end.
+
+    Bibliographic prose almost never contains legitimate ellipses, so the
+    simple "2+ dots → 1 dot" collapse is safe in practice. If a future
+    style needs to preserve ``...`` in quoted titles, swap this for a
+    smarter collapse.
+    """
+    import re
+
+    return re.sub(r"\.{2,}", ".", text)
+
+
 def format_doi(doi: str | None) -> str | None:
     """Render a DOI as a full ``https://doi.org/…`` URL."""
     if not doi:

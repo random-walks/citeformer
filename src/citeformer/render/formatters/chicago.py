@@ -110,9 +110,9 @@ class ChicagoAuthorDateFormatter(CitationFormatter):
         chunks: list[str] = []
         if authors:
             chunks.append(ensure_period(authors))
-        chunks.append(f"{year if year is not None else 'n.d.'}.")
+        chunks.append(ensure_period(str(year) if year is not None else "n.d."))
         if title:
-            chunks.append(f'"{title}."')
+            chunks.append(f'"{ensure_period(title)}"')
         if journal:
             j = journal
             if volume:
@@ -134,9 +134,9 @@ class ChicagoAuthorDateFormatter(CitationFormatter):
         chunks: list[str] = []
         if authors:
             chunks.append(ensure_period(authors))
-        chunks.append(f"{year if year is not None else 'n.d.'}.")
+        chunks.append(ensure_period(str(year) if year is not None else "n.d."))
         if title:
-            chunks.append(f"{title}.")
+            chunks.append(ensure_period(title))
         parts = [p for p in (place, publisher) if p]
         if parts:
             chunks.append(": ".join(parts) + ".")
@@ -155,9 +155,9 @@ class ChicagoAuthorDateFormatter(CitationFormatter):
         chunks: list[str] = []
         if authors:
             chunks.append(ensure_period(authors))
-        chunks.append(f"{year if year is not None else 'n.d.'}.")
+        chunks.append(ensure_period(str(year) if year is not None else "n.d."))
         if title:
-            chunks.append(f'"{title}."')
+            chunks.append(f'"{ensure_period(title)}"')
         in_parts: list[str] = ["In"]
         if book:
             in_parts.append(f"{book},")
@@ -187,9 +187,9 @@ class ChicagoAuthorDateFormatter(CitationFormatter):
         chunks: list[str] = []
         if authors:
             chunks.append(ensure_period(authors))
-        chunks.append(f"{year if year is not None else 'n.d.'}.")
+        chunks.append(ensure_period(str(year) if year is not None else "n.d."))
         if title:
-            chunks.append(f'"{title}."')
+            chunks.append(f'"{ensure_period(title)}"')
         if conf:
             tail = f"Paper presented at {conf}"
             if place:
@@ -207,13 +207,13 @@ class ChicagoAuthorDateFormatter(CitationFormatter):
         chunks: list[str] = []
         if authors:
             chunks.append(ensure_period(authors))
-        chunks.append(f"{year if year is not None else 'n.d.'}.")
+        chunks.append(ensure_period(str(year) if year is not None else "n.d."))
         if title:
-            chunks.append(f'"{title}."')
+            chunks.append(f'"{ensure_period(title)}"')
         tail_parts: list[str] = [genre]
         if publisher:
             tail_parts.append(publisher)
-        chunks.append(", ".join(tail_parts) + ".")
+        chunks.append(ensure_period(", ".join(tail_parts)))
         return " ".join(chunks)
 
     def _webpage(self, item: CSLItem) -> str:
@@ -226,9 +226,9 @@ class ChicagoAuthorDateFormatter(CitationFormatter):
         chunks: list[str] = []
         if authors:
             chunks.append(ensure_period(authors))
-        chunks.append(f"{year if year is not None else 'n.d.'}.")
+        chunks.append(ensure_period(str(year) if year is not None else "n.d."))
         if title:
-            chunks.append(f'"{title}."')
+            chunks.append(f'"{ensure_period(title)}"')
         if site:
             chunks.append(f"{site}.")
         if url:

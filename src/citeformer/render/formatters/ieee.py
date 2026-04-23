@@ -20,6 +20,7 @@ from citeformer.render.formatters._base import (
     Author,
     CitationFormatter,
     CSLItem,
+    ensure_period,
     format_page_range,
     get_str,
     get_title,
@@ -116,7 +117,7 @@ class IEEEFormatter(CitationFormatter):
         if authors:
             chunks.append(f"{authors},")
         if title:
-            chunks.append(f"{title}.")
+            chunks.append(ensure_period(title))
         location_parts: list[str] = []
         if place:
             location_parts.append(place)

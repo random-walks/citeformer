@@ -21,6 +21,7 @@ from citeformer.render.formatters._base import (
     Author,
     CitationFormatter,
     CSLItem,
+    ensure_period,
     format_doi,
     format_page_range,
     get_str,
@@ -118,7 +119,7 @@ class APAFormatter(CitationFormatter):
             chunks.append(f"{authors}")
         chunks.append(f"({year if year else 'n.d.'}).")
         if title:
-            chunks.append(f"{title}.")
+            chunks.append(ensure_period(title))
         if journal:
             journal_chunk = journal
             if volume:
@@ -143,9 +144,9 @@ class APAFormatter(CitationFormatter):
             chunks.append(authors)
         chunks.append(f"({year if year else 'n.d.'}).")
         if title:
-            chunks.append(f"{title}.")
+            chunks.append(ensure_period(title))
         if publisher:
-            chunks.append(f"{publisher}.")
+            chunks.append(ensure_period(publisher))
         return self._join(chunks)
 
     def _chapter(self, item: CSLItem) -> str:
@@ -162,7 +163,7 @@ class APAFormatter(CitationFormatter):
             chunks.append(authors)
         chunks.append(f"({year if year else 'n.d.'}).")
         if title:
-            chunks.append(f"{title}.")
+            chunks.append(ensure_period(title))
         in_parts: list[str] = ["In"]
         if editors:
             # APA chapter editor form: "In E. Editor (Ed.),"
@@ -180,7 +181,7 @@ class APAFormatter(CitationFormatter):
         if in_parts != ["In"]:
             chunks.append(" ".join(in_parts))
         if publisher:
-            chunks.append(f"{publisher}.")
+            chunks.append(ensure_period(publisher))
         return self._join(chunks)
 
     def _paper_conference(self, item: CSLItem) -> str:
@@ -197,14 +198,14 @@ class APAFormatter(CitationFormatter):
             chunks.append(authors)
         chunks.append(f"({year if year else 'n.d.'}).")
         if title:
-            chunks.append(f"{title}.")
+            chunks.append(ensure_period(title))
         tail_parts: list[str] = []
         if conf:
             tail_parts.append(conf)
         if place:
             tail_parts.append(place)
         if tail_parts:
-            chunks.append(", ".join(tail_parts) + ".")
+            chunks.append(ensure_period(", ".join(tail_parts)))
         return self._join(chunks)
 
     def _thesis(self, item: CSLItem) -> str:
@@ -224,7 +225,7 @@ class APAFormatter(CitationFormatter):
                 bracket_tail = f"{genre}, {publisher}"
             chunks.append(f"{title} [{bracket_tail}].")
         elif publisher:
-            chunks.append(f"{publisher}.")
+            chunks.append(ensure_period(publisher))
         return self._join(chunks)
 
     def _webpage(self, item: CSLItem) -> str:
@@ -239,7 +240,7 @@ class APAFormatter(CitationFormatter):
             chunks.append(authors)
         chunks.append(f"({year if year else 'n.d.'}).")
         if title:
-            chunks.append(f"{title}.")
+            chunks.append(ensure_period(title))
         if site:
             chunks.append(f"{site}.")
         if url:

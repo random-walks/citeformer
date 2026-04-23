@@ -104,7 +104,7 @@ class MLAFormatter(CitationFormatter):
         if authors:
             chunks.append(ensure_period(authors))
         if title:
-            chunks.append(f'"{title}."')
+            chunks.append(f'"{ensure_period(title)}"')
         parts: list[str] = []
         if journal:
             parts.append(journal)
@@ -130,7 +130,7 @@ class MLAFormatter(CitationFormatter):
         if authors:
             chunks.append(ensure_period(authors))
         if title:
-            chunks.append(f"{title}.")
+            chunks.append(ensure_period(title))
         tail: list[str] = []
         if publisher:
             tail.append(publisher)
@@ -153,7 +153,7 @@ class MLAFormatter(CitationFormatter):
         if authors:
             chunks.append(ensure_period(authors))
         if title:
-            chunks.append(f'"{title}."')
+            chunks.append(f'"{ensure_period(title)}"')
         tail_parts: list[str] = []
         if book:
             tail_parts.append(book)
@@ -181,7 +181,7 @@ class MLAFormatter(CitationFormatter):
         if authors:
             chunks.append(ensure_period(authors))
         if title:
-            chunks.append(f"{title}.")
+            chunks.append(ensure_period(title))
         if year:
             chunks.append(f"{year}.")
         final_parts: list[str] = []
@@ -202,7 +202,7 @@ class MLAFormatter(CitationFormatter):
         if authors:
             chunks.append(ensure_period(authors))
         if title:
-            chunks.append(f'"{title}."')
+            chunks.append(f'"{ensure_period(title)}"')
         tail: list[str] = []
         if site:
             tail.append(site)

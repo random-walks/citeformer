@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from citeformer.core import Citation, Reference, Source
 from citeformer.render.formatters import CitationFormatter, get_formatter
+from citeformer.render.formatters._base import collapse_periods
 
 
 def render_references(
@@ -56,8 +57,8 @@ def render_references(
         references.append(
             Reference(
                 source_id=cid,
-                inline_marker=formatter.inline(item, position),
-                rendered=formatter.bibliography(item, position),
+                inline_marker=collapse_periods(formatter.inline(item, position)),
+                rendered=collapse_periods(formatter.bibliography(item, position)),
             )
         )
     return references
@@ -86,8 +87,8 @@ def render_single_reference(
     formatter = get_formatter(style_name)
     return Reference(
         source_id=number,
-        inline_marker=formatter.inline(source.metadata, number),
-        rendered=formatter.bibliography(source.metadata, number),
+        inline_marker=collapse_periods(formatter.inline(source.metadata, number)),
+        rendered=collapse_periods(formatter.bibliography(source.metadata, number)),
     )
 
 

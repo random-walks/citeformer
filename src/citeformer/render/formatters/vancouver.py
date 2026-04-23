@@ -87,7 +87,7 @@ class VancouverFormatter(CitationFormatter):
         if authors:
             chunks.append(ensure_period(authors))
         if title:
-            chunks.append(f"{title}.")
+            chunks.append(ensure_period(title))
         if journal:
             chunks.append(f"{journal}.")
         detail_parts: list[str] = []
@@ -121,7 +121,7 @@ class VancouverFormatter(CitationFormatter):
         if authors:
             chunks.append(ensure_period(authors))
         if title:
-            chunks.append(f"{title}.")
+            chunks.append(ensure_period(title))
         location_parts: list[str] = [p for p in (place, publisher) if p]
         if location_parts and year:
             chunks.append(": ".join(location_parts) + f"; {year}.")
@@ -145,7 +145,7 @@ class VancouverFormatter(CitationFormatter):
         if authors:
             chunks.append(ensure_period(authors))
         if title:
-            chunks.append(f"{title}.")
+            chunks.append(ensure_period(title))
         in_parts: list[str] = ["In:"]
         if editors:
             in_parts.append(f"{editors}, ed.")
@@ -183,7 +183,7 @@ class VancouverFormatter(CitationFormatter):
         if publisher and year:
             chunks.append(f"{publisher}; {year}.")
         elif publisher:
-            chunks.append(f"{publisher}.")
+            chunks.append(ensure_period(publisher))
         elif year:
             chunks.append(f"{year}.")
         return " ".join(chunks)

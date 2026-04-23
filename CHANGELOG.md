@@ -6,6 +6,42 @@ Versioning policy: **patch bumps are cheap**. See [docs/development/releasing.md
 
 ## [Unreleased]
 
+### Added — P1 core types + mock orchestration
+
+- `citeformer.Citeformer` orchestrator — composes a `Backend` with a CSL style
+  and a citation `Policy`, parses `[N]` markers out of backend output into
+  `Citation` objects, and assembles a `GenerationResult`. Reference rendering is
+  a stub until P3 (citeproc-py integration).
+- `citeformer.core`: `Source`, `Citation`, `Reference`, `GenerationResult`,
+  `Policy` (`StrEnum` — `required`, `quotes_only`, `auto`). All pydantic
+  `model_config = ConfigDict(frozen=True, extra="forbid")`.
+- `citeformer.verify.report`: `VerificationReport` and `CitationSupport` schema
+  locked here even though `verify()` itself lands in P6 — that way the §10.3
+  contract snapshot has something to pin from day one.
+- `citeformer.backends.Backend` ABC + `MockBackend` (scripted responses for
+  tests, deterministic `[1]`-emitting fallback when not scripted).
+- Tests: 32 new unit + integration tests covering type validation (frozen,
+  extra-forbidden, range checks), mock backend behavior, `Citeformer`
+  orchestration (cite parsing, stub reference rendering, policy override), and
+  snapshot-pinned §10.3 schemas for `GenerationResult` + `VerificationReport`
+  via `pytest-regressions`.
+
+### Changed
+
+- Ruff ignore list now includes `RUF001`/`RUF002`/`RUF003` — em-dashes,
+  en-dashes, and typographic quotes in prose docstrings are intentional
+  typography, not ambiguous Unicode.
+
+### Contracts (§10)
+
+- §10.1 grammar shape: not yet implemented (lands in P2).
+- §10.2 CSL metadata: `Source.metadata` type declared as `dict[str, Any]`
+  annotated as a CSL-JSON item in docstrings. Full validation against the CSL
+  schema lands with citeproc-py integration in P3.
+- §10.3 output schemas: **locked**. `GenerationResult.schema_version == 1` and
+  `VerificationReport.schema_version == 1` pinned by snapshots in
+  `tests/integration/test_schemas.py`.
+
 ### Added — P0 scaffolding
 
 - Repo infrastructure matching the `random-walks` house style (cf. `jellycell`): `src/citeformer/` package layout, `hatchling` + `uv` packaging, Sphinx + furo + myst-parser + autodoc2 + sphinx-llms-txt docs, GitHub Actions CI + release workflows with PyPI OIDC trusted publishing, pre-commit hooks, Makefile with `dev/test/lint/format/docs/release-check` targets.

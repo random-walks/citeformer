@@ -1,17 +1,34 @@
 """citeformer — a bulletproof way to generate verifiably cited text from language models.
 
-Public API (populated across phases):
+The public API surface:
 
-- `Source`, `Citation`, `Reference`, `GenerationResult`, `Policy`   — P1
-- `Citeformer` orchestrator                                          — P1/P2
-- Backend classes (`HFBackend`, `VLLMBackend`, `LlamaCppBackend`)    — P2/P5
-- `verify()` entry points                                            — P6
+- `Citeformer` — the orchestrator. Wrap a `Backend`, call `generate()`.
+- Types: `Source`, `Citation`, `Reference`, `GenerationResult`, `Policy`.
+- Verification: `VerificationReport`, `CitationSupport` (schema in P1; behavior in P6).
+- Backends: `Backend` (ABC), `MockBackend` (P1). `HFBackend` lands in P2;
+  `VLLMBackend` and `LlamaCppBackend` in P5.
 
-See https://citeformer.readthedocs.io for the full documentation.
+See https://citeformer.readthedocs.io for documentation.
 """
 
 from __future__ import annotations
 
 from citeformer._version import __version__
+from citeformer.backends import Backend, MockBackend
+from citeformer.citeformer import Citeformer
+from citeformer.core import Citation, GenerationResult, Policy, Reference, Source
+from citeformer.verify import CitationSupport, VerificationReport
 
-__all__ = ["__version__"]
+__all__ = [
+    "Backend",
+    "Citation",
+    "CitationSupport",
+    "Citeformer",
+    "GenerationResult",
+    "MockBackend",
+    "Policy",
+    "Reference",
+    "Source",
+    "VerificationReport",
+    "__version__",
+]

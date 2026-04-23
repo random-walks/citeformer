@@ -65,6 +65,12 @@ vllm = ["vllm>=0.7"]
 llamacpp = ["llama-cpp-python>=0.3"]
 # P6: NLI-based verification.
 verify = ["transformers>=4.46", "torch>=2.4", "sentence-transformers>=3"]
+# P7: API-provider backends — schema-level enforcement tier. Citeformer's
+# local-only bulletproof claim is unchanged; these are honest second-tier
+# integrations where the constraint lives in the provider's JSON-schema
+# validator rather than in logit masking.
+openai = ["openai>=1.40"]
+anthropic = ["anthropic>=0.40"]
 
 docs = [
     "sphinx>=7",

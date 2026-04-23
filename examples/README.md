@@ -89,6 +89,22 @@ uv sync --extra dev --extra hf
 uv run python examples/07_llamaindex_rag.py
 ```
 
+### 8. [`08_literature_review.ipynb`](08_literature_review.ipynb) — full academic workflow
+
+Jupyter notebook walking through the realistic literature-review use case:
+pull 6 arXiv papers on prompt reasoning, generate a paragraph-length review
+under REQUIRED policy, assert the structural guarantee held, run NLI
+verification over every emitted citation, and render an APA-7
+bibliography. Ends with a side-by-side baseline comparison showing
+fabrication in the unmasked run.
+
+```bash
+uv sync --extra dev --extra hf --extra verify --extra examples
+uv run jupyter notebook examples/08_literature_review.ipynb
+```
+
+The notebook loads `Qwen/Qwen2.5-0.5B-Instruct` (CPU-friendly, ~500 MB).
+
 ## Adding a new citation style
 
 Adding a seventh (or seventieth) citation style is handled by the

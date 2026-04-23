@@ -6,6 +6,112 @@ Versioning policy: **patch bumps are cheap**. See [docs/development/releasing.md
 
 ## [Unreleased]
 
+### Tier expansion + calibration + flagship artifacts
+
+Three-axis expansion: the public API grows to cover more models, more
+evidence, and more shareable artifacts.
+
+**33 property-based fuzz tests** (was 9). New invariants covered: grammar
+bounds rejection, formatter hygiene (no leading/trailing whitespace, no
+double-space, never-empty, year-present-in-author-date styles),
+`render_references` ordering and out-of-range drop, `Citation` nonpositive
+source_id rejection, `GenerationResult` frozen + schema_version default,
+CSL validator accepts well-typed / errors on missing id/type / warns on
+unknown fields, `deduplicate_adjacent_cites` idempotence + collapse, prompt
+ordering invariants.
+
+**50-case CSL suite × 6 formatters = 300 locked snapshots.** New
+``tests/unit/test_csl_suite.py`` exercises the CSL 1.0 item-type registry
+and field-presence matrix more broadly than the previous 4-item canonical
+fixture. Covers book / article-journal / chapter / thesis / paper-conference /
+report / webpage / software / dataset / patent / map / figure / speech /
+interview / legislation / bill / review / review-book / broadcast /
+musical_score / motion_picture / personal_communication /
+entry-dictionary / entry-encyclopedia / manuscript / post-weblog /
+article-newspaper / article-magazine plus edge cases (single-page vs range,
+missing author/year, van der / de la / von particles, literal org author,
+CJK literal names, Unicode Scandinavian surname, hyphenated given name,
+BC years, 8-author et-al threshold, ISBN / ISSN, volume / issue / URL).
+
+**BibTeX + Zotero CSL-JSON ingest adapters.** Two new zero-dep metadata
+adapters:
+
+- ``citeformer.metadata.bibtex`` — hand-rolled BibTeX parser mapping
+  common entry types + ~20 fields to CSL-JSON. Handles balanced braces,
+  `{value}` / `"value"` delimiters, BibTeX `and`-separated names in
+  both `Family, Given` and `Given Family` conventions, month abbreviations,
+  type → CSL mapping. Unknown fields land under `custom` for lossless
+  round-tripping; `@string` / `@preamble` / `@comment` skipped without
+  error.
+- ``citeformer.metadata.zotero`` — loader for Zotero's native CSL-JSON
+  export (and Better BibTeX CSL-JSON, identical schema). Dedupes
+  colliding ids, drops null fields, normalises stringified date-parts,
+  supports predicate filtering.
+
+Source-level: ``Source.from_bibtex(path_or_str)`` and
+``Source.from_zotero(path_or_iterable)`` return `list[Source]` with
+empty content. 26 unit tests.
+
+**Configurable marker shapes (ADR-011).** New `MarkerStyle` enum —
+`BRACKET` (default, `[N]`), `PAREN` (`(N)`), `CURLY` (`{N}`),
+`CARET` (`^N`). Threaded through `build_grammar`, `Citeformer`, all real
+backends + MockBackend echo, and the post-hoc citation parser. §10.1
+invariant (digit enum bounded by `range(1, n_sources + 1)`) holds
+identically across all four shapes — additive minor change. 15 new unit
+tests + 4 parametrised grammar-builder variants.
+
+**OpenAI + Anthropic API backends (schema-tier enforcement).**
+
+- `OpenAIBackend` uses OpenAI Structured Outputs with `strict=true` and a
+  JSON schema whose `citations` items are `enum`-bounded to the source
+  ids. Schema-equivalent of the GBNF `cite-id` digit enum — the provider
+  validates, fabrication is impossible in the returned payload. Requires
+  `gpt-4o-mini` or any post-August-2024 model.
+- `AnthropicBackend` adapts Anthropic's native Citations API: passes
+  documents with `citations.enabled=true`, translates per-block citation
+  structure into citeformer's `Citation`/`Reference` shape so API output
+  mixes with local-backend output in the same pipeline.
+
+Both respect `marker_style`, accept per-call overrides, support streaming
+via sentence-sized chunking. New extras: `openai = ["openai>=1.40"]`,
+`anthropic = ["anthropic>=0.40"]`. 24 unit tests with
+`SimpleNamespace`-based client stand-ins.
+
+**NLI threshold calibration sweep.** New ``benchmarks/threshold_calibration.py``
+runs 19 thresholds (0.05-0.95) against 50 hand-labelled (premise,
+hypothesis, label) triples grounded in the fixture abstracts. Writes a
+two-panel figure (threshold sweep + P/R scatter) and a JSON log.
+
+Finding: DeBERTa-v3-large-mnli is **bimodal** — scores cluster at ~0
+and ~1 with only 3 of 50 pairs in the mid-range. Every threshold from
+0.20 to 0.95 produces the same confusion matrix (P=0.93 / R=1.00 /
+F1=0.96). Default 0.5 sits on the plateau and stays. Users who want
+fewer false positives should reach for chunked full-text scoring or
+self-consistency — threshold tuning isn't the right knob for this NLI
+head.
+
+**Multi-prompt benchmark.** New ``benchmarks/multiprompt_sweep.py`` adds a
+prompt-shape axis to the existing model × seed sweep: 4 shapes
+(survey / compare / explain / critique) × N seeds × M models. Per-prompt
+aggregates with `mean ± std` for fabrication + support rate + citation
+density. Produces `findings/multiprompt-summary.png`. Addresses the
+"one-prompt caveat" in the benchmarks README head-on.
+
+**Literature-review notebook.** ``examples/08_literature_review.ipynb``
+— 7-section end-to-end notebook: fetch 6 arXiv papers on prompt-reasoning,
+build the RAG prompt, grammar-constrained generation under REQUIRED
+policy, structural-invariant check, NLI verification per citation,
+APA-7 bibliography render, side-by-side baseline comparison.
+
+**HuggingFace Space / Gradio demo.** ``hf-space/`` directory: `app.py`
+runs the adversarial demo in a clickable Gradio UI; `README.md` includes
+the Spaces frontmatter for `git push`-to-deploy. Loads Qwen 0.5B on CPU
+(~500 MB). Single model, any seed, reliably shows the 100% → 0%
+fabrication swing.
+
+Suite: 449 unit tests + integration suite. Mypy strict + ruff clean
+throughout.
+
 ### Fit-and-finish: eyebrow-raisers audit
 
 A scrutiny pass addressing specific soft spots flagged in a self-audit

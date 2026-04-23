@@ -64,6 +64,31 @@ uv sync --extra dev --extra hf
 uv run python examples/05_streaming.py
 ```
 
+### 6. [`06_langchain_rag.py`](06_langchain_rag.py) — LangChain `Document` → citeformer `Source`
+
+Wraps a LangChain retriever output (hand-built for the demo, but the same
+shape as `retriever.invoke(query)`) with `sources_from_documents` and pipes
+it through `Citeformer.generate`. Citation fabrication is structural — no
+matter what the LLM tries to cite, it's in [1..N].
+
+```bash
+uv pip install langchain-core
+uv sync --extra dev --extra hf
+uv run python examples/06_langchain_rag.py
+```
+
+### 7. [`07_llamaindex_rag.py`](07_llamaindex_rag.py) — LlamaIndex `NodeWithScore` → `Source`
+
+Same pattern for LlamaIndex: `sources_from_nodes(retrieved_nodes)`,
+then `Citeformer.generate`. Uses IEEE-style references to show the
+style-picking works end-to-end with external node metadata.
+
+```bash
+uv pip install llama-index-core
+uv sync --extra dev --extra hf
+uv run python examples/07_llamaindex_rag.py
+```
+
 ## Adding a new citation style
 
 Adding a seventh (or seventieth) citation style is handled by the

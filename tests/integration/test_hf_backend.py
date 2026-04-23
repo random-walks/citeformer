@@ -171,6 +171,36 @@ def test_hf_backend_stream_yields_multiple_chunks_and_matches_generate(hf_backen
 
 
 @pytest.mark.integration
+def test_hf_backend_stream_on_instruct_model_matches_generate() -> None:
+    """Streaming on an instruct model (Qwen 0.5B) must round-trip the same text.
+
+    gpt2 (the default fixture model) has no chat template and no instruction
+    behaviour. Real users run instruct models; a tokenizer / streaming
+    interaction there that gpt2 doesn't exercise would bite in production.
+    This test loads Qwen 2.5 0.5B Instruct (cached after the benchmark) and
+    asserts stream().finalize().text == generate().text at temperature 0.
+    """
+    from citeformer.backends.hf import HFBackend
+
+    backend = HFBackend(model="Qwen/Qwen2.5-0.5B-Instruct", device="cpu")
+    sources = _sources(3)
+    cf = Citeformer(backend=backend, citation_policy=Policy.AUTO)
+    prompt = "Write one short sentence:"
+    # Deterministic generation so stream + direct produce the same text.
+    stream = cf.stream(prompt=prompt, sources=sources, max_new_tokens=30, temperature=0.0)
+    chunks = list(stream)
+    assert len(chunks) > 1, f"Expected multiple stream chunks, got {chunks!r}"
+    streamed_result = stream.finalize()
+
+    direct_result = cf.generate(
+        prompt=prompt, sources=sources, max_new_tokens=30, temperature=0.0
+    )
+    assert streamed_result.text == direct_result.text
+    for cite in streamed_result.citations:
+        assert 1 <= cite.source_id <= 3
+
+
+@pytest.mark.integration
 def test_hf_backend_compiler_caches_across_calls(hf_backend) -> None:  # type: ignore[no-untyped-def]
     """Two generate() calls with the same (n_sources, policy) should hit the compiler
     cache rather than recompile the grammar.

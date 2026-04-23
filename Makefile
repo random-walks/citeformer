@@ -1,4 +1,4 @@
-.PHONY: help dev test test-unit test-integration lint format docs docs-build release-check clean
+.PHONY: help dev test test-unit test-integration coverage lint format docs docs-build release-check clean
 
 help:
 	@echo "citeformer developer commands:"
@@ -7,6 +7,7 @@ help:
 	@echo "  make test             Run full pytest suite"
 	@echo "  make test-unit        Run unit tests only (fast; no model loads)"
 	@echo "  make test-integration Run integration tests (loads real HF models; slow)"
+	@echo "  make coverage         Run unit tests with coverage; write htmlcov/ + coverage.json"
 	@echo "  make lint             Run ruff + mypy"
 	@echo "  make format           Apply ruff formatting + fixes"
 	@echo "  make docs             Build + serve docs with live reload (http://127.0.0.1:5190)"
@@ -27,6 +28,14 @@ test-unit:
 test-integration:
 	uv sync --extra dev --extra hf --extra llamacpp
 	uv run pytest -m integration
+
+coverage:
+	uv run pytest tests/unit \
+	    --cov=citeformer \
+	    --cov-report=term-missing \
+	    --cov-report=html:htmlcov \
+	    --cov-report=json:coverage.json
+	@echo "Coverage report: htmlcov/index.html"
 
 lint:
 	uv run ruff check .

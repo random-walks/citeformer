@@ -9,9 +9,9 @@ We stopped consuming citeproc-py in the home-grown rewrite (see
 ``docs/decisions/004-citeproc-rewrite.md``) because of accumulated quirks
 (Chicago page-range crash, APA double-period, noisy CSL-JSON warnings)
 and because Vancouver has no canonical bundled style in the upstream
-CSL repo. citeproc-py is still available behind the optional
-``citeproc-compat`` extra for users who want the "any of 10,000 CSL
-files" escape hatch.
+CSL repo. The six built-in formatters cover the target styles with no
+runtime citeproc-py dependency; users wanting arbitrary CSL files can
+install ``citeproc-py`` directly and wrap it themselves.
 
 ``GenerationResult.text`` continues to carry the model-emitted ``[N]``
 markers verbatim (see ``docs/decisions/002-inline-markers-stay-numeric.md``).

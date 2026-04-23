@@ -3,8 +3,8 @@
 Since the home-grown-formatter rewrite (see
 ``docs/decisions/004-citeproc-rewrite.md``), "style loading" is just a
 formatter lookup — no more CSL XML parsing. This module stays for API
-compatibility with P3 callers and for future use by the optional
-``citeproc-compat`` extra.
+compatibility with P3 callers and as the integration point if we later
+add a user-supplied-CSL code path.
 """
 
 from __future__ import annotations

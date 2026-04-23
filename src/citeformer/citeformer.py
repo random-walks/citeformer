@@ -5,7 +5,8 @@ produce raw text with inline `[N]` markers, parses those markers into `Citation`
 objects, renders the reference list, and packages the whole thing as a
 `GenerationResult`.
 
-Reference rendering is a stub in P1 and gains real citeproc-py backing in P3.
+Reference rendering uses the home-grown formatters in
+``citeformer.render.formatters`` — see ADR-004 for the rationale.
 """
 
 from __future__ import annotations
@@ -26,10 +27,9 @@ _CITE_PATTERN = re.compile(r"\[(\d+)\]")
 class Citeformer:
     """High-level orchestrator for generating citation-backed text.
 
-    Wraps a `Backend` with a citation policy and a CSL style. In v0.1, references
-    are rendered deterministically via citeproc-py (P3); until that phase ships,
-    references carry a stub `rendered` string so the pipeline is end-to-end
-    testable.
+    Wraps a `Backend` with a citation policy and a CSL style. References are
+    rendered deterministically by the home-grown formatters in
+    ``citeformer.render.formatters`` — the model never emits bibliography text.
 
     Example:
         >>> from citeformer import Citeformer, Source
@@ -114,7 +114,7 @@ class Citeformer:
         sources: list[Source],
         citations: list[Citation],
     ) -> list[Reference]:
-        """Render the reference list via citeproc-py in the configured style.
+        """Render the reference list via the built-in formatters.
 
         Delegates to `citeformer.render.render_references`. Out-of-range cite
         ids are skipped silently (grammar-level enforcement prevents them at

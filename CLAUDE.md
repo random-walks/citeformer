@@ -4,14 +4,14 @@ One-screen brief for Claude Code working in this repo. Canonical wider guide is 
 
 ## What this is
 
-`citeformer` is a Python OSS library: a bulletproof way to generate verifiably cited text from language models. Citation markers are *structurally impossible to fabricate* at the logit level when using a grammar-level constrained-decoding backend (HF + XGrammar/llguidance, vLLM, llama.cpp). Reference lists are rendered deterministically by citeproc-py — the model never touches the bibliography. The point of the library is **composition** — we piggyback on XGrammar, llguidance, transformers, vLLM, llama.cpp, citeproc-py, lark, httpx, diskcache, grobid, readability, and DeBERTa-v3-MNLI. Full piggyback map + architecture in [`docs/reference/architecture.md`](docs/reference/architecture.md); **read it before writing grammar / rendering / decoding / verification code**.
+`citeformer` is a Python OSS library: a bulletproof way to generate verifiably cited text from language models. Citation markers are *structurally impossible to fabricate* at the logit level when using a grammar-level constrained-decoding backend (HF + XGrammar/llguidance, vLLM, llama.cpp). Reference lists are rendered deterministically by six hand-written CSL formatters (APA 7, MLA 9, Chicago author-date, IEEE, Nature, Vancouver — see [ADR-004](docs/decisions/004-citeproc-rewrite.md)). The model never touches the bibliography. The library's point is **composition** — we piggyback on XGrammar, llguidance, transformers, vLLM, llama.cpp, lark, httpx, diskcache, grobid, readability, and DeBERTa-v3-MNLI. Full piggyback map + architecture in [`docs/reference/architecture.md`](docs/reference/architecture.md); **read it before writing grammar / rendering / decoding / verification code**.
 
 ## Invariants — DO NOT CHANGE SILENTLY
 
 Three §10 contracts (full detail: [`docs/reference/contracts.md`](docs/reference/contracts.md)). Touching any is a deliberate ceremony.
 
 1. **§10.1 — Citation marker grammar.** `cite-id ::= "[" <digits> "]"` (GBNF) + `required` / `quotes_only` / `auto` policies. Lives in `src/citeformer/grammar/`. Changing the marker shape or policy semantics = **major** bump.
-2. **§10.2 — `Source.metadata` CSL-JSON shape.** The shape citeproc-py consumes. Additive fields = minor; renames or removals = major. Regression snapshot in `tests/unit/test_csl_rendering.py`.
+2. **§10.2 — `Source.metadata` CSL-JSON shape.** The shape consumed by the home-grown render layer (and still CSL-JSON compliant for external tooling). Additive fields = minor; renames or removals = major. Regression snapshot in `tests/unit/test_csl_rendering.py`.
 3. **§10.3 — Output schemas.** `GenerationResult` + `VerificationReport` pydantic models carry `schema_version: 1`. Any shape change bumps `schema_version`.
 
 Before editing `src/citeformer/grammar/`, `src/citeformer/core.py`, or `src/citeformer/verify/report.py` — run `/contract-check` on your diff.
@@ -29,7 +29,6 @@ Upper may import lower; never the reverse. A `render` module must never import f
 Before writing new code, ask: is this already done by one of these?
 
 - **XGrammar** / **llguidance** — grammar-level token masking. Don't hand-roll a sampling loop.
-- **citeproc-py** — CSL rendering. Don't parse CSL style XML yourself.
 - **transformers** / **vLLM** / **llama-cpp-python** — model runtimes.
 - **lark** — authoring the grammar before handoff to the decoder.
 - **httpx** + **diskcache** — fetchers with caching.
@@ -66,15 +65,20 @@ make release-check    # preflight for tag push
 
 ## Phase status
 
-v0.1 is in progress. Phase breakdown in [`docs/reference/architecture.md`](docs/reference/architecture.md). Current state: **P0 — scaffolding** (the repo you're looking at). Expected milestones:
+v0.1 is feature-complete on the `feat/p0-scaffolding` branch; we're in a
+tighten-and-polish pass before cutting the tag. Phase breakdown in
+[`docs/reference/architecture.md`](docs/reference/architecture.md).
 
-- **P0** — scaffolding (this PR / branch).
-- **P1** — core types + contracts locked.
-- **P2** — HF backend with grammar-level enforcement (the flagship capability).
-- **P3** — deterministic CSL rendering.
-- **P4** — metadata adapters (DOI, arXiv, PDF, URL).
-- **P5** — vLLM + llama.cpp backends.
-- **P6** — NLI verification + v0.1 PyPI release.
+- **P0** — scaffolding. ✅
+- **P1** — core types + contracts locked. ✅
+- **P2** — HF backend with grammar-level enforcement (flagship). ✅
+- **P3** — deterministic CSL rendering (home-grown; ADR-004). ✅
+- **P4** — metadata adapters (DOI, arXiv, PDF, URL). ✅
+- **P5** — vLLM + llama.cpp backends. ✅
+- **P6** — NLI verification + AI-papers benchmark. ✅
+- **Polish** — REQUIRED progression fix (ADR-009), CLI, examples as
+  living reports. *← we are here*
+- **P7** — v0.1 PyPI release.
 
 ## Versioning policy
 

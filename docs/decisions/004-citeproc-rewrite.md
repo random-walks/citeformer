@@ -17,7 +17,10 @@ P3 shipped rendering via `citeproc-py`. It works but has accumulated friction:
 
 Rewrite `citeformer.render` to a home-grown formatter. Specifically:
 
-- Remove the `citeproc-py` dependency from `citeformer`'s main deps. Add it to an optional `citeproc-compat` extra for users who want the "any of 10,000 CSL files" escape hatch — that path remains available, but off by default.
+- Remove the `citeproc-py` dependency entirely — both main deps and the initial
+  `citeproc-compat` extra. Users who want the "any of 10,000 CSL files"
+  escape hatch install `citeproc-py` themselves and feed it our
+  CSL-JSON-compliant `Source.metadata`; no shim needed from us.
 - Implement six styles procedurally in Python: APA 7, MLA 9, Chicago (author-date), IEEE, Nature, **and Vancouver**. Each style is a `CitationFormatter` subclass with `inline(item: CSLItem, number: int) -> str` and `bibliography(item: CSLItem, number: int) -> str` methods.
 - The styles still consume **CSL-JSON** as the input shape (`Source.metadata`). §10.2 doesn't change. Users can keep feeding us Crossref / arXiv output verbatim.
 - Author a `.claude/skills/add-citation-format/SKILL.md` that documents the exact template, test matrix, and edge cases to cover when implementing a new style. Adding a seventh style becomes a 30-minute skill-driven task.
@@ -26,8 +29,15 @@ Rewrite `citeformer.render` to a home-grown formatter. Specifically:
 
 - Full control over output. Chicago page-range crash, APA double-period, noisy warnings — all fixed by construction. The six built-ins go through zero citeproc-py code paths.
 - Vancouver joined the bundle (six styles total: APA 7, MLA 9, Chicago author-date, IEEE, Nature, Vancouver).
-- `citeformer[citeproc-compat]` extra is declared in `pyproject.toml`. No code currently uses it; reserved for a future compatibility module that lets users plug arbitrary `.csl` files back in. Users who need that today can install citeproc-py themselves — the `Reference` / `Source.metadata` types are compatible.
-- Loss of "10,000 styles for free" out-of-the-box. Mitigated by the compatibility extra + the `add-citation-format` skill at `.claude/skills/add-citation-format/SKILL.md`.
+- Initially we shipped a `citeproc-compat` extra as a placeholder for a future
+  compat module, but since it had no implementation we removed it to keep the
+  promised surface honest. Anyone wanting arbitrary CSL files today can
+  `pip install citeproc-py` themselves — `Reference` / `Source.metadata` stay
+  CSL-JSON compliant.
+- Loss of "10,000 styles for free" out-of-the-box. Mitigated by the
+  `add-citation-format` skill at `.claude/skills/add-citation-format/SKILL.md`
+  (adding a new style is a 30-minute skill-driven task) and by the option to
+  drop down to `citeproc-py` directly.
 - Implementation landed at `src/citeformer/render/formatters/` (one file per style; `_base.py` for shared helpers: `Author`, `parse_authors`, `parse_year`, `ensure_period`, `format_page_range`, `format_doi`, `get_str`, `get_title`). Total ~1,200 LOC across formatters, 60+ granular tests, 6 snapshot tests, 1 skill file.
 - `citeproc-py` removed from main dependencies. Bundled `.csl` files deleted (`apa.csl`, `modern-language-association.csl`, `chicago-author-date.csl`, `ieee.csl`, `nature.csl`).
 - Public-API changes: `load_style()` and `resolve_style_path()` are gone (they were citeproc-py-specific). Callers use `get_formatter(name)` to obtain a formatter object.

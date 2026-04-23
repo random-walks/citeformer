@@ -14,7 +14,7 @@ The P0 scaffolding stratified optional dependencies aggressively: `hf`, `render`
 
 Move `httpx`, `diskcache`, `readability-lxml`, `lxml`, and `pypdf` into main `dependencies`. Remove the now-redundant `render`, `pdf`, `url`, and `meta` extras. Keep:
 
-(Originally `citeproc-py` was also promoted here, but the [home-grown render rewrite](004-citeproc-rewrite.md) removed it entirely; it's now in the opt-in `citeproc-compat` extra.)
+(Originally `citeproc-py` was also promoted here, but the [home-grown render rewrite](004-citeproc-rewrite.md) removed it entirely. The six built-in formatters have no runtime citeproc-py dependency.)
 
 
 - `hf` (torch + transformers + xgrammar + llguidance + accelerate) — heavy ML stack.
@@ -28,4 +28,6 @@ Move `httpx`, `diskcache`, `readability-lxml`, `lxml`, and `pypdf` into main `de
 - `pip install citeformer` is ~30 MB of deps (vs. the original ~10 MB of just pydantic/typer/rich). Tolerable trade for a working out-of-the-box render + metadata pipeline.
 - Users who genuinely want the minimal base can't anymore. Feedback so far suggests no one wants that.
 - CI install shrinks — `dev` extra stopped pulling in `hf`-level ML deps in P3, so `uv sync --extra dev` installs only docs + test tooling + main deps. Fast.
-- When we do the citeproc-py rewrite ([ADR-004](004-citeproc-rewrite.md)), `citeproc-py` moves to a `citeproc-compat` optional extra. At that point main deps shrink again — the rewrite is self-contained.
+- With [ADR-004](004-citeproc-rewrite.md), `citeproc-py` left the dependency
+  tree entirely. Main deps shrank accordingly; the rewrite is fully
+  self-contained.

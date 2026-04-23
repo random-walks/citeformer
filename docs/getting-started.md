@@ -45,7 +45,7 @@ backend = HFBackend(model="Qwen/Qwen2.5-0.5B-Instruct")
 cf = Citeformer(
     backend=backend,
     style="apa-7",
-    citation_policy=Policy.AUTO,
+    citation_policy=Policy.REQUIRED,  # every sentence gets a citation — see ADR-009.
 )
 
 # 3. Generate. Fabricating [4] is structurally impossible (only 3 sources).
@@ -86,3 +86,8 @@ for cs in report.per_citation:
 - [Guarantees](guarantees.md) — what's structurally enforced vs. what's post-hoc checked.
 - [Verification](verification.md) — how NLI-based verify() works and its limitations.
 - [Architecture](reference/architecture.md) — the six-phase design and layer order.
+- [Runnable examples](https://github.com/random-walks/citeformer/tree/main/examples) —
+  four scripts covering the quickstart, a full HF + verify() pipeline, standalone
+  rendering, and the metadata-fetch path. Each doubles as a living report.
+- [Benchmarks](https://github.com/random-walks/citeformer/tree/main/benchmarks) —
+  the AI-papers RAG comparison with actual numbers from recent runs.

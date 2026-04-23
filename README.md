@@ -14,7 +14,7 @@
 
 LLM-generated citations are wrong 14–95% of the time depending on the benchmark. RAG systems still fabricate 3–13% of cited URLs. NeurIPS 2025 accepted ~50 papers with AI-generated fake references. Prompting doesn't fix it; post-hoc verification doesn't fix it. The only real fix is **structural** — make the invalid output token-impossible before the model reaches the decision point.
 
-That's the [jsonformer](https://github.com/1rgs/jsonformer) insight applied to citations. citeformer wraps modern constrained-decoding libraries ([XGrammar](https://github.com/mlc-ai/xgrammar), [llguidance](https://github.com/guidance-ai/llguidance)) plus the 20-year-old CSL ecosystem ([citeproc-py](https://github.com/citeproc-py/citeproc-py) + 10,000 community styles) into a single API. The guarantee is honest and tiered:
+That's the [jsonformer](https://github.com/1rgs/jsonformer) insight applied to citations. citeformer wraps modern constrained-decoding libraries ([XGrammar](https://github.com/mlc-ai/xgrammar), [llguidance](https://github.com/guidance-ai/llguidance)) plus six hand-written CSL formatters (APA 7, MLA 9, Chicago author-date, IEEE, Nature, Vancouver — see [ADR-004](docs/decisions/004-citeproc-rewrite.md) for why we rolled our own) into a single API. The guarantee is honest and tiered:
 
 - **Local backends** (HF / vLLM / llama.cpp + XGrammar/llguidance): citation markers are **structurally impossible to fabricate** at the logit level.
 - **API-provider backends** (future v0.2+): schema-level enforcement via OpenAI / Gemini structured outputs with enum-constrained cite IDs.
@@ -68,7 +68,7 @@ result = cf.generate(
 
 print(result.text)          # "Poe's Raven opens... [3]"
 for ref in result.references:
-    print(ref.rendered)     # rendered by citeproc-py, not by the LLM
+    print(ref.rendered)     # rendered by our home-grown APA-7 formatter, not by the LLM
 
 report = result.verify()    # NLI-based entailment per citation
 print(report.support_rate)
@@ -84,14 +84,13 @@ citeformer's value is the **composition**, not the parts. The heavy lifting live
 |---|---|
 | **XGrammar** / **llguidance** | Token-level logit masking at generation time |
 | **transformers** / **vLLM** / **llama-cpp-python** | Running the model |
-| **citeproc-py** + [CSL styles repo](https://github.com/citation-style-language/styles) | Reference-list rendering in 10,000+ styles |
 | **lark** | Authoring the citation grammar before handing it off |
 | **httpx** + **diskcache** | Metadata fetchers with caching |
-| **grobid-client-python** | PDF extraction |
+| **pypdf** | PDF text extraction |
 | **readability-lxml** | URL extraction |
 | **DeBERTa-v3-MNLI** via transformers | NLI entailment for `verify()` |
 
-The bits citeformer owns: citation grammar shape, CSL-JSON source contract, output pydantic models, marker-to-reference coupling, and the orchestration loop. Everything else is a compose.
+The bits citeformer owns: citation grammar shape, CSL-JSON source contract, output pydantic models, marker-to-reference coupling, the six bundled style formatters, and the orchestration loop. Everything else is a compose.
 
 ## Is this for you?
 

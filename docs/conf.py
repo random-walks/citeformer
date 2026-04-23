@@ -97,8 +97,8 @@ llms_txt_summary = (
     "Generate verifiably cited text from language models. Citation markers are "
     "structurally impossible to fabricate when a grammar-level logit-enforcing "
     "backend (HF transformers + XGrammar/llguidance, vLLM, llama.cpp) is used. "
-    "Reference lists are rendered deterministically by citeproc-py against any "
-    "CSL style — the model never touches the bibliography."
+    "Reference lists are rendered deterministically by six hand-written "
+    "CSL formatters — the model never touches the bibliography."
 )
 # Curated llms.txt excludes auto-generated API dump; llms-full.txt keeps it.
 llms_txt_exclude = ["apidocs/**"]

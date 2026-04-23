@@ -29,7 +29,7 @@ v0.1 ships local-backend support only (HF transformers, vLLM, llama.cpp). API-pr
 - **Piggyback first.** The hard work (token masking, CSL rendering, PDF extraction, NLI) already lives in deps. We compose; we don't reimplement. See the piggyback map in [`docs/reference/architecture.md`](docs/reference/architecture.md).
 - **Three §10 contracts.** Grammar shape, CSL metadata shape, output schemas. Touching one = ceremony (regenerate snapshots, bump `schema_version`, CHANGELOG note, PR template). See [`docs/reference/contracts.md`](docs/reference/contracts.md).
 - **Layer discipline.** Upper layer may import lower; never the reverse. `render/` must never import from `backends/`. Break this and the refactor radius explodes.
-- **The model never touches the reference list.** Reference rendering is *always* deterministic via citeproc-py. If you find yourself prompting the model to output a reference list, stop and ask why.
+- **The model never touches the reference list.** Reference rendering is *always* deterministic via the six hand-written formatters in `src/citeformer/render/formatters/`. If you find yourself prompting the model to output a reference list, stop and ask why.
 - **Apache-2.0**, Python ≥ 3.11 (tested through 3.14). CI matrix in `.github/workflows/ci.yml`.
 - **Default install = minimum.** Every backend / adapter family is an extra. `pip install citeformer` gets you the core types; backends come via `citeformer[hf]`, `citeformer[vllm]` (Linux-only), `citeformer[llamacpp]`, etc.
 
@@ -57,7 +57,7 @@ Environment variables live in `.env.example`. Copy to `.env` when needed. For P0
 ## The three §10 contracts (short form)
 
 1. **§10.1** — `cite-id ::= "[" <digits> "]"` (GBNF) + the policies (`required`, `quotes_only`, `auto`) in `src/citeformer/grammar/`.
-2. **§10.2** — `Source.metadata` is CSL-JSON; shape consumed by citeproc-py.
+2. **§10.2** — `Source.metadata` is CSL-JSON; consumed by the home-grown render layer and interoperable with external CSL tooling.
 3. **§10.3** — `GenerationResult` and `VerificationReport` pydantic models with `schema_version: 1`.
 
 Full ceremony in [`docs/reference/contracts.md`](docs/reference/contracts.md). When editing any file listed there, run `/contract-check` (Claude Code) or ask whoever's reviewing to run the audit before merging.

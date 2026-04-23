@@ -20,15 +20,14 @@ Before writing new code, ask: is this already done by one of these?
 | **transformers** (HF) | Running local causal LMs |
 | **vLLM** | High-throughput inference with `--guided-decoding-backend` |
 | **llama.cpp** (`llama-cpp-python`) | CPU / Apple Silicon inference with GBNF grammars |
-| **citeproc-py** + the CSL styles repo | Deterministic reference-list rendering in 10,000+ styles |
 | **lark** | Authoring the citation grammar before handing off to the decoder |
 | **httpx** + **diskcache** | Metadata fetchers (Crossref, arXiv) with polite caching |
-| **grobid-client-python** | PDF metadata + text extraction |
+| **pypdf** | PDF text extraction (Crossref/arXiv supply the metadata) |
 | **readability-lxml** | URL extraction |
 | **DeBERTa-v3-MNLI** (via transformers) | NLI entailment for `verify()` |
 | **pydantic** + **typer** + **rich** | Types, CLI, pretty output |
 
-The parts citeformer owns are the glue: the citation grammar shape (§10.1), the CSL-JSON source metadata contract (§10.2), the output pydantic models (§10.3), the inline-marker-to-reference coupling, and the orchestration loop. Everything else is a composition.
+The parts citeformer owns are the glue plus the render layer: the citation grammar shape (§10.1), the CSL-JSON source metadata contract (§10.2), the output pydantic models (§10.3), the inline-marker-to-reference coupling, the orchestration loop, and the six hand-written CSL formatters (APA 7, MLA 9, Chicago author-date, IEEE, Nature, Vancouver — see [ADR-004](../decisions/004-citeproc-rewrite.md)). Everything else is a composition.
 
 ## Phase plan
 
@@ -39,9 +38,10 @@ v0.1 ships at the end of P6. Each phase is a mergeable milestone with its own ex
 | **P0** | Scaffolding: pyproject, CI, docs skeleton, .claude/ | `make lint && make test && make docs-build` green; v0.0.1 publishes to TestPyPI |
 | **P1** | Core types: `Source`, `Citation`, `Reference`, `GenerationResult`, `Policy`, `Backend` ABC | Contracts locked; mock backend works end-to-end |
 | **P2** | HF backend with grammar-level logit enforcement (the flagship) | Smoke test: given N sources, model cannot emit `[N+k]` for any `k > 0`, across 100+ prompts |
-| **P3** | Deterministic CSL reference rendering via citeproc-py | APA-7, MLA-9, Chicago, IEEE, Vancouver render cleanly on the fixture set |
+| **P3** | Deterministic CSL reference rendering (home-grown, see [ADR-004](../decisions/004-citeproc-rewrite.md)) | APA 7, MLA 9, Chicago author-date, IEEE, Nature, Vancouver render cleanly on the fixture set |
 | **P4** | Metadata adapters: DOI, arXiv, PDF, URL | VCR-backed CI tests plus a live smoke script |
 | **P5** | vLLM and llama.cpp backends | All three local backends pass the same conformance suite |
-| **P6** | NLI verification + v0.1 release | ALCE-style benchmark emits the headline comparison; PyPI live |
+| **P6** | NLI verification + hand-curated AI-papers benchmark | Coverage report shows support-rate gains; see `benchmarks/README.md` |
+| **Polish** | REQUIRED progression fix ([ADR-009](../decisions/009-bounded-content-required.md)), real CLI, examples as living reports | ADR-009 integration test passes; `citeformer` CLI covers generate/verify/render; `examples/` has runnable scripts with findings READMEs |
 
 After v0.1, API-provider backends (OpenAI, Gemini), Anthropic Citations-API wrapping, and a possible `citeformer-ts` sibling are on the roadmap but not in scope here.

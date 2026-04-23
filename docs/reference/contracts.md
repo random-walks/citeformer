@@ -26,7 +26,7 @@ Regression snapshot: `tests/unit/test_grammar_builder.py` pins the GBNF grammar 
 
 ## §10.2 — `Source.metadata` shape
 
-`Source.metadata` is a [CSL-JSON item](https://github.com/citation-style-language/schema/blob/master/csl-data.json): `{id, type, author, title, issued, container-title, DOI, URL, ...}`. This is the shape `citeproc-py` consumes to render the bibliography.
+`Source.metadata` is a [CSL-JSON item](https://github.com/citation-style-language/schema/blob/master/csl-data.json): `{id, type, author, title, issued, container-title, DOI, URL, ...}`. Our home-grown formatters consume this shape directly; it's also compatible with external CSL tooling (`citeproc-py`, Pandoc, Zotero) if you need to plug it in downstream.
 
 - Adding optional fields = **additive / minor**.
 - Renaming or removing fields = **breaking / major**.

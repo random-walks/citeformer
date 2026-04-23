@@ -25,7 +25,8 @@ test-unit:
 	uv run pytest tests/unit
 
 test-integration:
-	uv run pytest tests/integration -m integration
+	uv sync --extra dev --extra hf
+	uv run pytest -m integration
 
 lint:
 	uv run ruff check .

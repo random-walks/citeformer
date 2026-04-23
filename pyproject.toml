@@ -168,7 +168,10 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra --strict-markers --strict-config"
+# `-m "not integration and not gpu and not network"` keeps the default run fast
+# and hermetic. Run `pytest -m integration` (or `make test-integration`) to
+# exercise tests that load real models / hit live APIs.
+addopts = "-ra --strict-markers --strict-config -m 'not integration and not gpu and not network'"
 asyncio_mode = "auto"
 markers = [
     "integration: tests that load real models or hit live APIs (slow; opt-in)",

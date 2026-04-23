@@ -2,21 +2,20 @@ cite_ids:
 - 1
 - 2
 - 3
-ebnf: 'start: (TEXT | quoted_cite)+
+gbnf: 'root ::= (text | quoted-cite)+
 
-  TEXT: /[^\["]+/
+  text ::= [^\["]+
 
-  quoted_cite: QUOTE cite_group
+  quoted-cite ::= quote cite-group
 
-  QUOTE: "\"" /[^"]*/ "\""
+  quote ::= "\"" [^"]* "\""
 
+  cite-group ::= cite-id (ws cite-id)*
 
+  ws ::= " "
 
-  cite_group: CITE_ID (WS CITE_ID)*
-
-  WS: " "
-
-  CITE_ID: "[" ("1" | "2" | "3") "]"
+  cite-id ::= "[" ("1" | "2" | "3") "]"
 
   '
 policy: quotes_only
+root_rule: root

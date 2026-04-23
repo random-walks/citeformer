@@ -9,21 +9,20 @@ cite_ids:
 - 8
 - 9
 - 10
-ebnf: 'start: sentence (WS sentence)*
+gbnf: 'root ::= sentence (ws sentence)*
 
-  sentence: CONTENT cite_group SENT_END
+  sentence ::= content cite-group sent-end
 
-  CONTENT: /[^\[\.!?]+/
+  content ::= [^\[.!?]+
 
-  SENT_END: "." | "!" | "?"
+  sent-end ::= "." | "!" | "?"
 
+  cite-group ::= cite-id (ws cite-id)*
 
+  ws ::= " "
 
-  cite_group: CITE_ID (WS CITE_ID)*
-
-  WS: " "
-
-  CITE_ID: "[" ("1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10") "]"
+  cite-id ::= "[" ("1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10") "]"
 
   '
 policy: required
+root_rule: root

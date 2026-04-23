@@ -6,6 +6,119 @@ Versioning policy: **patch bumps are cheap**. See [docs/development/releasing.md
 
 ## [Unreleased]
 
+### Added — bigger-model sweep, full-text NLI premise, annotated figures
+
+Four things this round, all under the same "scrutinize and improve" umbrella:
+
+**1. Bigger-model sweep.** Phi-3.5-mini (3.8B params) now has a 2-seed
+sweep row alongside Qwen 0.5B and SmolLM 360M. Fabrication rate: 0.0 ±
+0.0% on Phi across both seeds. Confirms the structural guarantee scales
+from 360M to 3.8B without drift. Sweep JSONs live under
+``benchmarks/findings/`` one-per-run; ``benchmarks/plot.py`` merges them
+into the figures by (model, premise) key.
+
+**2. Full-text NLI premise.** Before this round, the benchmarks README
+flagged small-model "support-rate ceiling" (~1-14% NLI-verified on Qwen
+0.5B) as a real limitation. Turns out the ceiling was mostly the NLI
+*premise*, not the model. Swapping the premise from paper abstracts
+(~1-2k chars) to PDF body text (~20k chars via ``pypdf``) lifts support
+dramatically:
+
+- Qwen 2.5 0.5B:     1.0% → **90.9%** (+90 pts)
+- SmolLM 360M:       0.0% → **55.0%** (+55 pts)
+- Phi-3.5-mini:      0.0% → **31.5%** (+31 pts)
+
+New ``benchmarks.demo --premise fulltext`` /
+``benchmarks.sweep --premise fulltext`` flags thread through to the new
+``sources_from_fixtures(..., premise=...)`` helper. Populate via
+``uv run python -m benchmarks.fetch_fixtures --fulltext`` (downloads 6
+arXiv PDFs, extracts via pypdf, caps at 20k chars per paper).
+
+Caveats: DeBERTa-v3's 512-token premise limit truncates silently
+(chunked-NLI is the obvious next polish); pypdf can't cleanly separate
+body text from headers/captions (GROBID would be cleaner but heavier).
+Both documented in ``benchmarks/README.md``.
+
+**3. Property-based fuzz tests (hypothesis).** New
+``tests/unit/test_fuzz.py`` with strategies for random CSL-JSON items,
+source counts, policies, and query text. Nine generative tests cover:
+
+- Grammar always compiles with xgrammar for any (n_sources, policy,
+  max_content_chars) triple
+- cite-id rule always enumerates 1..N and never N+1
+- Every formatter handles any well-typed CSL-JSON without crashing
+- **No formatter ever emits `..` or `et al..`** — regression lock
+- Numeric styles always emit ``[N]`` / ``N`` with the passed number
+- ``build_rag_prompt`` numbers sources consistently; query appears
+  verbatim
+- ``[N]`` parse round-trips cleanly for any sequence of 1..20 ids
+- ``Source`` is frozen and pydantic-round-trippable
+
+Hypothesis immediately caught two real bugs on the first run:
+
+- **Chicago formatter emitted ``n.d..``** when a CSL item had no year
+  (single-period was concatenated with the helper's own trailing period)
+- **Every numeric formatter emitted ``Title..``** when a CSL title itself
+  ended in a period (title `"Essay."` → output `"Essay.."`)
+
+Fix: routed all ~25 title/year append sites across APA / MLA / Chicago /
+IEEE / Nature / Vancouver through the idempotent ``ensure_period`` helper.
+Fuzz tests now green. The bug-catching speaks for the approach — these
+specific shapes would never have appeared in a hand-enumerated unit test.
+
+**4. Annotated benchmark figures.** New ``benchmarks/plot.py`` reads every
+sweep JSON under ``findings/`` and emits three PNG figures:
+
+- ``fabrication-structural-vs-empirical.png`` — the README cover. Two
+  bars per scenario (baseline vs. citeformer); annotates the "structural:
+  grammar mask eliminates out-of-range tokens" call-out on the 0% bar.
+- ``sweep-summary.png`` — per-model comparison with mean ± std error
+  bars. Left: citations emitted. Right: fabrication rate. Surfaces the
+  SmolLM 4.8% abstract-run baseline fabrication that we couldn't easily
+  see in text.
+- ``premise-comparison.png`` — side-by-side abstract vs. fulltext NLI
+  support rate per model. Swing arrows + "+N pts" annotations tell the
+  story at a glance.
+
+Cover figure embedded in both README.md and benchmarks/README.md.
+``matplotlib>=3.8`` added to dev deps (it was already in the
+``examples`` extra).
+
+### Added — LangChain + LlamaIndex duck-typed integrations
+
+New ``citeformer.integrations`` subpackage with adapters for the two
+dominant RAG frameworks. Both are **duck-typed** — we don't import
+LangChain / LlamaIndex at module load, so users can adopt the adapter
+without the matching dependency installed, as long as their objects
+have the expected attribute shape.
+
+``citeformer.integrations.langchain``:
+
+- ``source_from_document(doc)`` — LangChain ``Document`` → citeformer
+  ``Source``. Pulls ``page_content`` into ``Source.content`` and derives
+  CSL-JSON metadata from whatever the document's metadata dict contains.
+- ``sources_from_documents(docs)`` — list wrapper, order-preserving.
+- ``default_metadata_converter(meta)`` — the CSL-JSON derivation, factored
+  out so users can override via ``metadata_converter=`` kwarg.
+
+``citeformer.integrations.llamaindex``:
+
+- ``source_from_node(node)`` — accepts either a bare ``TextNode`` shape
+  or a ``NodeWithScore`` wrapper (unwraps ``.node`` transparently).
+- ``sources_from_nodes(nodes)``.
+- Mirror ``default_metadata_converter`` for LlamaIndex-style metadata.
+
+Both converters recognise common ecosystem keys (title, source, url,
+author, date, year, file_path) and handle structured author lists with
+multiple shapes (CSL-JSON, ``{first, last}``, ``{name}``, bare string).
+Unknown metadata gets stashed under ``_langchain_metadata`` /
+``_llamaindex_metadata`` so callers don't lose signal.
+
+20 unit tests in ``tests/unit/test_integrations.py`` using ``SimpleNamespace``
+stand-ins (no LC/LI dependency needed to run the tests). Two end-to-end
+integration tests exercise the full convert → generate → verify pipeline
+via ``MockBackend``.
+
 ### Added — adversarial benchmark + multi-seed sweep
 
 New `benchmarks/adversarial.py` wraps the six-paper fixtures with a prompt

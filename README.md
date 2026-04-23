@@ -8,6 +8,8 @@
 
 ***A bulletproof way to generate verifiably cited text from language models.***
 
+![Citation fabrication is structural, not statistical](benchmarks/findings/figures/fabrication-structural-vs-empirical.png)
+
 > **Status**: pre-1.0, under active development. v0.1 ships local-backend support only (HF transformers, vLLM, llama.cpp). API-provider backends come in v0.2+. Follow [CHANGELOG.md](CHANGELOG.md) for progress.
 
 ## Why citeformer

@@ -1,0 +1,22 @@
+citations:
+- entailment_score: null
+  source_id: 1
+  span:
+  - 31
+  - 34
+  verified: false
+- entailment_score: 0.88
+  source_id: 2
+  span:
+  - 66
+  - 69
+  verified: true
+references:
+- inline_marker: '[1]'
+  rendered: Poe, E. A. (1845). The Raven.
+  source_id: 1
+- inline_marker: '[2]'
+  rendered: Melville, H. (1851). Moby-Dick.
+  source_id: 2
+schema_version: 1
+text: Poe's Raven opens with mystery [1]. Melville begins with identity [2].

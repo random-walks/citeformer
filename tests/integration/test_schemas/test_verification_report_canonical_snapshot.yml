@@ -1,0 +1,12 @@
+per_citation:
+- citation_index: 0
+  entailment_score: 0.32
+  supported: false
+- citation_index: 1
+  entailment_score: 0.88
+  supported: true
+schema_version: 1
+support_rate: 0.5
+uncited_but_entailed:
+- 2
+- 5

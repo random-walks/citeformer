@@ -153,10 +153,16 @@ def main() -> None:
         choices=["required", "auto", "quotes_only"],
         default="required",
     )
+    parser.add_argument(
+        "--premise",
+        choices=["abstract", "fulltext"],
+        default="abstract",
+        help="NLI premise source (see `python -m benchmarks.demo --help`).",
+    )
     args = parser.parse_args()
 
     fixtures = load_fixtures()
-    sources = sources_from_fixtures(fixtures)
+    sources = sources_from_fixtures(fixtures, premise=args.premise)
 
     prompt = _adversarial_prompt(sources)
     policy = Policy(args.policy)

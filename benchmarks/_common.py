@@ -57,13 +57,45 @@ def load_fixtures(path: Path = FIXTURE_PATH) -> list[dict[str, Any]]:
     return list(json.loads(path.read_text()))
 
 
-def sources_from_fixtures(fixtures: list[dict[str, Any]]) -> list[Source]:
-    """Convert fixture entries to `Source` objects with the abstract as content."""
+def sources_from_fixtures(
+    fixtures: list[dict[str, Any]],
+    *,
+    premise: str = "abstract",
+) -> list[Source]:
+    """Convert fixture entries to `Source` objects.
+
+    Args:
+        fixtures: Fixture entries from ``load_fixtures()``.
+        premise: Which text to use as the ``Source.content`` (which becomes
+            the NLI premise in ``verify()``):
+
+            - ``"abstract"`` — use each paper's arXiv abstract (~2k chars).
+              Default. Every fixture has one.
+            - ``"fulltext"`` — use PDF-extracted body text (~20k chars).
+              Requires a prior ``python -m benchmarks.fetch_fixtures
+              --fulltext`` run to populate the ``fulltext`` field. Entries
+              missing ``fulltext`` fall back to the abstract (with a log
+              line) so the mode degrades gracefully.
+    """
+    if premise not in {"abstract", "fulltext"}:
+        raise ValueError(f"premise must be 'abstract' or 'fulltext', got {premise!r}")
+
     sources: list[Source] = []
     for entry in fixtures:
         csl = dict(entry["csl"])
         abstract = str(csl.pop("abstract", "")).strip()
-        sources.append(Source(metadata=csl, content=abstract))
+        content = abstract
+        if premise == "fulltext":
+            fulltext = str(entry.get("fulltext", "")).strip()
+            if fulltext:
+                content = fulltext
+            else:
+                print(
+                    f"  [_common] WARN: no fulltext for {entry.get('arxiv_id')}; "
+                    "falling back to abstract. Run `python -m benchmarks.fetch_fixtures "
+                    "--fulltext` to populate.",
+                )
+        sources.append(Source(metadata=csl, content=content))
     return sources
 
 

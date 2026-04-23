@@ -299,10 +299,16 @@ def main() -> None:
         choices=["required", "auto", "quotes_only"],
         default="required",
     )
+    parser.add_argument(
+        "--premise",
+        choices=["abstract", "fulltext"],
+        default="abstract",
+        help="NLI premise source (see `python -m benchmarks.demo --help`).",
+    )
     args = parser.parse_args()
 
     fixtures = load_fixtures()
-    sources = sources_from_fixtures(fixtures)
+    sources = sources_from_fixtures(fixtures, premise=args.premise)
     prompt = _default_prompt(sources)
     policy = Policy(args.policy)
 
@@ -354,6 +360,7 @@ def main() -> None:
         "nli_model": args.nli_model,
         "device": args.device,
         "policy": policy.value,
+        "premise": args.premise,
     }
     log_path = _write_json_log(rows, aggregates, config)
     print(f"\n[sweep] wrote {log_path}")

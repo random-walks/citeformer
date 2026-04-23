@@ -144,10 +144,21 @@ def main() -> None:
             "land more often per sentence; larger (e.g. 500) allows longer prose."
         ),
     )
+    parser.add_argument(
+        "--premise",
+        choices=["abstract", "fulltext"],
+        default="abstract",
+        help=(
+            "Which text to feed NLI as the premise. 'abstract' (default) uses "
+            "each paper's arXiv abstract. 'fulltext' uses PDF-extracted body "
+            "text (requires `python -m benchmarks.fetch_fixtures --fulltext` "
+            "to have populated the fixtures)."
+        ),
+    )
     args = parser.parse_args()
 
     fixtures = load_fixtures()
-    sources = sources_from_fixtures(fixtures)
+    sources = sources_from_fixtures(fixtures, premise=args.premise)
 
     prompt = args.prompt or _default_prompt(sources)
     policy = Policy(args.policy)

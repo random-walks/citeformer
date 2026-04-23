@@ -212,20 +212,25 @@ class GenerationResult(BaseModel):
 
     §10.3 contract: `schema_version` is pinned by `tests/integration/test_schemas.py`.
     Any shape change requires bumping `schema_version` and following the ceremony in
-    `docs/reference/contracts.md`.
+    `docs/reference/contracts.md`. Current version: **2** (P6 added `sources`
+    so `verify()` is self-contained).
 
     Attributes:
         schema_version: Contract version. Bump on any field add/rename/removal.
         text: The generated prose with inline `[N]` markers.
         citations: One entry per `[N]` marker, with its char span and `source_id`.
         references: Deterministically rendered bibliography, one entry per unique
-            cited `source_id`. Rendered by `citeproc-py` (P3+) — never by the LLM.
+            cited `source_id`. Rendered by the `citeformer.render` formatters —
+            never by the LLM.
+        sources: The sources that were in scope for this generation call. Carried
+            on the result so `verify()` can run NLI against them without the
+            caller having to pass them separately.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     schema_version: int = Field(
-        default=1,
+        default=2,
         description="§10.3 contract version. Bumped on any shape change.",
     )
     text: str = Field(
@@ -239,21 +244,59 @@ class GenerationResult(BaseModel):
         default_factory=list,
         description="Deterministically rendered references, one per unique cited source_id.",
     )
+    sources: list[Source] = Field(
+        default_factory=list,
+        description="The sources that were in scope when this result was generated.",
+    )
 
-    def verify(self, **_options: Any) -> VerificationReport:
+    def verify(
+        self,
+        *,
+        threshold: float = 0.5,
+        nli: Any | None = None,
+        run_coverage: bool = True,
+        **_options: Any,
+    ) -> VerificationReport:
         """Run NLI-based verification against the cited sources.
 
-        Populated in P6. Until then, raises `NotImplementedError` so callers who
-        wire up the full flow get a clear error rather than silently-incorrect stubs.
+        Requires the ``verify`` extra (``pip install citeformer[verify]``) —
+        the NLI backend is imported lazily on first call.
+
+        Args:
+            threshold: Entailment probability above which a citation is
+                ``supported`` and an uncited sentence is flagged as needing a
+                citation.
+            nli: Optional pre-constructed `citeformer.verify.NLIModel`. If
+                ``None``, the default model (DeBERTa-v3-large-MNLI, or whatever
+                ``CITEFORMER_NLI_MODEL`` is set to) is loaded on first use and
+                cached.
+            run_coverage: If False, skip the NLI coverage check (per-sentence
+                "should this have been cited?" scan). Useful under REQUIRED
+                policy where the grammar guarantees every sentence has a cite.
 
         Returns:
-            A `VerificationReport` with per-citation entailment scores, an overall
-            support rate, and uncited-but-entailed flags for missing citations.
+            A `VerificationReport` with per-citation entailment scores, an
+            overall support rate, and uncited-but-entailed flags.
 
         Raises:
-            NotImplementedError: Always, in P1–P5. Landing in P6.
+            ImportError: If ``citeformer[verify]`` extras aren't installed.
+            ValueError: If this result was constructed without `sources` (e.g.
+                a pre-P6 serialization that predates the schema_version=2
+                shape).
         """
-        raise NotImplementedError(
-            "GenerationResult.verify() lands in P6 (NLI verification). "
-            "Track progress at https://github.com/random-walks/citeformer."
+        from citeformer.verify import Verifier
+
+        if not self.sources:
+            raise ValueError(
+                "GenerationResult.verify() needs `sources` populated. "
+                "Results from Citeformer.generate() carry this automatically; "
+                "hand-constructed results must pass `sources=...` at build time."
+            )
+
+        verifier = Verifier(threshold=threshold, nli=nli)
+        return verifier.verify(
+            text=self.text,
+            citations=self.citations,
+            sources=self.sources,
+            run_coverage=run_coverage,
         )

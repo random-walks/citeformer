@@ -5,8 +5,16 @@ per_citation:
 - citation_index: 1
   entailment_score: 0.88
   supported: true
-schema_version: 1
+schema_version: 2
 support_rate: 0.5
 uncited_but_entailed:
-- 2
-- 5
+- candidate_source_id: 2
+  entailment_score: 0.71
+  span:
+  - 10
+  - 42
+- candidate_source_id: 1
+  entailment_score: 0.64
+  span:
+  - 100
+  - 140

@@ -1,8 +1,13 @@
 """`VerificationReport` pydantic schema — §10.3 contract.
 
-Shape is locked in P1 even though `verify()` itself isn't implemented until P6.
-That's deliberate: locking the contract first means we can't accidentally
-ship a v0.1 with verification fields users depend on and then reshape them later.
+Shape is locked in P1 (and refined in P6); the `schema_version` is bumped
+when fields change. Current version: **2** (P6 promoted
+`uncited_but_entailed` from a list of sentence-index ints to a list of
+`UncitedClaim` records that carry the span + candidate source + score).
+
+§10.3 ceremony: every change goes through the `release-bump` rubric, the
+snapshot tests in `tests/integration/test_schemas.py`, and a CHANGELOG
+``Contracts (§10)`` note. See ``docs/reference/contracts.md``.
 """
 
 from __future__ import annotations
@@ -16,9 +21,10 @@ class CitationSupport(BaseModel):
     Attributes:
         citation_index: Position in `GenerationResult.citations` this entry describes.
         entailment_score: NLI entailment probability in [0, 1]. Computed by the
-            configured NLI model (DeBERTa-v3-large-MNLI by default in P6).
-        supported: `True` iff `entailment_score >= threshold`. Threshold defaults to
-            0.5 but is configurable on the Citeformer instance.
+            configured NLI model (DeBERTa-v3-large-MNLI by default).
+        supported: `True` iff `entailment_score >= threshold` AND the
+            citation's source_id resolves to an in-range source. Threshold
+            defaults to 0.5; configurable on the `Verifier`.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -33,7 +39,36 @@ class CitationSupport(BaseModel):
         description="NLI entailment probability.",
     )
     supported: bool = Field(
-        description="True iff entailment_score >= threshold.",
+        description="True iff entailment_score >= threshold and source_id is in range.",
+    )
+
+
+class UncitedClaim(BaseModel):
+    """An uncited sentence that NLI flags as likely needing a citation.
+
+    Attributes:
+        span: ``(start, end)`` char offsets of the sentence in
+            `GenerationResult.text`.
+        candidate_source_id: 1-indexed source that most strongly entails the
+            sentence — suggested citation target if the author wanted to fix
+            the gap.
+        entailment_score: Entailment probability of the best-matching
+            source, in [0, 1].
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    span: tuple[int, int] = Field(
+        description="(start, end) char offsets of the uncited sentence.",
+    )
+    candidate_source_id: int = Field(
+        ge=1,
+        description="1-indexed source that best entails the sentence.",
+    )
+    entailment_score: float = Field(
+        ge=0.0,
+        le=1.0,
+        description="NLI entailment probability of the best-matching source.",
     )
 
 
@@ -45,17 +80,20 @@ class VerificationReport(BaseModel):
     Attributes:
         schema_version: Contract version. Bump on any shape change.
         support_rate: Fraction of citations with `supported == True`, in [0, 1].
+            Defined as 1.0 when `per_citation` is empty (no citations → no
+            unsupported claims).
         per_citation: One `CitationSupport` entry per citation in the
             `GenerationResult`, in the same order.
-        uncited_but_entailed: Sentence indices where the NLI coverage check flagged a
-            missing citation — i.e. an uncited claim that one of the available sources
-            would entail. Indices reference sentence spans in `GenerationResult.text`.
+        uncited_but_entailed: Sentences where the NLI coverage check flagged
+            a missing citation — an uncited claim that one of the available
+            sources would entail. Each entry carries the span, the best-
+            matching source, and the entailment score.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     schema_version: int = Field(
-        default=1,
+        default=2,
         description="§10.3 contract version. Bumped on any shape change.",
     )
     support_rate: float = Field(
@@ -67,7 +105,7 @@ class VerificationReport(BaseModel):
         default_factory=list,
         description="Entailment detail for each citation.",
     )
-    uncited_but_entailed: list[int] = Field(
+    uncited_but_entailed: list[UncitedClaim] = Field(
         default_factory=list,
-        description="Sentence indices flagged as missing a citation.",
+        description="Sentences flagged as missing a citation.",
     )

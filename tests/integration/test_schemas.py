@@ -14,8 +14,10 @@ from citeformer import (
     CitationSupport,
     GenerationResult,
     Reference,
+    Source,
     VerificationReport,
 )
+from citeformer.verify import UncitedClaim
 
 
 def test_generation_result_canonical_snapshot(data_regression) -> None:  # type: ignore[no-untyped-def]
@@ -48,6 +50,16 @@ def test_generation_result_canonical_snapshot(data_regression) -> None:  # type:
                 rendered="Melville, H. (1851). Moby-Dick.",
             ),
         ],
+        sources=[
+            Source(
+                metadata={"id": "poe", "type": "book", "title": "The Raven"},
+                content="Once upon a midnight dreary...",
+            ),
+            Source(
+                metadata={"id": "mel", "type": "book", "title": "Moby-Dick"},
+                content="Call me Ishmael...",
+            ),
+        ],
     )
     data_regression.check(result.model_dump(mode="json"))
 
@@ -60,20 +72,23 @@ def test_verification_report_canonical_snapshot(data_regression) -> None:  # typ
             CitationSupport(citation_index=0, entailment_score=0.32, supported=False),
             CitationSupport(citation_index=1, entailment_score=0.88, supported=True),
         ],
-        uncited_but_entailed=[2, 5],
+        uncited_but_entailed=[
+            UncitedClaim(span=(10, 42), candidate_source_id=2, entailment_score=0.71),
+            UncitedClaim(span=(100, 140), candidate_source_id=1, entailment_score=0.64),
+        ],
     )
     data_regression.check(report.model_dump(mode="json"))
 
 
-def test_generation_result_schema_version_is_1() -> None:
+def test_generation_result_schema_version_is_2() -> None:
     """Belt-and-suspenders: even if snapshots are regenerated carelessly, this asserts
     the contract version number explicitly.
     """
     result = GenerationResult(text="x")
-    assert result.schema_version == 1
+    assert result.schema_version == 2
 
 
-def test_verification_report_schema_version_is_1() -> None:
+def test_verification_report_schema_version_is_2() -> None:
     """Belt-and-suspenders for VerificationReport too."""
     report = VerificationReport(support_rate=1.0)
-    assert report.schema_version == 1
+    assert report.schema_version == 2

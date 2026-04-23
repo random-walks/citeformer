@@ -98,6 +98,7 @@ class Citeformer:
             text=text,
             citations=citations,
             references=references,
+            sources=list(sources),
         )
 
     @staticmethod

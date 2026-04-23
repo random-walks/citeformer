@@ -86,15 +86,16 @@ def test_reference_rejects_source_id_zero() -> None:
 
 def test_generation_result_defaults() -> None:
     result = GenerationResult(text="plain text with no markers")
-    assert result.schema_version == 1
+    assert result.schema_version == 2
     assert result.citations == []
     assert result.references == []
+    assert result.sources == []
 
 
-def test_generation_result_schema_version_is_1() -> None:
-    """§10.3 contract — schema_version MUST be 1 in this release."""
+def test_generation_result_schema_version_is_2() -> None:
+    """§10.3 contract — schema_version MUST be 2 after the P6 bump."""
     result = GenerationResult(text="x")
-    assert result.schema_version == 1
+    assert result.schema_version == 2
 
 
 def test_generation_result_roundtrip() -> None:
@@ -107,10 +108,12 @@ def test_generation_result_roundtrip() -> None:
     assert reconstructed == result
 
 
-def test_generation_result_verify_raises_until_p6() -> None:
-    """verify() is a stub in P1-P5; should raise with a clear message."""
+def test_generation_result_verify_requires_sources() -> None:
+    """verify() needs `sources` populated — hand-constructed results without
+    them get a clear error rather than a downstream NLI crash.
+    """
     result = GenerationResult(text="x")
-    with pytest.raises(NotImplementedError, match="P6"):
+    with pytest.raises(ValueError, match="needs `sources`"):
         result.verify()
 
 
@@ -130,12 +133,12 @@ def test_citation_support_rejects_out_of_range_score() -> None:
 
 def test_verification_report_defaults() -> None:
     report = VerificationReport(support_rate=1.0)
-    assert report.schema_version == 1
+    assert report.schema_version == 2
     assert report.per_citation == []
     assert report.uncited_but_entailed == []
 
 
-def test_verification_report_schema_version_is_1() -> None:
-    """§10.3 contract — schema_version MUST be 1."""
+def test_verification_report_schema_version_is_2() -> None:
+    """§10.3 contract — schema_version MUST be 2 after the P6 bump."""
     report = VerificationReport(support_rate=0.5)
-    assert report.schema_version == 1
+    assert report.schema_version == 2

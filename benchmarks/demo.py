@@ -5,7 +5,7 @@ pre-fetched via ``benchmarks/fetch_fixtures.py``), runs a small instruction-
 tuned model twice over the same prompt:
 
 1. **Grammar-enforced**: through `Citeformer` with the HF backend and the
-   `REQUIRED` policy. Citation fabrication is structurally impossible.
+   selected policy. Citation fabrication is structurally impossible.
 2. **Baseline**: plain ``model.generate()`` with no `LogitsProcessor`. Lets
    the model emit whatever ``[N]`` sequences it wants.
 
@@ -17,6 +17,7 @@ Run:
     uv run python -m benchmarks.demo
     uv run python -m benchmarks.demo --model Qwen/Qwen2.5-0.5B-Instruct
     uv run python -m benchmarks.demo --prompt "…"
+    uv run python -m benchmarks.demo --policy auto
 
 Requires the ``hf`` + ``verify`` extras:
 
@@ -26,197 +27,49 @@ Requires the ``hf`` + ``verify`` extras:
 from __future__ import annotations
 
 import argparse
-import contextlib
-import json
-import re
-from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
-from citeformer import Citeformer, Policy, Source
-from citeformer.render import render_references
+from benchmarks._common import (
+    RunStats,
+    analyze_run,
+    fabrication_rate,
+    format_source_list,
+    load_fixtures,
+    run_constrained_and_baseline,
+    sources_from_fixtures,
+)
+from citeformer import Policy, Source
+from citeformer.prompts import build_rag_prompt
 
-# Default tiny instruction-tuned model. Small enough to download + run on any
-# laptop; big enough to produce text that cites sources with some structure.
-# Qwen 2.5 0.5B Instruct is the sweet spot: ~500 MB, genuinely instruction-
-# tuned so it honors "cite with [N] markers" in the prompt.
 DEFAULT_MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
 
-# Prompt explicitly asks for ``[N]`` citations. Under the constrained run the
-# grammar ensures *any* emitted ``[N]`` is in range; under the baseline the
-# model is free to fabricate. We push the prompt hard on citations so both
-# runs actually attempt them — otherwise the comparison is vacuous.
-DEFAULT_PROMPT = (
-    "You are writing a brief, citation-dense technical survey. CITE EVERY "
-    "CLAIM. Use [N] markers — for example [1] or [3]. The sources are:\n"
-    "{source_list}\n\n"
-    "Example sentence: The Transformer architecture introduced self-attention "
-    "[1]. BERT extended this with bidirectional pre-training [2].\n\n"
-    "Now write five citation-dense sentences tracing the development of "
-    "transformer-based language models, citing at least one of the sources "
-    "in every sentence.\n\n"
-    "Survey:"
-)
 
-_CITE_PATTERN = re.compile(r"\[(\d+)\]")
+def _default_prompt(sources: list[Source]) -> str:
+    """Citation-dense survey prompt assembled via `build_rag_prompt`.
 
-
-@dataclass(frozen=True)
-class _RunStats:
-    """Stats for a single generation run (constrained or baseline)."""
-
-    label: str
-    text: str
-    cite_ids_emitted: list[int]
-    fabricated_cite_ids: list[int]
-    supported_count: int
-    entailed_uncited_count: int
-    support_rate: float
-
-
-def _load_fixtures(path: Path) -> list[dict[str, Any]]:
-    """Load the pre-fetched paper fixtures. Fail loudly if missing."""
-    if not path.exists():
-        raise SystemExit(
-            f"Fixtures missing at {path!s}. Run first: `uv run python -m benchmarks.fetch_fixtures`"
-        )
-    return json.loads(path.read_text())
-
-
-def _sources_from_fixtures(fixtures: list[dict[str, Any]]) -> list[Source]:
-    """Convert fixture entries to `Source` objects with the abstract as content."""
-    sources: list[Source] = []
-    for entry in fixtures:
-        csl = dict(entry["csl"])
-        abstract = str(csl.pop("abstract", "")).strip()
-        sources.append(Source(metadata=csl, content=abstract))
-    return sources
-
-
-def _format_source_list(sources: list[Source]) -> str:
-    """Render a numbered source list for the prompt + stdout."""
-    lines = []
-    for i, source in enumerate(sources, start=1):
-        title = str(source.metadata.get("title", "Untitled")).strip()
-        authors_raw = source.metadata.get("author") or []
-        author_names = []
-        for a in authors_raw[:3]:
-            if isinstance(a, dict):
-                family = a.get("family") or a.get("literal") or ""
-                if family:
-                    author_names.append(family)
-        author_str = ", ".join(author_names)
-        if len(authors_raw) > 3:
-            author_str += " et al."
-        lines.append(f"[{i}] {author_str}: {title}")
-    return "\n".join(lines)
-
-
-def _both_runs(
-    sources: list[Source],
-    prompt: str,
-    model_name: str,
-    max_new_tokens: int,
-    *,
-    device: str | None = None,
-    policy: Policy = Policy.REQUIRED,
-    max_content_chars: int | None = None,
-) -> tuple[str, str]:
-    """Run constrained + baseline through a single shared HF model instance.
-
-    Avoids loading the weights twice (halves RAM + works around MPS
-    ndarray-size limits on Apple Silicon). The constrained run uses the
-    full HFBackend pipeline; the baseline reaches into the backend's
-    already-loaded model/tokenizer and calls ``model.generate`` with no
-    LogitsProcessor.
-
-    With ``Policy.REQUIRED`` the grammar's bounded-content rule
-    (``docs/decisions/009-bounded-content-required.md``) forces progression
-    on small models — previously the benchmark had to use AUTO to avoid
-    stall on Qwen 0.5B. ``max_content_chars`` overrides the default bound;
-    ``None`` uses the ADR-009 default of 240.
-
-    Returns:
-        ``(constrained_text, baseline_text)``.
+    Explicitly demands ``[N]`` markers so both runs genuinely attempt
+    citations; otherwise the comparison is vacuous.
     """
-    import torch
-
-    from citeformer.backends.hf import HFBackend
-
-    backend = HFBackend(model=model_name, device=device)
-
-    cf = Citeformer(backend=backend, citation_policy=policy)
-    generate_kwargs: dict[str, Any] = {"max_new_tokens": max_new_tokens}
-    if max_content_chars is not None:
-        generate_kwargs["max_content_chars"] = max_content_chars
-    result = cf.generate(prompt=prompt, sources=sources, **generate_kwargs)
-    constrained_text = result.text
-
-    # Baseline path: same model, no grammar. Reuse backend internals.
-    inputs = backend.tokenizer(prompt, return_tensors="pt").to(backend.device)
-    with torch.no_grad():
-        output_ids = backend.model.generate(
-            **inputs,
-            max_new_tokens=max_new_tokens,
-            temperature=0.7,
-            do_sample=True,
-            pad_token_id=backend.tokenizer.eos_token_id or backend.tokenizer.pad_token_id,
-        )
-    generated = output_ids[0][inputs.input_ids.shape[1] :]
-    baseline_text = str(backend.tokenizer.decode(generated, skip_special_tokens=True))
-
-    return constrained_text, baseline_text
-
-
-def _analyze_run(
-    label: str,
-    text: str,
-    sources: list[Source],
-    *,
-    nli: Any,
-    threshold: float,
-) -> _RunStats:
-    """Run verification on a generation and compute summary stats."""
-    from citeformer.core import Citation, GenerationResult
-
-    cite_ids = [int(m.group(1)) for m in _CITE_PATTERN.finditer(text)]
-    in_range = {i for i in cite_ids if 1 <= i <= len(sources)}
-    fabricated = sorted({i for i in cite_ids if i not in in_range})
-
-    # Build a minimal GenerationResult with citations so verify() can run.
-    # source_id < 1 trips pydantic validation; skip but still counted in fabricated.
-    citations: list[Citation] = []
-    for m in _CITE_PATTERN.finditer(text):
-        with contextlib.suppress(Exception):
-            citations.append(
-                Citation(
-                    span=(m.start(), m.end()),
-                    source_id=int(m.group(1)),
-                )
-            )
-
-    references = render_references(sources, citations, style_name="apa-7")
-    result = GenerationResult(
-        text=text,
-        citations=citations,
-        references=references,
+    return build_rag_prompt(
+        query=(
+            "Write five citation-dense sentences tracing the development of "
+            "transformer-based language models, citing at least one of the "
+            "sources in every sentence."
+        ),
         sources=sources,
-    )
-    report = result.verify(threshold=threshold, nli=nli, run_coverage=True)
-
-    supported = sum(1 for cs in report.per_citation if cs.supported)
-    return _RunStats(
-        label=label,
-        text=text,
-        cite_ids_emitted=cite_ids,
-        fabricated_cite_ids=fabricated,
-        supported_count=supported,
-        entailed_uncited_count=len(report.uncited_but_entailed),
-        support_rate=report.support_rate,
+        system=(
+            "You are writing a brief, citation-dense technical survey. "
+            "CITE EVERY CLAIM."
+        ),
+        example=(
+            "The Transformer architecture introduced self-attention [1]. "
+            "BERT extended this with bidirectional pre-training [2]."
+        ),
+        answer_prefix="Survey:",
     )
 
 
-def _print_report(constrained: _RunStats, baseline: _RunStats, sources: list[Source]) -> None:
+def _print_report(constrained: RunStats, baseline: RunStats, sources: list[Source]) -> None:
     """Pretty-print the side-by-side benchmark summary."""
     print()
     print("=" * 72)
@@ -224,7 +77,7 @@ def _print_report(constrained: _RunStats, baseline: _RunStats, sources: list[Sou
     print("=" * 72)
     print()
     print(f"Sources in scope (N = {len(sources)}):")
-    print(_format_source_list(sources))
+    print(format_source_list(sources))
     print()
     for run in (constrained, baseline):
         print(f"--- {run.label} ---")
@@ -235,22 +88,20 @@ def _print_report(constrained: _RunStats, baseline: _RunStats, sources: list[Sou
         print(f"  citation markers emitted:      {n}")
         print(f"  cite IDs emitted:              {sorted(set(run.cite_ids_emitted))}")
         print(f"  fabricated IDs (out of range): {run.fabricated_cite_ids}")
-        fab_rate = len(run.fabricated_cite_ids) / max(len(set(run.cite_ids_emitted)), 1)
-        print(f"  fabrication rate:              {fab_rate:.0%}")
+        print(f"  fabrication rate:              {fabrication_rate(run):.0%}")
         print(f"  NLI-supported citations:       {run.supported_count} / {n}")
         print(f"  overall support rate:          {run.support_rate:.0%}")
         print(f"  uncited-but-entailed sentences: {run.entailed_uncited_count}")
         print()
 
-    # Headline summary.
     print("=" * 72)
-    baseline_fab = len(baseline.fabricated_cite_ids) / max(len(set(baseline.cite_ids_emitted)), 1)
-    constrained_fab = len(constrained.fabricated_cite_ids) / max(
-        len(set(constrained.cite_ids_emitted)), 1
-    )
-    print(f"  fabrication rate: baseline {baseline_fab:.0%} → citeformer {constrained_fab:.0%}")
     print(
-        f"  NLI-support rate: baseline {baseline.support_rate:.0%} → citeformer {constrained.support_rate:.0%}"
+        f"  fabrication rate: baseline {fabrication_rate(baseline):.0%} → "
+        f"citeformer {fabrication_rate(constrained):.0%}"
+    )
+    print(
+        f"  NLI-support rate: baseline {baseline.support_rate:.0%} → "
+        f"citeformer {constrained.support_rate:.0%}"
     )
     print("=" * 72)
 
@@ -263,6 +114,7 @@ def main() -> None:
     parser.add_argument("--prompt", default=None, help="Override the default prompt")
     parser.add_argument("--nli-model", default=None, help="Override the NLI model")
     parser.add_argument("--threshold", type=float, default=0.5)
+    parser.add_argument("--seed", type=int, default=None, help="Torch seed for reproducibility")
     parser.add_argument(
         "--device",
         default="cpu",
@@ -294,19 +146,16 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    fixture_path = Path(__file__).parent / "fixtures" / "ai_papers.json"
-    fixtures = _load_fixtures(fixture_path)
-    sources = _sources_from_fixtures(fixtures)
+    fixtures = load_fixtures()
+    sources = sources_from_fixtures(fixtures)
 
-    prompt_template = args.prompt or DEFAULT_PROMPT
-    prompt = prompt_template.format(source_list=_format_source_list(sources))
-
+    prompt = args.prompt or _default_prompt(sources)
     policy = Policy(args.policy)
     print(
         f"[1/2] Running constrained (policy={policy.value}) + baseline generation "
         f"on device={args.device}…"
     )
-    constrained_text, baseline_text = _both_runs(
+    constrained_text, baseline_text = run_constrained_and_baseline(
         sources,
         prompt,
         args.model,
@@ -314,6 +163,7 @@ def main() -> None:
         device=args.device,
         policy=policy,
         max_content_chars=args.max_content_chars,
+        seed=args.seed,
     )
 
     print("[2/2] Scoring with NLI …")
@@ -324,14 +174,14 @@ def main() -> None:
         nli_kwargs["model_name"] = args.nli_model
     nli = NLIModel(**nli_kwargs)
 
-    constrained_stats = _analyze_run(
+    constrained_stats = analyze_run(
         f"GRAMMAR-ENFORCED (citeformer — policy={policy.value})",
         constrained_text,
         sources,
         nli=nli,
         threshold=args.threshold,
     )
-    baseline_stats = _analyze_run(
+    baseline_stats = analyze_run(
         "BASELINE (plain HF generate, no grammar)",
         baseline_text,
         sources,

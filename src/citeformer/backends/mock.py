@@ -11,7 +11,14 @@ from collections.abc import Iterator
 from typing import Any
 
 from citeformer.backends.base import Backend
-from citeformer.core import Policy, Source
+from citeformer.core import MarkerStyle, Policy, Source
+
+_MARKER_TEMPLATES: dict[MarkerStyle, str] = {
+    MarkerStyle.BRACKET: "[1]",
+    MarkerStyle.PAREN: "(1)",
+    MarkerStyle.CURLY: "{1}",
+    MarkerStyle.CARET: "^1",
+}
 
 
 class MockBackend(Backend):
@@ -20,7 +27,9 @@ class MockBackend(Backend):
     Construct with a `responses` mapping from prompt to pre-canned output. Any
     prompt not in the mapping gets a deterministic echo of the form
     `"Mock response for: <prompt> [1]."` — which satisfies the `REQUIRED`
-    policy trivially when at least one source is in scope.
+    policy trivially when at least one source is in scope. The marker in the
+    fallback honours the ``marker_style`` option so tests for non-bracket
+    styles see the right delimiters in the echoed output.
 
     Attributes:
         responses: Pre-canned responses keyed by exact prompt string.
@@ -43,17 +52,20 @@ class MockBackend(Backend):
     ) -> str:
         """Return a scripted response or a deterministic fallback.
 
-        The fallback echo emits a `[1]` marker when sources are in scope, so that
-        downstream parsers and verifiers see at least one citation. When there are
-        no sources, it returns the echo with no marker regardless of policy — the
-        caller is responsible for not invoking `generate()` with an empty source
-        list under `REQUIRED`.
+        The fallback echo emits a marker (shape determined by the
+        ``marker_style`` option, default ``[1]``) when sources are in scope,
+        so that downstream parsers and verifiers see at least one citation.
+        When there are no sources, it returns the echo with no marker
+        regardless of policy — the caller is responsible for not invoking
+        `generate()` with an empty source list under `REQUIRED`.
         """
-        del policy, options  # Mock doesn't vary output by policy or options.
+        del policy  # Mock doesn't vary output by policy.
         if prompt in self.responses:
             return self.responses[prompt]
         if sources:
-            return f"Mock response for: {prompt!r} [1]."
+            marker_style = options.get("marker_style", MarkerStyle.BRACKET)
+            marker = _MARKER_TEMPLATES[marker_style]
+            return f"Mock response for: {prompt!r} {marker}."
         return f"Mock response for: {prompt!r}."
 
     def stream(

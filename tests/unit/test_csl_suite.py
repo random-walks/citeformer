@@ -702,7 +702,7 @@ def _render_all_for_style(style: str) -> list[dict]:
                 "inline": ref.inline_marker,
                 "bib": ref.rendered,
             }
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             entry = {
                 "case_id": case_id,
                 "error": f"{type(exc).__name__}: {exc}",

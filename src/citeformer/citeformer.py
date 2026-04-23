@@ -22,7 +22,14 @@ from collections.abc import Iterator
 from typing import Any
 
 from citeformer.backends.base import Backend
-from citeformer.core import Citation, GenerationResult, Policy, Reference, Source
+from citeformer.core import (
+    Citation,
+    GenerationResult,
+    MarkerStyle,
+    Policy,
+    Reference,
+    Source,
+)
 from citeformer.render import render_references
 
 # Pattern for extracting [N] markers from generated text. The grammar layer
@@ -35,6 +42,22 @@ _CITE_PATTERN = re.compile(r"\[(\d+)\]")
 # shape the REQUIRED policy produces on small models that want to close a
 # sentence but keep choosing in-range cite ids.
 _CITE_RUN_PATTERN = re.compile(r"(?:\[\d+\]\s*){2,}\[\d+\]")
+
+
+#: Regex patterns for extracting inline markers from generated text. Keyed by
+#: :class:`~citeformer.core.MarkerStyle`. The pattern captures the digit(s)
+#: inside group 1.
+_MARKER_PATTERNS: dict[MarkerStyle, re.Pattern[str]] = {
+    MarkerStyle.BRACKET: re.compile(r"\[(\d+)\]"),
+    MarkerStyle.PAREN: re.compile(r"\((\d+)\)"),
+    MarkerStyle.CURLY: re.compile(r"\{(\d+)\}"),
+    MarkerStyle.CARET: re.compile(r"\^(\d+)"),
+}
+
+
+def _pattern_for(style: MarkerStyle) -> re.Pattern[str]:
+    """Return the compiled regex for a marker style (not exposed publicly)."""
+    return _MARKER_PATTERNS[style]
 
 
 def deduplicate_adjacent_cites(text: str) -> str:
@@ -102,6 +125,7 @@ class Citeformer:
         backend: Backend,
         style: str = "apa-7",
         citation_policy: Policy = Policy.REQUIRED,
+        marker_style: MarkerStyle = MarkerStyle.BRACKET,
     ) -> None:
         """Construct a Citeformer.
 
@@ -110,10 +134,17 @@ class Citeformer:
             style: CSL style identifier for reference rendering (see
                 ``bundled_style_names()`` for available styles).
             citation_policy: Default citation enforcement policy for `generate()`.
+            marker_style: Shape of inline citation markers. Default is
+                :attr:`MarkerStyle.BRACKET` (``[N]``). Swap for ``PAREN``
+                (``(N)``), ``CURLY`` (``{N}``), or ``CARET`` (``^N``) when
+                the downstream pipeline already reserves square brackets.
+                The structural guarantee (digit enum bounded by ``len(sources)``)
+                holds identically across styles.
         """
         self.backend = backend
         self.style = style
         self.citation_policy = citation_policy
+        self.marker_style = marker_style
 
     def generate(
         self,
@@ -133,18 +164,22 @@ class Citeformer:
                 and `Reference.source_id`.
             policy: Override the default `citation_policy` for this call.
             **options: Backend-specific options forwarded to `Backend.generate()`.
+                Pass ``marker_style=`` to override the orchestrator's default for
+                a single call.
 
         Returns:
             A `GenerationResult` with text, parsed citations, and rendered references.
         """
         effective_policy = policy if policy is not None else self.citation_policy
+        effective_marker = options.pop("marker_style", self.marker_style)
         text = self.backend.generate(
             prompt=prompt,
             sources=sources,
             policy=effective_policy,
+            marker_style=effective_marker,
             **options,
         )
-        citations = self._parse_citations(text)
+        citations = self._parse_citations(text, effective_marker)
         references = self._render_references(sources, citations)
         return GenerationResult(
             text=text,
@@ -186,20 +221,30 @@ class Citeformer:
             A `StreamingResult` wrapping the backend's chunk iterator.
         """
         effective_policy = policy if policy is not None else self.citation_policy
+        effective_marker = options.pop("marker_style", self.marker_style)
         chunks = self.backend.stream(
             prompt=prompt,
             sources=sources,
             policy=effective_policy,
+            marker_style=effective_marker,
             **options,
         )
-        return StreamingResult(chunks=chunks, sources=list(sources), style=self.style)
+        return StreamingResult(
+            chunks=chunks,
+            sources=list(sources),
+            style=self.style,
+            marker_style=effective_marker,
+        )
 
     @staticmethod
-    def _parse_citations(text: str) -> list[Citation]:
-        """Extract `[N]` markers from `text` into `Citation` objects."""
+    def _parse_citations(
+        text: str, marker_style: MarkerStyle = MarkerStyle.BRACKET
+    ) -> list[Citation]:
+        """Extract markers from `text` into `Citation` objects."""
+        pattern = _pattern_for(marker_style)
         return [
             Citation(span=(m.start(), m.end()), source_id=int(m.group(1)))
-            for m in _CITE_PATTERN.finditer(text)
+            for m in pattern.finditer(text)
         ]
 
     def _render_references(
@@ -243,11 +288,13 @@ class StreamingResult:
         chunks: Iterator[str],
         sources: list[Source],
         style: str,
+        marker_style: MarkerStyle = MarkerStyle.BRACKET,
     ) -> None:
         """Wrap a backend chunk iterator. Not for direct construction by users."""
         self._chunks = chunks
         self.sources = sources
         self.style = style
+        self.marker_style = marker_style
         self._accumulated: list[str] = []
         self._finalized: GenerationResult | None = None
 
@@ -276,9 +323,10 @@ class StreamingResult:
         for _ in self:
             pass
         text = self.text
+        pattern = _pattern_for(self.marker_style)
         citations = [
             Citation(span=(m.start(), m.end()), source_id=int(m.group(1)))
-            for m in _CITE_PATTERN.finditer(text)
+            for m in pattern.finditer(text)
         ]
         references = render_references(self.sources, citations, self.style)
         self._finalized = GenerationResult(

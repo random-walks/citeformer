@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import pytest
 
-from citeformer import Policy
+from citeformer import MarkerStyle, Policy
 from citeformer.grammar import Grammar, build_grammar
 from citeformer.grammar.builder import DEFAULT_MAX_CONTENT_CHARS
 
@@ -119,13 +119,13 @@ def test_build_grammar_rejects_negative_max_content_chars() -> None:
 def test_required_default_content_bound_is_applied() -> None:
     """ADR-009: default REQUIRED body includes `{1, DEFAULT_MAX_CONTENT_CHARS}`."""
     g = build_grammar(n_sources=3, policy=Policy.REQUIRED)
-    assert f"content ::= [^\\[.!?]{{1, {DEFAULT_MAX_CONTENT_CHARS}}}" in g.gbnf
+    assert f"content ::= [^[.!?]{{1, {DEFAULT_MAX_CONTENT_CHARS}}}" in g.gbnf
     assert g.max_content_chars == DEFAULT_MAX_CONTENT_CHARS
 
 
 def test_required_unbounded_preserves_legacy_plus_quantifier() -> None:
     g = build_grammar(n_sources=3, policy=Policy.REQUIRED, max_content_chars=None)
-    assert "content ::= [^\\[.!?]+" in g.gbnf
+    assert "content ::= [^[.!?]+" in g.gbnf
     assert g.max_content_chars is None
 
 
@@ -149,5 +149,52 @@ def _grammar_dict(g: Grammar) -> dict[str, object]:
         "gbnf": g.gbnf,
         "cite_ids": list(g.cite_ids),
         "policy": g.policy.value,
+        "marker_style": g.marker_style.value,
         "root_rule": g.root_rule,
     }
+
+
+# --- Marker style variants ---------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "marker_style,expected_cite_id",
+    [
+        (MarkerStyle.BRACKET, 'cite-id ::= "[" ("1" | "2" | "3") "]"'),
+        (MarkerStyle.PAREN, 'cite-id ::= "(" ("1" | "2" | "3") ")"'),
+        (MarkerStyle.CURLY, 'cite-id ::= "{" ("1" | "2" | "3") "}"'),
+        (MarkerStyle.CARET, 'cite-id ::= "^" ("1" | "2" | "3")'),
+    ],
+)
+def test_cite_id_rule_matches_marker_style(
+    marker_style: MarkerStyle, expected_cite_id: str
+) -> None:
+    """The digit enum is identical across marker styles; only delimiters change."""
+    g = build_grammar(n_sources=3, policy=Policy.AUTO, marker_style=marker_style)
+    assert expected_cite_id in g.gbnf
+    assert g.marker_style is marker_style
+
+
+@pytest.mark.parametrize("marker_style", list(MarkerStyle))
+def test_every_marker_style_compiles_in_xgrammar(marker_style: MarkerStyle) -> None:
+    """All four marker styles produce a GBNF string xgrammar accepts."""
+    import xgrammar as xgr
+
+    for policy in Policy:
+        g = build_grammar(n_sources=3, policy=policy, marker_style=marker_style)
+        # from_ebnf raises if the body is malformed.
+        parsed = xgr.Grammar.from_ebnf(g.gbnf)
+        assert str(parsed)
+
+
+@pytest.mark.parametrize("marker_style", list(MarkerStyle))
+def test_text_rule_excludes_marker_open_char(marker_style: MarkerStyle) -> None:
+    """AUTO body's ``text`` rule must exclude the open char of the chosen marker."""
+    g = build_grammar(n_sources=3, policy=Policy.AUTO, marker_style=marker_style)
+    open_char = {
+        MarkerStyle.BRACKET: "[",
+        MarkerStyle.PAREN: "(",
+        MarkerStyle.CURLY: "{",
+        MarkerStyle.CARET: "^",
+    }[marker_style]
+    assert f"text ::= [^{open_char}]+" in g.gbnf

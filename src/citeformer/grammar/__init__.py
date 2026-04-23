@@ -16,8 +16,16 @@ from __future__ import annotations
 
 from citeformer.grammar.builder import (
     DEFAULT_MAX_CONTENT_CHARS,
+    MARKER_SPECS,
     Grammar,
+    MarkerSpec,
     build_grammar,
 )
 
-__all__ = ["DEFAULT_MAX_CONTENT_CHARS", "Grammar", "build_grammar"]
+__all__ = [
+    "DEFAULT_MAX_CONTENT_CHARS",
+    "MARKER_SPECS",
+    "Grammar",
+    "MarkerSpec",
+    "build_grammar",
+]

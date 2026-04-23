@@ -4,7 +4,7 @@ cite_ids:
 - 3
 gbnf: 'root ::= (text | cite-group)+
 
-  text ::= [^\[]+
+  text ::= [^[]+
 
   cite-group ::= cite-id (ws cite-id)*
 
@@ -13,5 +13,6 @@ gbnf: 'root ::= (text | cite-group)+
   cite-id ::= "[" ("1" | "2" | "3") "]"
 
   '
+marker_style: bracket
 policy: auto
 root_rule: root

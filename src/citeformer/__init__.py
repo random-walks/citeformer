@@ -21,7 +21,14 @@ from __future__ import annotations
 from citeformer._version import __version__
 from citeformer.backends import Backend, MockBackend
 from citeformer.citeformer import Citeformer, StreamingResult, deduplicate_adjacent_cites
-from citeformer.core import Citation, GenerationResult, Policy, Reference, Source
+from citeformer.core import (
+    Citation,
+    GenerationResult,
+    MarkerStyle,
+    Policy,
+    Reference,
+    Source,
+)
 from citeformer.csl import (
     CSLValidationError,
     ValidationReport,
@@ -47,6 +54,7 @@ __all__ = [
     "CitationSupport",
     "Citeformer",
     "GenerationResult",
+    "MarkerStyle",
     "MockBackend",
     "Policy",
     "Reference",

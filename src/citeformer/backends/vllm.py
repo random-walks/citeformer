@@ -18,7 +18,7 @@ import logging
 from typing import Any
 
 from citeformer.backends.base import Backend
-from citeformer.core import Policy, Source
+from citeformer.core import MarkerStyle, Policy, Source
 from citeformer.grammar import DEFAULT_MAX_CONTENT_CHARS, build_grammar
 
 _LOG = logging.getLogger(__name__)
@@ -111,11 +111,13 @@ class VLLMBackend(Backend):
         max_new_tokens = int(options.get("max_new_tokens", _DEFAULT_MAX_NEW_TOKENS))
         temperature = float(options.get("temperature", _DEFAULT_TEMPERATURE))
         max_content_chars = options.get("max_content_chars", DEFAULT_MAX_CONTENT_CHARS)
+        marker_style = options.get("marker_style", MarkerStyle.BRACKET)
 
         grammar = build_grammar(
             n_sources=len(sources),
             policy=policy,
             max_content_chars=max_content_chars,
+            marker_style=marker_style,
         )
         guided = GuidedDecodingParams(
             grammar=grammar.gbnf,

@@ -34,6 +34,33 @@ class Policy(StrEnum):
     AUTO = "auto"
 
 
+class MarkerStyle(StrEnum):
+    """Inline citation-marker visual shape.
+
+    Orthogonal to :class:`Policy` — the structural guarantee ("digit enum is
+    bounded by ``len(sources)``") holds for every marker style because the
+    grammar enumerates the same set of ids regardless of which delimiters
+    bracket them.
+
+    - ``BRACKET`` (default): ``[1]`` — numeric styles, IEEE / Vancouver shape.
+    - ``PAREN``: ``(1)`` — used by some author-year styles and legacy
+      newspaper conventions.
+    - ``CURLY``: ``{1}`` — less common but useful when the downstream
+      pipeline already reserves square brackets (e.g. Markdown link syntax).
+    - ``CARET``: ``^1`` — caret-prefixed numeric, a footnote-style inline
+      without the superscript Unicode.
+
+    Picking a non-bracket marker does **not** change the §10.1 structural
+    guarantee — it just changes the delimiters used at both the grammar
+    terminal and the post-hoc parse regex.
+    """
+
+    BRACKET = "bracket"
+    PAREN = "paren"
+    CURLY = "curly"
+    CARET = "caret"
+
+
 class Source(BaseModel):
     """A piece of evidence made available to the model.
 

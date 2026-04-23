@@ -6,7 +6,7 @@ gbnf: 'root ::= sentence (ws sentence)*
 
   sentence ::= content cite-group sent-end
 
-  content ::= [^\[.!?]{1, 240}
+  content ::= [^[.!?]{1, 240}
 
   sent-end ::= "." | "!" | "?"
 
@@ -17,5 +17,6 @@ gbnf: 'root ::= sentence (ws sentence)*
   cite-id ::= "[" ("1" | "2" | "3") "]"
 
   '
+marker_style: bracket
 policy: required
 root_rule: root

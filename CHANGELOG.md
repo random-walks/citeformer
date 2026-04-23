@@ -6,6 +6,20 @@ Versioning policy: **patch bumps are cheap**. See [docs/development/releasing.md
 
 ## [Unreleased]
 
+### Added — P6 NLI-based verification + AI-paper benchmark
+
+The final v0.1 phase. `GenerationResult.verify()` is no longer a stub —
+real NLI-backed entailment + coverage checks land now. New
+`citeformer.verify` module: sentence splitter + existence check (no ML)
+plus NLI-powered entailment and coverage. `GenerationResult` and
+`VerificationReport` both bumped to schema_version=2 (see
+[ADR-008](docs/decisions/008-generation-result-schema-v2.md)).
+Benchmark harness at `benchmarks/demo.py` runs on six real AI papers
+(Attention Is All You Need, BERT, GPT-3, Chain-of-Thought, LLaMA,
+QLoRA) and compares constrained vs. baseline generation on a shared
+model instance. Known limitation in REQUIRED policy on small models
+documented in [ADR-007](docs/decisions/007-required-policy-progression-gap.md).
+
 ### Changed — render layer rewritten from citeproc-py to home-grown formatters
 
 Replaced the citeproc-py-based `render_references` with six hand-written

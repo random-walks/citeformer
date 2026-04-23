@@ -42,6 +42,7 @@ That's the jsonformer insight, applied to citation attribution in RAG. citeforme
 
 getting-started
 guarantees
+verification
 ```
 
 ```{toctree}

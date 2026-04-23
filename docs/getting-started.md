@@ -1,28 +1,33 @@
 # Getting started
 
-:::{note}
-This page is a stub. The real quickstart lands once P2 ships — a working HF backend with grammar-level citation enforcement. Follow the [CHANGELOG](https://github.com/random-walks/citeformer/blob/main/CHANGELOG.md) or watch the repo for the v0.1 release announcement.
-:::
-
-## P0 — installing the scaffold
-
-Until P2 lands, there's no working backend yet, but you can still install the package to see the shape:
+## Install
 
 ```bash
+# Core install — Source types, render layer, metadata fetchers.
 pip install citeformer
-python -c "import citeformer; print(citeformer.__version__)"
+
+# With the HuggingFace transformers backend (local grammar-enforced decoding).
+pip install 'citeformer[hf]'
+
+# With NLI-based verify().
+pip install 'citeformer[verify]'
+
+# Everything cross-platform.
+pip install 'citeformer[all]'
 ```
 
-## What to expect in v0.1
+Python 3.11+ (tested through 3.14).
 
-After the full P0 → P6 phase plan lands (see [architecture](reference/architecture.md)), the user-facing API will look roughly like this:
+## Full quickstart
 
 ```python
-from citeformer import Citeformer, Source
+from citeformer import Citeformer, Policy, Source
+from citeformer.backends.hf import HFBackend
 
+# 1. Gather sources — via DOI, arXiv, PDF, URL, or hand-constructed.
 sources = [
-    Source.from_doi("10.1038/s41586-023-06221-2"),
-    Source.from_arxiv("2305.14627"),
+    Source.from_arxiv("1706.03762"),                # Attention Is All You Need
+    Source.from_arxiv("1810.04805"),                # BERT
     Source(
         metadata={
             "id": "poe-raven",
@@ -35,24 +40,49 @@ sources = [
     ),
 ]
 
+# 2. Instantiate a Citeformer with a grammar-enforced backend.
+backend = HFBackend(model="Qwen/Qwen2.5-0.5B-Instruct")
 cf = Citeformer(
-    backend="hf",
-    model="microsoft/Phi-3.5-mini-instruct",
+    backend=backend,
     style="apa-7",
-    citation_policy="required",
+    citation_policy=Policy.AUTO,
 )
-result = cf.generate(prompt="Summarize these works.", sources=sources)
+
+# 3. Generate. Fabricating [4] is structurally impossible (only 3 sources).
+result = cf.generate(
+    prompt="Write a short paragraph about transformer-based LMs, citing [N] markers.",
+    sources=sources,
+    max_new_tokens=120,
+)
 
 print(result.text)
-# → "Poe's 'The Raven' opens with mystery [3]. The Nature paper shows [1]..."
+# → "Transformers introduced self-attention [1]. BERT extended this with bidirectional pre-training [2]..."
 
+# 4. Rendered references — via home-grown CSL formatter, never by the model.
 for ref in result.references:
     print(ref.rendered)
-# → "Poe, E. A. (1845). The Raven."
-# → ... (rendered by citeproc-py, not by the LLM)
+# → "Vaswani, A. et al. (2017). Attention Is All You Need. arXiv preprint."
+# → ...
 
-report = result.verify()
-print(report.support_rate)  # NLI-based entailment check
+# 5. NLI-verify every citation.
+report = result.verify(threshold=0.5)
+print(f"support rate: {report.support_rate:.0%}")
+for cs in report.per_citation:
+    print(f"  cite #{cs.citation_index}: entailment={cs.entailment_score:.2f}")
 ```
 
-The key property: `[4]` cannot appear in `result.text` because there is no fourth source. It's structurally impossible at the logit level, not a prompt hint or post-hoc check.
+## Key properties to remember
+
+- **No fabrications**: ``[4]`` cannot appear in ``result.text`` when there are 3 sources.
+  The grammar masks out-of-range tokens at every decode step — see
+  [architecture](reference/architecture.md) for the §10.1 contract.
+- **References are home-grown**: citeformer ships six CSL formatters (APA, MLA, Chicago
+  author-date, IEEE, Nature, Vancouver). The LLM never sees / writes the bibliography.
+- **Verify is opt-in**: ``result.verify()`` runs NLI per citation; not free. Skip it for
+  pure generation throughput.
+
+## See also
+
+- [Guarantees](guarantees.md) — what's structurally enforced vs. what's post-hoc checked.
+- [Verification](verification.md) — how NLI-based verify() works and its limitations.
+- [Architecture](reference/architecture.md) — the six-phase design and layer order.

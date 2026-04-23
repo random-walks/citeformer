@@ -15,4 +15,6 @@ and link to the replacement rather than editing history.
 004-citeproc-rewrite
 005-metadata-deps-in-main-install
 006-vllm-excluded-from-all-extra
+007-required-policy-progression-gap
+008-generation-result-schema-v2
 ```

@@ -1,0 +1,414 @@
+[
+  {
+    "arxiv_id": "1706.03762",
+    "label": "Attention Is All You Need (Vaswani et al., 2017)",
+    "csl": {
+      "id": "arxiv-1706.03762",
+      "type": "article-journal",
+      "author": [
+        {
+          "given": "Ashish",
+          "family": "Vaswani"
+        },
+        {
+          "given": "Noam",
+          "family": "Shazeer"
+        },
+        {
+          "given": "Niki",
+          "family": "Parmar"
+        },
+        {
+          "given": "Jakob",
+          "family": "Uszkoreit"
+        },
+        {
+          "given": "Llion",
+          "family": "Jones"
+        },
+        {
+          "given": "Aidan N.",
+          "family": "Gomez"
+        },
+        {
+          "given": "Lukasz",
+          "family": "Kaiser"
+        },
+        {
+          "given": "Illia",
+          "family": "Polosukhin"
+        }
+      ],
+      "title": "Attention Is All You Need",
+      "container-title": "arXiv preprint",
+      "note": "arXiv:1706.03762",
+      "URL": "https://arxiv.org/abs/1706.03762",
+      "abstract": "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks in an encoder-decoder configuration. The best performing models also connect the encoder and decoder through an attention mechanism. We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely. Experiments on two machine translation tasks show these models to be superior in quality while being more parallelizable and requiring significantly less time to train. Our model achieves 28.4 BLEU on the WMT 2014 English-to-German translation task, improving over the existing best results, including ensembles by over 2 BLEU. On the WMT 2014 English-to-French translation task, our model establishes a new single-model state-of-the-art BLEU score of 41.8 after training for 3.5 days on eight GPUs, a small fraction of the training costs of the best models from the literature. We show that the Transformer generalizes well to other tasks by applying it successfully to English constituency parsing both with large and limited training data.",
+      "issued": {
+        "date-parts": [
+          [
+            2017
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "arxiv_id": "1810.04805",
+    "label": "BERT: Pre-training of Deep Bidirectional Transformers (Devlin et al., 2018)",
+    "csl": {
+      "id": "arxiv-1810.04805",
+      "type": "article-journal",
+      "author": [
+        {
+          "given": "Jacob",
+          "family": "Devlin"
+        },
+        {
+          "given": "Ming-Wei",
+          "family": "Chang"
+        },
+        {
+          "given": "Kenton",
+          "family": "Lee"
+        },
+        {
+          "given": "Kristina",
+          "family": "Toutanova"
+        }
+      ],
+      "title": "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
+      "container-title": "arXiv preprint",
+      "note": "arXiv:1810.04805",
+      "URL": "https://arxiv.org/abs/1810.04805",
+      "abstract": "We introduce a new language representation model called BERT, which stands for Bidirectional Encoder Representations from Transformers. Unlike recent language representation models, BERT is designed to pre-train deep bidirectional representations from unlabeled text by jointly conditioning on both left and right context in all layers. As a result, the pre-trained BERT model can be fine-tuned with just one additional output layer to create state-of-the-art models for a wide range of tasks, such as question answering and language inference, without substantial task-specific architecture modifications.\n  BERT is conceptually simple and empirically powerful. It obtains new state-of-the-art results on eleven natural language processing tasks, including pushing the GLUE score to 80.5% (7.7% point absolute improvement), MultiNLI accuracy to 86.7% (4.6% absolute improvement), SQuAD v1.1 question answering Test F1 to 93.2 (1.5 point absolute improvement) and SQuAD v2.0 Test F1 to 83.1 (5.1 point absolute improvement).",
+      "issued": {
+        "date-parts": [
+          [
+            2018
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "arxiv_id": "2005.14165",
+    "label": "Language Models are Few-Shot Learners / GPT-3 (Brown et al., 2020)",
+    "csl": {
+      "id": "arxiv-2005.14165",
+      "type": "article-journal",
+      "author": [
+        {
+          "given": "Tom B.",
+          "family": "Brown"
+        },
+        {
+          "given": "Benjamin",
+          "family": "Mann"
+        },
+        {
+          "given": "Nick",
+          "family": "Ryder"
+        },
+        {
+          "given": "Melanie",
+          "family": "Subbiah"
+        },
+        {
+          "given": "Jared",
+          "family": "Kaplan"
+        },
+        {
+          "given": "Prafulla",
+          "family": "Dhariwal"
+        },
+        {
+          "given": "Arvind",
+          "family": "Neelakantan"
+        },
+        {
+          "given": "Pranav",
+          "family": "Shyam"
+        },
+        {
+          "given": "Girish",
+          "family": "Sastry"
+        },
+        {
+          "given": "Amanda",
+          "family": "Askell"
+        },
+        {
+          "given": "Sandhini",
+          "family": "Agarwal"
+        },
+        {
+          "given": "Ariel",
+          "family": "Herbert-Voss"
+        },
+        {
+          "given": "Gretchen",
+          "family": "Krueger"
+        },
+        {
+          "given": "Tom",
+          "family": "Henighan"
+        },
+        {
+          "given": "Rewon",
+          "family": "Child"
+        },
+        {
+          "given": "Aditya",
+          "family": "Ramesh"
+        },
+        {
+          "given": "Daniel M.",
+          "family": "Ziegler"
+        },
+        {
+          "given": "Jeffrey",
+          "family": "Wu"
+        },
+        {
+          "given": "Clemens",
+          "family": "Winter"
+        },
+        {
+          "given": "Christopher",
+          "family": "Hesse"
+        },
+        {
+          "given": "Mark",
+          "family": "Chen"
+        },
+        {
+          "given": "Eric",
+          "family": "Sigler"
+        },
+        {
+          "given": "Mateusz",
+          "family": "Litwin"
+        },
+        {
+          "given": "Scott",
+          "family": "Gray"
+        },
+        {
+          "given": "Benjamin",
+          "family": "Chess"
+        },
+        {
+          "given": "Jack",
+          "family": "Clark"
+        },
+        {
+          "given": "Christopher",
+          "family": "Berner"
+        },
+        {
+          "given": "Sam",
+          "family": "McCandlish"
+        },
+        {
+          "given": "Alec",
+          "family": "Radford"
+        },
+        {
+          "given": "Ilya",
+          "family": "Sutskever"
+        },
+        {
+          "given": "Dario",
+          "family": "Amodei"
+        }
+      ],
+      "title": "Language Models are Few-Shot Learners",
+      "container-title": "arXiv preprint",
+      "note": "arXiv:2005.14165",
+      "URL": "https://arxiv.org/abs/2005.14165",
+      "abstract": "Recent work has demonstrated substantial gains on many NLP tasks and benchmarks by pre-training on a large corpus of text followed by fine-tuning on a specific task. While typically task-agnostic in architecture, this method still requires task-specific fine-tuning datasets of thousands or tens of thousands of examples. By contrast, humans can generally perform a new language task from only a few examples or from simple instructions - something which current NLP systems still largely struggle to do. Here we show that scaling up language models greatly improves task-agnostic, few-shot performance, sometimes even reaching competitiveness with prior state-of-the-art fine-tuning approaches. Specifically, we train GPT-3, an autoregressive language model with 175 billion parameters, 10x more than any previous non-sparse language model, and test its performance in the few-shot setting. For all tasks, GPT-3 is applied without any gradient updates or fine-tuning, with tasks and few-shot demonstrations specified purely via text interaction with the model. GPT-3 achieves strong performance on many NLP datasets, including translation, question-answering, and cloze tasks, as well as several tasks that require on-the-fly reasoning or domain adaptation, such as unscrambling words, using a novel word in a sentence, or performing 3-digit arithmetic. At the same time, we also identify some datasets where GPT-3's few-shot learning still struggles, as well as some datasets where GPT-3 faces methodological issues related to training on large web corpora. Finally, we find that GPT-3 can generate samples of news articles which human evaluators have difficulty distinguishing from articles written by humans. We discuss broader societal impacts of this finding and of GPT-3 in general.",
+      "issued": {
+        "date-parts": [
+          [
+            2020
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "arxiv_id": "2201.11903",
+    "label": "Chain-of-Thought Prompting (Wei et al., 2022)",
+    "csl": {
+      "id": "arxiv-2201.11903",
+      "type": "article-journal",
+      "author": [
+        {
+          "given": "Jason",
+          "family": "Wei"
+        },
+        {
+          "given": "Xuezhi",
+          "family": "Wang"
+        },
+        {
+          "given": "Dale",
+          "family": "Schuurmans"
+        },
+        {
+          "given": "Maarten",
+          "family": "Bosma"
+        },
+        {
+          "given": "Brian",
+          "family": "Ichter"
+        },
+        {
+          "given": "Fei",
+          "family": "Xia"
+        },
+        {
+          "given": "Ed",
+          "family": "Chi"
+        },
+        {
+          "given": "Quoc",
+          "family": "Le"
+        },
+        {
+          "given": "Denny",
+          "family": "Zhou"
+        }
+      ],
+      "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
+      "container-title": "arXiv preprint",
+      "note": "arXiv:2201.11903",
+      "URL": "https://arxiv.org/abs/2201.11903",
+      "abstract": "We explore how generating a chain of thought -- a series of intermediate reasoning steps -- significantly improves the ability of large language models to perform complex reasoning. In particular, we show how such reasoning abilities emerge naturally in sufficiently large language models via a simple method called chain of thought prompting, where a few chain of thought demonstrations are provided as exemplars in prompting. Experiments on three large language models show that chain of thought prompting improves performance on a range of arithmetic, commonsense, and symbolic reasoning tasks. The empirical gains can be striking. For instance, prompting a 540B-parameter language model with just eight chain of thought exemplars achieves state of the art accuracy on the GSM8K benchmark of math word problems, surpassing even finetuned GPT-3 with a verifier.",
+      "issued": {
+        "date-parts": [
+          [
+            2022
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "arxiv_id": "2302.13971",
+    "label": "LLaMA: Open and Efficient Foundation Language Models (Touvron et al., 2023)",
+    "csl": {
+      "id": "arxiv-2302.13971",
+      "type": "article-journal",
+      "author": [
+        {
+          "given": "Hugo",
+          "family": "Touvron"
+        },
+        {
+          "given": "Thibaut",
+          "family": "Lavril"
+        },
+        {
+          "given": "Gautier",
+          "family": "Izacard"
+        },
+        {
+          "given": "Xavier",
+          "family": "Martinet"
+        },
+        {
+          "given": "Marie-Anne",
+          "family": "Lachaux"
+        },
+        {
+          "given": "Timothée",
+          "family": "Lacroix"
+        },
+        {
+          "given": "Baptiste",
+          "family": "Rozière"
+        },
+        {
+          "given": "Naman",
+          "family": "Goyal"
+        },
+        {
+          "given": "Eric",
+          "family": "Hambro"
+        },
+        {
+          "given": "Faisal",
+          "family": "Azhar"
+        },
+        {
+          "given": "Aurelien",
+          "family": "Rodriguez"
+        },
+        {
+          "given": "Armand",
+          "family": "Joulin"
+        },
+        {
+          "given": "Edouard",
+          "family": "Grave"
+        },
+        {
+          "given": "Guillaume",
+          "family": "Lample"
+        }
+      ],
+      "title": "LLaMA: Open and Efficient Foundation Language Models",
+      "container-title": "arXiv preprint",
+      "note": "arXiv:2302.13971",
+      "URL": "https://arxiv.org/abs/2302.13971",
+      "abstract": "We introduce LLaMA, a collection of foundation language models ranging from 7B to 65B parameters. We train our models on trillions of tokens, and show that it is possible to train state-of-the-art models using publicly available datasets exclusively, without resorting to proprietary and inaccessible datasets. In particular, LLaMA-13B outperforms GPT-3 (175B) on most benchmarks, and LLaMA-65B is competitive with the best models, Chinchilla-70B and PaLM-540B. We release all our models to the research community.",
+      "issued": {
+        "date-parts": [
+          [
+            2023
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "arxiv_id": "2305.14314",
+    "label": "QLoRA: Efficient Finetuning of Quantized LLMs (Dettmers et al., 2023)",
+    "csl": {
+      "id": "arxiv-2305.14314",
+      "type": "article-journal",
+      "author": [
+        {
+          "given": "Tim",
+          "family": "Dettmers"
+        },
+        {
+          "given": "Artidoro",
+          "family": "Pagnoni"
+        },
+        {
+          "given": "Ari",
+          "family": "Holtzman"
+        },
+        {
+          "given": "Luke",
+          "family": "Zettlemoyer"
+        }
+      ],
+      "title": "QLoRA: Efficient Finetuning of Quantized LLMs",
+      "container-title": "arXiv preprint",
+      "note": "arXiv:2305.14314",
+      "URL": "https://arxiv.org/abs/2305.14314",
+      "abstract": "We present QLoRA, an efficient finetuning approach that reduces memory usage enough to finetune a 65B parameter model on a single 48GB GPU while preserving full 16-bit finetuning task performance. QLoRA backpropagates gradients through a frozen, 4-bit quantized pretrained language model into Low Rank Adapters~(LoRA). Our best model family, which we name Guanaco, outperforms all previous openly released models on the Vicuna benchmark, reaching 99.3% of the performance level of ChatGPT while only requiring 24 hours of finetuning on a single GPU. QLoRA introduces a number of innovations to save memory without sacrificing performance: (a) 4-bit NormalFloat (NF4), a new data type that is information theoretically optimal for normally distributed weights (b) double quantization to reduce the average memory footprint by quantizing the quantization constants, and (c) paged optimziers to manage memory spikes. We use QLoRA to finetune more than 1,000 models, providing a detailed analysis of instruction following and chatbot performance across 8 instruction datasets, multiple model types (LLaMA, T5), and model scales that would be infeasible to run with regular finetuning (e.g. 33B and 65B parameter models). Our results show that QLoRA finetuning on a small high-quality dataset leads to state-of-the-art results, even when using smaller models than the previous SoTA. We provide a detailed analysis of chatbot performance based on both human and GPT-4 evaluations showing that GPT-4 evaluations are a cheap and reasonable alternative to human evaluation. Furthermore, we find that current chatbot benchmarks are not trustworthy to accurately evaluate the performance levels of chatbots. A lemon-picked analysis demonstrates where Guanaco fails compared to ChatGPT. We release all of our models and code, including CUDA kernels for 4-bit training.",
+      "issued": {
+        "date-parts": [
+          [
+            2023
+          ]
+        ]
+      }
+    }
+  }
+]

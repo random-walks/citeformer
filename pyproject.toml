@@ -38,15 +38,16 @@ dependencies = [
     "typer>=0.12",
     "rich>=13",
     "lark>=1.2",
-    # P3 rendering — citeproc-py is small (pure Python) and core to the value
-    # prop ("deterministic CSL bibliography"), so it lives in main deps.
-    "citeproc-py>=0.9",
     # P4 metadata fetchers — small deps, metadata extraction is a core feature.
     "httpx>=0.27",
     "diskcache>=5",
     "readability-lxml>=0.8.1",
     "lxml>=5",
     "pypdf>=5",
+    # P3 rendering is home-grown (see docs/decisions/004-citeproc-rewrite.md).
+    # Users who want the "any of 10,000 CSL files" escape hatch install the
+    # `citeproc-compat` extra below; our built-in six formatters never touch
+    # citeproc-py.
 ]
 
 [project.optional-dependencies]
@@ -63,6 +64,10 @@ hf = [
 # works on macOS. Install explicitly: `pip install citeformer[vllm]` on a supported host.
 vllm = ["vllm>=0.7"]
 llamacpp = ["llama-cpp-python>=0.3"]
+# citeproc-py compatibility for users who want arbitrary CSL files beyond our
+# six bundled formatters. No code uses this yet; reserved for the compat
+# module that wraps citeproc-py's renderer.
+citeproc-compat = ["citeproc-py>=0.9"]
 # P6: NLI-based verification.
 verify = ["transformers>=4.46", "torch>=2.4", "sentence-transformers>=3"]
 
@@ -115,14 +120,9 @@ path = "src/citeformer/_version.py"
 [tool.hatch.build.targets.wheel]
 packages = ["src/citeformer"]
 
-# Ship bundled CSL style files as package data. citeformer.render.styles
-# loads them via `importlib.resources.files`.
-[tool.hatch.build.targets.wheel.force-include]
-"src/citeformer/render/apa.csl" = "citeformer/render/apa.csl"
-"src/citeformer/render/modern-language-association.csl" = "citeformer/render/modern-language-association.csl"
-"src/citeformer/render/chicago-author-date.csl" = "citeformer/render/chicago-author-date.csl"
-"src/citeformer/render/ieee.csl" = "citeformer/render/ieee.csl"
-"src/citeformer/render/nature.csl" = "citeformer/render/nature.csl"
+# Bundled CSL files are gone since the home-grown rewrite (P3-rewrite).
+# All six built-in styles are pure Python. If we later ship CSL files for
+# the `citeproc-compat` path, re-add a force-include block here.
 
 [tool.ruff]
 line-length = 100
@@ -151,6 +151,10 @@ convention = "google"
 "docs/**/*.py" = ["D"]
 # typer's idiomatic pattern is `x: T = typer.Option(...)` — B008 is a false positive here.
 "src/citeformer/cli/**/*.py" = ["B008"]
+# Per-style formatter modules inherit method docstrings from the ABC and keep
+# bodies short/direct; module-level docstrings document the style. D102/D103
+# don't add signal here.
+"src/citeformer/render/formatters/*.py" = ["D102", "D103"]
 "examples/**/*.py" = ["D", "E402"]
 "benchmarks/**/*.py" = ["D", "E402"]
 

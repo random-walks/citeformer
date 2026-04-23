@@ -1,14 +1,15 @@
 - inline_marker: (Poe 1845)
-  rendered: Poe, E. A.1845The Raven and Other Poems. Wiley and Putnam.
+  rendered: 'Poe, Edgar Allan. 1845. The Raven and Other Poems. New York: Wiley and
+    Putnam.'
   source_id: 1
 - inline_marker: (Smith and Jones 2023)
-  rendered: 'Smith, A.and B. Jones2023“Constrained Decoding for RAG”Journal of Applied
-    AI 12(3): 45. https://doi.org/10.1234/jaai.2023.12.3.45.'
+  rendered: 'Smith, Alice, and Bob Jones. 2023. "Constrained Decoding for RAG." Journal
+    of Applied AI 12 (3): 45.'
   source_id: 2
 - inline_marker: (Melville 1851)
-  rendered: Melville, H.1851“Loomings”In Moby-Dick. Harper & Brothers.
+  rendered: Melville, Herman. 1851. "Loomings." In Moby-Dick, 1. Harper & Brothers.
   source_id: 3
 - inline_marker: (Austen 1813)
-  rendered: Austen, J.1813“A Critical Edition of Early Novels”. PhD dissertation,
+  rendered: Austen, Jane. 1813. "A Critical Edition of Early Novels." PhD dissertation,
     University of Oxford.
   source_id: 4

@@ -104,7 +104,7 @@ class LlamaCppBackend(Backend):
         Returns:
             Generated text with only valid ``[N]`` markers.
         """
-        from llama_cpp import LlamaGrammar  # type: ignore[attr-defined]
+        from llama_cpp import LlamaGrammar  # type: ignore[attr-defined,unused-ignore]
 
         if len(sources) < 1:
             raise ValueError("LlamaCppBackend.generate requires at least 1 source")

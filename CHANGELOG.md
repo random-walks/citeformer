@@ -6,6 +6,71 @@ Versioning policy: **patch bumps are cheap**. See [docs/development/releasing.md
 
 ## [Unreleased]
 
+### Changed — render layer rewritten from citeproc-py to home-grown formatters
+
+Replaced the citeproc-py-based `render_references` with six hand-written
+`CitationFormatter` subclasses. See
+[docs/decisions/004-citeproc-rewrite.md](docs/decisions/004-citeproc-rewrite.md)
+for the full rationale (Chicago page-range crash, APA double-period, noisy
+warnings, no canonical Vancouver in the upstream CSL bundle).
+
+Home-grown formatters landed at `src/citeformer/render/formatters/`:
+- `APAFormatter` (APA 7) — author-date.
+- `MLAFormatter` (MLA 9) — author + page.
+- `ChicagoAuthorDateFormatter` — author-date, no comma.
+- `IEEEFormatter` — numeric, bracketed.
+- `NatureFormatter` — numeric, bare.
+- `VancouverFormatter` — numeric, bracketed; previously unavailable.
+
+Shared helpers in `_base.py`: `Author`, `parse_authors()`, `parse_year()`,
+`ensure_period()`, `format_page_range()`, `format_doi()`, `get_str()`,
+`get_title()`. The `CitationFormatter` ABC exposes `inline()` and
+`bibliography()`; each style handles `article-journal`, `book`, `chapter`,
+`thesis`, `paper-conference`, `webpage`, and `report` types with sensible
+fallbacks.
+
+Dependency changes:
+- `citeproc-py` removed from main dependencies.
+- New optional `citeproc-compat` extra (holds `citeproc-py>=0.9`). No code
+  uses it yet; reserved for a future compat wrapper that lets users plug
+  arbitrary `.csl` files back in.
+- Bundled `apa.csl`, `modern-language-association.csl`,
+  `chicago-author-date.csl`, `ieee.csl`, `nature.csl` files deleted — no
+  longer consulted by the render path.
+
+Public API changes:
+- `bundled_style_names()` now returns 6 styles (adds `"vancouver"`).
+- `style_citation_format()` keeps the same shape; values come from the
+  formatter's `citation_format` class attribute.
+- `load_style()` and `resolve_style_path()` are GONE — they were
+  citeproc-py-specific. Callers who need a formatter object use
+  `get_formatter(name)` (new).
+
+Tests:
+- 60 new tests in `tests/unit/test_formatters.py` — parametrised across
+  all six styles × four CSL types, plus edge cases (missing author,
+  missing year, literal names, hyphenated given names, unknown CSL types,
+  per-style et-al. thresholds).
+- 6 snapshot tests in `tests/unit/test_render_csl.py` — the pre-existing
+  snapshots were regenerated with the new home-grown output; Vancouver
+  snapshot added.
+- `tests/unit/test_render_styles.py` rewritten around `get_formatter`.
+
+New skill at `.claude/skills/add-citation-format/SKILL.md` documents the
+template for adding a seventh style: research, copy-formatter, register,
+test matrix, document.
+
+ADR status:
+- [ADR-003](docs/decisions/003-bundle-five-csl-styles.md): superseded —
+  the bundled set grew to six and the CSL files were removed.
+- [ADR-004](docs/decisions/004-citeproc-rewrite.md): Proposed → Accepted
+  and implemented.
+- [ADR-005](docs/decisions/005-metadata-deps-in-main-install.md): updated
+  to note that citeproc-py was removed after the rewrite.
+
+§10.2 (`Source.metadata` as CSL-JSON) and §10.3 (output schemas) both
+unchanged. Pure implementation-layer swap from the users' perspective.
+
 ### Added — P5 vLLM and llama.cpp backends
 
 Two more local backends joining HFBackend, both consuming the same GBNF

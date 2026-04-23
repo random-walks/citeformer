@@ -178,6 +178,11 @@ def test_render_snapshot_nature(data_regression) -> None:  # type: ignore[no-unt
     data_regression.check(_refs_dict(refs))
 
 
+def test_render_snapshot_vancouver(data_regression) -> None:  # type: ignore[no-untyped-def]
+    refs = render_references(_canonical_sources(), _full_citations(), "vancouver")
+    data_regression.check(_refs_dict(refs))
+
+
 # --- Helpers ------------------------------------------------------------------
 
 

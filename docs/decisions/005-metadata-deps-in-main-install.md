@@ -12,7 +12,10 @@ The P0 scaffolding stratified optional dependencies aggressively: `hf`, `render`
 
 ## Decision
 
-Move `citeproc-py`, `httpx`, `diskcache`, `readability-lxml`, `lxml`, and `pypdf` into main `dependencies`. Remove the now-redundant `render`, `pdf`, `url`, and `meta` extras. Keep:
+Move `httpx`, `diskcache`, `readability-lxml`, `lxml`, and `pypdf` into main `dependencies`. Remove the now-redundant `render`, `pdf`, `url`, and `meta` extras. Keep:
+
+(Originally `citeproc-py` was also promoted here, but the [home-grown render rewrite](004-citeproc-rewrite.md) removed it entirely; it's now in the opt-in `citeproc-compat` extra.)
+
 
 - `hf` (torch + transformers + xgrammar + llguidance + accelerate) — heavy ML stack.
 - `vllm` (Linux/CUDA only; see [ADR-006](006-vllm-excluded-from-all-extra.md)).

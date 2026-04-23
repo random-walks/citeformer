@@ -1,7 +1,7 @@
 # ADR-003 — Bundle five CSL styles; accept user paths; drop Vancouver from v0.1
 
-- **Status**: Accepted (P3, 2026-04-23).
-- **Likely superseded by**: [ADR-004](004-citeproc-rewrite.md) — once the home-grown formatter lands, Vancouver returns and "bundled" changes meaning.
+- **Status**: Superseded by [ADR-004](004-citeproc-rewrite.md) (2026-04-23).
+- **Historical record**: this captured the bundled CSL-file decision during the citeproc-py era. After the home-grown rewrite, the bundled set grew to six (Vancouver joined) and the `.csl` files were removed — they're no longer consulted by the render path.
 
 ## Context
 

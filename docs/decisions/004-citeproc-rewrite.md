@@ -1,6 +1,6 @@
-# ADR-004 — Plan: replace citeproc-py with a home-grown formatter
+# ADR-004 — Replace citeproc-py with a home-grown formatter
 
-- **Status**: Proposed (planned, 2026-04-23). Implementation lands in a dedicated phase after P5.
+- **Status**: Accepted and implemented (2026-04-23).
 
 ## Context
 
@@ -24,10 +24,12 @@ Rewrite `citeformer.render` to a home-grown formatter. Specifically:
 
 ## Consequences
 
-- Full control over output. We fix the Chicago / APA quirks by construction.
-- Vancouver lands.
-- `citeformer[citeproc-compat]` remains a clean path for users who want to use a random `.csl` file from the upstream 10,000 — but they pay the quirks cost themselves and know it.
-- Loss of "10,000 styles for free" out-of-the-box. Mitigated by the compatibility extra.
-- Effort estimate: ~1,500 LOC across six formatters + ~180 tests + the skill file. Bigger than any single prior P-phase. Scheduled as its own refactor commit with clear boundaries.
-- §10.2 (CSL-JSON metadata shape) unchanged. §10.3 (output schemas) unchanged. This is a pure implementation-layer refactor.
-- Cross-references to this ADR: [ADR-003](003-bundle-five-csl-styles.md) (bundled-style decision will be revisited with Vancouver back in scope).
+- Full control over output. Chicago page-range crash, APA double-period, noisy warnings — all fixed by construction. The six built-ins go through zero citeproc-py code paths.
+- Vancouver joined the bundle (six styles total: APA 7, MLA 9, Chicago author-date, IEEE, Nature, Vancouver).
+- `citeformer[citeproc-compat]` extra is declared in `pyproject.toml`. No code currently uses it; reserved for a future compatibility module that lets users plug arbitrary `.csl` files back in. Users who need that today can install citeproc-py themselves — the `Reference` / `Source.metadata` types are compatible.
+- Loss of "10,000 styles for free" out-of-the-box. Mitigated by the compatibility extra + the `add-citation-format` skill at `.claude/skills/add-citation-format/SKILL.md`.
+- Implementation landed at `src/citeformer/render/formatters/` (one file per style; `_base.py` for shared helpers: `Author`, `parse_authors`, `parse_year`, `ensure_period`, `format_page_range`, `format_doi`, `get_str`, `get_title`). Total ~1,200 LOC across formatters, 60+ granular tests, 6 snapshot tests, 1 skill file.
+- `citeproc-py` removed from main dependencies. Bundled `.csl` files deleted (`apa.csl`, `modern-language-association.csl`, `chicago-author-date.csl`, `ieee.csl`, `nature.csl`).
+- Public-API changes: `load_style()` and `resolve_style_path()` are gone (they were citeproc-py-specific). Callers use `get_formatter(name)` to obtain a formatter object.
+- §10.2 (`Source.metadata` as CSL-JSON) unchanged. §10.3 (output schemas) unchanged. Pure implementation-layer refactor from users' perspective.
+- [ADR-003](003-bundle-five-csl-styles.md) marked superseded in this round.

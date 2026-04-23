@@ -1,15 +1,14 @@
 - inline_marker: '1'
-  rendered: 1.Poe, E. A.. The Raven and Other Poems. (Wiley and Putnam, New York,
-    1845)..
+  rendered: 1. Poe, E. A. The Raven and Other Poems (Wiley and Putnam, 1845).
   source_id: 1
 - inline_marker: '2'
-  rendered: 2.Smith, A. & Jones, B.. Constrained Decoding for RAG. Journal of Applied
+  rendered: 2. Smith, A. & Jones, B. Constrained Decoding for RAG. Journal of Applied
     AI 12, 45 (2023).
   source_id: 2
 - inline_marker: '3'
-  rendered: 3.Melville, H.. Loomings. in Moby-Dick 1 (Harper & Brothers, 1851)..
+  rendered: 3. Melville, H. Loomings. In Moby-Dick 1 (Harper & Brothers, 1851).
   source_id: 3
 - inline_marker: '4'
-  rendered: 4.Austen, J.. A Critical Edition of Early Novels. (University of Oxford,
-    1813)..
+  rendered: 4. Austen, J. A Critical Edition of Early Novels. (PhD dissertation, University
+    of Oxford, 1813).
   source_id: 4

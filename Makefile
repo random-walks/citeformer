@@ -25,7 +25,7 @@ test-unit:
 	uv run pytest tests/unit
 
 test-integration:
-	uv sync --extra dev --extra hf
+	uv sync --extra dev --extra hf --extra llamacpp
 	uv run pytest -m integration
 
 lint:

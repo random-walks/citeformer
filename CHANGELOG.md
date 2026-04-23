@@ -6,6 +6,44 @@ Versioning policy: **patch bumps are cheap**. See [docs/development/releasing.md
 
 ## [Unreleased]
 
+### Added — P5 vLLM and llama.cpp backends
+
+Two more local backends joining HFBackend, both consuming the same GBNF
+grammar that the §10.1 contract pins. Citation fabrication is now
+structurally impossible on all three local inference paths.
+
+- `citeformer.backends.llamacpp.LlamaCppBackend`: wraps ``llama_cpp.Llama``;
+  compiles the GBNF via ``LlamaGrammar.from_string`` and passes it to
+  ``Llama.__call__(grammar=...)``. CPU, Metal, and CUDA all supported via
+  `n_gpu_layers` (auto-detected by llama.cpp). Takes a local GGUF file
+  path — users need ``pip install citeformer[llamacpp]`` plus a GGUF.
+- `citeformer.backends.vllm.VLLMBackend`: wraps ``vllm.LLM``; compiles the
+  GBNF via ``GuidedDecodingParams(grammar=..., backend="xgrammar")``.
+  XGrammar chosen as default backend since it matches HFBackend's choice —
+  users running the same grammar through both get identical decode-time
+  semantics. Linux/CUDA only; excluded from the ``all`` extra.
+
+Integration tests (7 new, total 11):
+- ``test_llamacpp_backend.py``: auto-downloads Qwen 2.5 0.5B Instruct Q4_K_M
+  GGUF (~370 MB, cached under the HF hub cache), loads the backend, runs
+  the "cannot fabricate citations" assertions under REQUIRED and AUTO
+  policies, plus a grammar-compiles smoke test that only needs
+  ``llama_cpp`` installed (no model load).
+- ``test_vllm_backend.py``: same assertions via vLLM; auto-skipped on
+  non-Linux or non-CUDA hosts. Uses ``Qwen/Qwen2.5-0.5B-Instruct`` (HF
+  weights) with ``enforce_eager=True`` and a small GPU memory utilization
+  budget so it runs on a wide variety of CUDA hardware.
+
+Locally on Apple Silicon: 9 integration tests pass (5 HF + 4 llama.cpp);
+2 vLLM tests skipped. Llama.cpp + HF + xgrammar all confirm the same
+§10.1 guarantee.
+
+Makefile:
+- ``make test-integration`` now runs ``uv sync --extra dev --extra hf
+  --extra llamacpp`` before pytest so both Apple-friendly local backends
+  are exercised. ``--extra vllm`` is opt-in per invocation (Linux/CUDA
+  hosts can add it themselves).
+
 ### Added — P4 metadata adapters (Source.from_doi / from_arxiv / from_pdf / from_url)
 
 Four classmethods on `Source` for building Source instances from common

@@ -1,6 +1,9 @@
 # ADR-007 — REQUIRED policy lets the model stall in content state
 
-- **Status**: Accepted as a known limitation (2026-04-23).
+- **Status**: Superseded by [ADR-009](009-bounded-content-required.md) (2026-04-23).
+  Kept for historical context — the problem described below is real, but the
+  "accept as documented" response was replaced same-day by a structural fix
+  (bounded `content` repetition). See ADR-009 for the current behavior.
 
 ## Context
 

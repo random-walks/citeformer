@@ -17,4 +17,5 @@ and link to the replacement rather than editing history.
 006-vllm-excluded-from-all-extra
 007-required-policy-progression-gap
 008-generation-result-schema-v2
+009-bounded-content-required
 ```

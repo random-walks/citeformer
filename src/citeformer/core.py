@@ -20,7 +20,10 @@ if TYPE_CHECKING:
 class Policy(StrEnum):
     """Citation enforcement policy.
 
-    - `REQUIRED`: every sentence must end with at least one citation (strictest; default).
+    - `REQUIRED`: every sentence must end with at least one citation (strictest;
+      default). The grammar bounds per-sentence content at
+      ``DEFAULT_MAX_CONTENT_CHARS`` to guarantee progression even on small
+      models — see ``docs/decisions/009-bounded-content-required.md``.
     - `QUOTES_ONLY`: only quoted spans require a citation; narrative sentences can stand alone.
     - `AUTO`: citations are optional at every position; `verify()` surfaces missing citations
       via the coverage check instead of rejecting them at decode time.
@@ -38,8 +41,9 @@ class Source(BaseModel):
     citation index used by the model and echoed back in `Citation.source_id` and
     `Reference.source_id` — it is always 1-indexed.
 
-    §10.2 contract: `metadata` must be a CSL-JSON item (the shape `citeproc-py`
-    consumes). See https://github.com/citation-style-language/schema for the spec.
+    §10.2 contract: `metadata` must be a CSL-JSON item — the shape our
+    home-grown formatters (and, historically, citeproc-py) consume. See
+    https://github.com/citation-style-language/schema for the spec.
 
     Attributes:
         metadata: CSL-JSON item with at least `id`, `type`, and whatever fields the
@@ -52,7 +56,7 @@ class Source(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     metadata: dict[str, Any] = Field(
-        description="CSL-JSON item consumed by citeproc-py.",
+        description="CSL-JSON item consumed by the render layer.",
     )
     content: str = Field(
         description="Raw text the model may cite from.",
@@ -181,7 +185,8 @@ class Reference(BaseModel):
     """A rendered bibliography entry paired with its inline marker.
 
     Every cited `source_id` has exactly one `Reference` in `GenerationResult.references`.
-    Rendering is deterministic via `citeproc-py` — **the model never touches this**.
+    Rendering is deterministic via the home-grown ``render/formatters/`` — **the
+    model never touches this**.
 
     Attributes:
         source_id: The 1-indexed source this reference describes. Matches the
@@ -189,8 +194,8 @@ class Reference(BaseModel):
         inline_marker: How the marker appears in prose. For numeric styles this is
             `"[1]"`; for author-year styles `"(Poe 1845)"`; for footnote styles
             `"¹"`. The renderer chooses based on the selected CSL style.
-        rendered: Full bibliography entry, rendered by `citeproc-py` in the chosen
-            CSL style. E.g. `"Poe, E. A. (1845). The Raven. ..."`.
+        rendered: Full bibliography entry, rendered by the style's formatter.
+            E.g. `"Poe, E. A. (1845). The Raven. ..."`.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -203,7 +208,7 @@ class Reference(BaseModel):
         description="How the marker appears in prose, e.g. '[1]' or '(Poe 1845)'.",
     )
     rendered: str = Field(
-        description="Full bibliography entry, rendered by citeproc-py.",
+        description="Full bibliography entry, rendered by the style formatter.",
     )
 
 

@@ -21,7 +21,7 @@ from typing import Any
 
 from citeformer.backends.base import Backend
 from citeformer.core import Policy, Source
-from citeformer.grammar import build_grammar
+from citeformer.grammar import DEFAULT_MAX_CONTENT_CHARS, build_grammar
 
 _LOG = logging.getLogger(__name__)
 
@@ -135,9 +135,11 @@ class HFBackend(Backend):
             sources: Sources in scope. Position (1-indexed) determines the
                 citation id the model can emit. Must be non-empty.
             policy: Citation enforcement policy.
-            **options: Sampling overrides — ``max_new_tokens`` (default 256),
-                ``temperature`` (default 0.7). Unknown options are silently
-                ignored.
+            **options: Sampling + grammar overrides —
+                ``max_new_tokens`` (default 256), ``temperature`` (default 0.7),
+                ``max_content_chars`` (default ``DEFAULT_MAX_CONTENT_CHARS``;
+                REQUIRED-policy soft progression bound — see ADR-009; pass
+                ``None`` to disable). Unknown options are silently ignored.
 
         Returns:
             The generated text as a string, containing only ``[N]`` markers where
@@ -153,8 +155,14 @@ class HFBackend(Backend):
         temperature = float(options.get("temperature", _DEFAULT_TEMPERATURE))
 
         # Build + compile the citation grammar. Compiler cache means compilation
-        # is near-free after the first call with a given (n_sources, policy).
-        grammar = build_grammar(n_sources=len(sources), policy=policy)
+        # is near-free after the first call with a given (n_sources, policy,
+        # max_content_chars) triple.
+        max_content_chars = options.get("max_content_chars", DEFAULT_MAX_CONTENT_CHARS)
+        grammar = build_grammar(
+            n_sources=len(sources),
+            policy=policy,
+            max_content_chars=max_content_chars,
+        )
         compiled = self._compiler.compile_grammar(
             grammar.gbnf,
             root_rule_name=grammar.root_rule,

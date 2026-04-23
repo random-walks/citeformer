@@ -11,14 +11,14 @@ What "bulletproof" actually means in citeformer.
 | Every inline marker has a matching reference, and vice versa | **Yes** — coupled at render time | Same |
 | Claim is actually supported by the cited source | **Verified** — NLI entailment via `verify()` | Same |
 | Sentence without a citation is actually non-factual | **Flagged** — NLI coverage check via `verify()` | Same |
-| Format matches the requested CSL style exactly | **Yes** — citeproc-py + 10k CSL styles | Same |
+| Format matches the requested CSL style exactly | **Yes** — six hand-written formatters (APA 7, MLA 9, Chicago author-date, IEEE, Nature, Vancouver) | Same |
 
 ## What's *not* enforced
 
 - **Claim truth.** citeformer enforces that *if* a claim is cited, the citation points at a real source; and via `verify()`, that the source entails the claim. It does *not* verify the source itself is correct. Garbage in, cited garbage out.
 - **Policy appropriateness.** You pick a `citation_policy` (`required`, `quotes_only`, `auto`). citeformer enforces the grammar that policy implies — it doesn't decide for you whether that policy is right for your domain.
 - **Retrieval quality.** citeformer is downstream of your retriever. If you retrieved irrelevant chunks, the model has to cite them anyway (or hit the coverage-flag branch of `verify()`).
-- **Sentence closure under REQUIRED.** The ``REQUIRED`` policy's grammar says every sentence must end with a cite-group — but small models (≤1B params) sometimes stall in "content" state indefinitely and never emit a ``[``, producing prose with zero citations that gets truncated at ``max_new_tokens``. The guarantee that *any emitted* cite is in-range still holds; the guarantee that a sentence *will* emit one doesn't. See [ADR-007](decisions/007-required-policy-progression-gap.md). Workaround: use ``AUTO`` + a citation-dense prompt on small models, or a ≥3B model for REQUIRED.
+- **Natural sentence length under REQUIRED.** The ``REQUIRED`` policy bounds per-sentence content at 240 characters (configurable) to guarantee progression on small models — see [ADR-009](decisions/009-bounded-content-required.md) for the structural fix to the [ADR-007](decisions/007-required-policy-progression-gap.md) stall. Sentences that would naturally run longer get clipped mid-clause, with the citation landing at clip point. Tune ``max_content_chars`` higher for very long-sentence technical writing, or pass ``None`` to disable bounding entirely.
 
 ## Why v0.1 skips API providers
 

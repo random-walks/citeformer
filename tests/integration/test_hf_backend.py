@@ -104,6 +104,37 @@ def test_hf_backend_rejects_empty_sources(hf_backend) -> None:  # type: ignore[n
 
 
 @pytest.mark.integration
+def test_hf_backend_required_with_tight_bound_emits_citations(hf_backend) -> None:  # type: ignore[no-untyped-def]
+    """ADR-009: bounded `content` forces progression on small models.
+
+    Pre-ADR-009, REQUIRED on a small model at modest `max_new_tokens` often
+    produced zero citations because the unbounded `content ::= ... +` let the
+    model stall in content state. With `max_content_chars=16` the grammar
+    hard-masks everything except `[` after 16 non-terminating chars, so at
+    least one citation must appear within the token budget.
+
+    This test uses `gpt2` which lacks a chat template and happily runs on
+    indefinitely — the exact stall-prone shape that exposed the old bug.
+    """
+    sources = _sources(3)
+    cf = Citeformer(backend=hf_backend, citation_policy=Policy.REQUIRED)
+    result = cf.generate(
+        prompt="The books discuss:",
+        sources=sources,
+        max_new_tokens=120,
+        temperature=0.7,
+        max_content_chars=16,  # tight bound exercises the fix quickly
+    )
+    emitted_ids = [int(m.group(1)) for m in _CITE.finditer(result.text)]
+    assert emitted_ids, (
+        f"ADR-009 regression: expected ≥1 citation with max_content_chars=16, "
+        f"got 0 in text: {result.text!r}"
+    )
+    for cid in emitted_ids:
+        assert 1 <= cid <= 3, f"FABRICATED citation id {cid} in text: {result.text!r}"
+
+
+@pytest.mark.integration
 def test_hf_backend_compiler_caches_across_calls(hf_backend) -> None:  # type: ignore[no-untyped-def]
     """Two generate() calls with the same (n_sources, policy) should hit the compiler
     cache rather than recompile the grammar.

@@ -6,7 +6,7 @@ gbnf: 'root ::= sentence (ws sentence)*
 
   sentence ::= content cite-group sent-end
 
-  content ::= [^\[.!?]+
+  content ::= [^\[.!?]{1, 240}
 
   sent-end ::= "." | "!" | "?"
 

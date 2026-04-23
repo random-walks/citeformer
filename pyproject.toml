@@ -1,0 +1,179 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "citeformer"
+dynamic = ["version"]
+description = "A bulletproof way to generate verifiably cited text from language models — structurally unforgeable citation markers via constrained decoding."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+authors = [{ name = "Blaise Albis-Burdige", email = "blaise@ubik.studio" }]
+keywords = [
+    "llm",
+    "rag",
+    "citations",
+    "constrained-decoding",
+    "structured-output",
+    "hallucination",
+    "nli",
+    "csl",
+    "agents",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: Linguistic",
+]
+dependencies = [
+    "pydantic>=2",
+    "typer>=0.12",
+    "rich>=13",
+]
+
+[project.optional-dependencies]
+# P2+: grammar-level logit enforcement for HF transformers.
+hf = [
+    "transformers>=4.46",
+    "torch>=2.4",
+    "accelerate>=1.0",
+    "xgrammar>=0.1.30",
+    "llguidance>=0.5",
+    "lark>=1.2",
+]
+# P3: deterministic CSL reference rendering.
+render = ["citeproc-py>=0.9"]
+# P4: metadata fetchers.
+pdf = ["grobid-client-python>=0.0.9"]
+url = ["readability-lxml>=0.8.1", "lxml>=5"]
+meta = ["citeformer[pdf,url]", "httpx>=0.27", "diskcache>=5"]
+# P5: additional local backends.
+# vllm is Linux/CUDA-only — deliberately excluded from `all` so `uv sync --all-extras`
+# works on macOS. Install explicitly: `pip install citeformer[vllm]` on a supported host.
+vllm = ["vllm>=0.7"]
+llamacpp = ["llama-cpp-python>=0.3"]
+# P6: NLI-based verification.
+verify = ["transformers>=4.46", "torch>=2.4", "sentence-transformers>=3"]
+
+docs = [
+    "sphinx>=7",
+    "sphinx-autobuild>=2024.10",
+    "sphinx-autodoc2>=0.5",
+    "myst-parser[linkify]>=3",
+    "myst-nb>=1.1",
+    "furo>=2024.8",
+    "sphinxcontrib-typer>=0.5",
+    "sphinx-design>=0.6",
+    "sphinx-copybutton>=0.5",
+    "sphinx-llms-txt>=0.7",
+]
+examples = [
+    "citeformer[hf,render,meta]",
+    "jupyter>=1",
+    "matplotlib>=3.8",
+]
+all = ["citeformer[hf,render,meta,llamacpp,verify]"]
+# Intentionally lightweight during P0 — just docs + tooling, no ML deps yet.
+# Grows to include `all` in P2 once src/ actually imports transformers / xgrammar.
+dev = [
+    "citeformer[docs]",
+    "pytest>=8",
+    "pytest-cov",
+    "pytest-asyncio",
+    "pytest-regressions>=2",
+    "pytest-vcr",
+    "ruff>=0.6",
+    "mypy>=1.10",
+    "pre-commit>=3",
+    "hatch",
+]
+
+[project.scripts]
+citeformer = "citeformer.cli.app:app"
+
+[project.urls]
+Homepage = "https://citeformer.readthedocs.io"
+Repository = "https://github.com/random-walks/citeformer"
+Documentation = "https://citeformer.readthedocs.io"
+Issues = "https://github.com/random-walks/citeformer/issues"
+Changelog = "https://github.com/random-walks/citeformer/blob/main/CHANGELOG.md"
+
+[tool.hatch.version]
+path = "src/citeformer/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/citeformer"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = [".venv", "docs/_build", "docs/apidocs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "N", "PTH"]
+extend-select = ["D100", "D101", "D102", "D103", "D200"]
+ignore = ["E501", "D203", "D213"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["D"]
+"docs/**/*.py" = ["D"]
+# typer's idiomatic pattern is `x: T = typer.Option(...)` — B008 is a false positive here.
+"src/citeformer/cli/**/*.py" = ["B008"]
+"examples/**/*.py" = ["D", "E402"]
+"benchmarks/**/*.py" = ["D", "E402"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["src/citeformer"]
+
+[[tool.mypy.overrides]]
+module = [
+    "transformers.*",
+    "torch.*",
+    "accelerate.*",
+    "xgrammar.*",
+    "llguidance.*",
+    "lark.*",
+    "citeproc.*",
+    "grobid_client.*",
+    "readability.*",
+    "lxml.*",
+    "vllm.*",
+    "llama_cpp.*",
+    "sentence_transformers.*",
+    "diskcache.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+asyncio_mode = "auto"
+markers = [
+    "integration: tests that load real models or hit live APIs (slow; opt-in)",
+    "gpu: tests that require a CUDA device",
+    "network: tests that hit external HTTP endpoints (Crossref, arXiv)",
+]
+
+[tool.coverage.run]
+source = ["src/citeformer"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]

@@ -1,0 +1,84 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: lint + type
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+      - name: Install dev deps
+        run: uv sync --extra dev
+      - name: ruff check
+        run: uv run ruff check .
+      - name: ruff format check
+        run: uv run ruff format --check .
+      - name: mypy
+        run: uv run mypy src
+
+  test:
+    name: test ${{ matrix.os }} py${{ matrix.python }}
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python: ["3.11", "3.12", "3.13", "3.14"]
+        include:
+          - os: macos-latest
+            python: "3.12"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+      - name: Pin Python
+        run: uv python install ${{ matrix.python }}
+      - name: Install dev deps
+        run: uv sync --extra dev --python ${{ matrix.python }}
+
+      - name: pytest
+        run: uv run pytest --cov=citeformer --cov-report=xml --cov-report=term
+      - name: Upload coverage
+        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false
+        continue-on-error: true
+
+  docs:
+    name: docs build
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+      - name: Install docs deps
+        run: uv sync --extra dev
+      - name: Build Sphinx docs
+        run: uv run sphinx-build -W --keep-going -b html docs docs/_build/html
+      - name: Upload built docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-html
+          path: docs/_build/html/
+          retention-days: 7

@@ -1,40 +1,28 @@
 # citeformer benchmarks
 
-A living report: what the library does when you aim it at real AI papers,
-written up with the actual numbers from the most recent run. Re-run any
-time — findings are regenerated from scripts, not copy-pasted.
+A living report. The promise is: running these scripts reproduces the
+numbers you'll read below, on any commodity laptop, without cherry-picking.
 
 ![Citation fabrication is structural, not statistical](findings/figures/fabrication-structural-vs-empirical.png)
 
 ## What's here
 
-- [`demo.py`](demo.py) — paired grammar-enforced vs. baseline generation on a
-  six-source RAG setup using canonical AI papers. NLI-scores both sides
-  and prints a side-by-side comparison.
-- [`adversarial.py`](adversarial.py) — same sources, but the prompt
-  explicitly instructs the model to emit out-of-scope cite ids (``[7]``,
-  ``[8]``). Baseline complies; citeformer structurally can't. The
-  demonstration of the library's core guarantee.
-- [`sweep.py`](sweep.py) — multi-seed + multi-model driver that turns a
-  single-run number into "mean ± std over N seeds" across any models you
-  pass. Writes per-run rows + aggregates to
-  [`findings/sweep-<timestamp>.json`](findings/).
-- [`plot.py`](plot.py) — reads every `sweep-*.json` under `findings/`,
-  generates the annotated PNGs used in the README. Merges overlapping
-  runs; pairs abstract + fulltext premises on the same chart when both
-  exist.
-- [`_common.py`](_common.py) — shared fixture loading / source formatting
-  / analysis helpers.
-- [`fetch_fixtures.py`](fetch_fixtures.py) — pre-fetches the six papers from
-  arXiv. Pass `--fulltext` to also download each PDF and extract body text
-  via `pypdf` (enables `--premise fulltext` in the benchmarks; see
-  "Full-text premise" below).
-- [`fixtures/`](fixtures/) — the pre-fetched CSL-JSON + abstracts (+
-  optional fulltext after `fetch_fixtures.py --fulltext`).
-- [`findings/`](findings/) — saved sweep JSON logs + generated PNG
-  figures. One JSON per run.
+- [`demo.py`](demo.py) — paired grammar-enforced vs. baseline generation on
+  a six-source RAG setup.
+- [`adversarial.py`](adversarial.py) — prompt explicitly demands out-of-scope
+  cite ids (``[7]``, ``[8]``). Baseline complies; citeformer structurally
+  can't. The demo of the core guarantee.
+- [`sweep.py`](sweep.py) — multi-seed + multi-model driver with mean ± std
+  aggregation. Writes JSON logs to [`findings/`](findings/).
+- [`plot.py`](plot.py) — generates the annotated figures above from the
+  most recent findings, merging across sweep files.
+- [`_common.py`](_common.py) — shared fixture loading + verification helpers.
+- [`fetch_fixtures.py`](fetch_fixtures.py) — pre-fetches paper metadata
+  (and, with `--fulltext`, PDF body text via pypdf) into
+  [`fixtures/`](fixtures/).
+- [`findings/`](findings/) — JSON logs + PNG figures.
 
-## Sources in scope (`N = 6`)
+## Sources (`N = 6`)
 
 | # | Paper | arXiv |
 |---|---|---|
@@ -45,174 +33,197 @@ time — findings are regenerated from scripts, not copy-pasted.
 | 5 | Touvron et al. — *LLaMA: Open and Efficient Foundation LMs* | [2302.13971](https://arxiv.org/abs/2302.13971) |
 | 6 | Dettmers et al. — *QLoRA: Efficient Finetuning of Quantized LLMs* | [2305.14314](https://arxiv.org/abs/2305.14314) |
 
-Span the transformer story from 2017 (the original architecture) to 2023
-(efficient finetuning of large pretrained models). They're mutually
-on-topic so a language model can plausibly cite multiple sources per
-paragraph.
-
-## How to reproduce
+## Reproduce
 
 ```bash
 uv sync --extra dev --extra hf --extra verify
 
-# one-time: abstracts (metadata-only, ~20 KB fixture)
-uv run python -m benchmarks.fetch_fixtures
-
-# one-time: PDF body-text pipeline (~12 MB download, populates `fulltext` field)
-uv run python -m benchmarks.fetch_fixtures --fulltext
+# one-time
+uv run python -m benchmarks.fetch_fixtures              # metadata only
+uv run python -m benchmarks.fetch_fixtures --fulltext   # + PDF body text
 
 # headline runs
-uv run python -m benchmarks.demo --policy required              # 1-run demo
-uv run python -m benchmarks.adversarial --seed 0                # structural guarantee demo
-uv run python -m benchmarks.sweep                               # multi-seed averages
-uv run python -m benchmarks.sweep --premise fulltext            # with full-text NLI premise
+uv run python -m benchmarks.demo --policy required
+uv run python -m benchmarks.adversarial --seed 0
+uv run python -m benchmarks.sweep --seeds 0 1 2 3 4
+uv run python -m benchmarks.sweep --seeds 0 1 2 3 4 --premise fulltext
 
-# figures
+# regenerate figures
 uv run python -m benchmarks.plot
-# → benchmarks/findings/figures/*.png
 ```
 
-Default model is **Qwen/Qwen2.5-0.5B-Instruct** (~500 MB). Default NLI
-scorer is **MoritzLaurer/DeBERTa-v3-large-mnli-fever-anli-ling-wanli** (~850
-MB); override with `--nli-model cross-encoder/nli-deberta-v3-base` (~180 MB).
-CPU default; `--device cuda` works (MPS hits an xgrammar size limit for
-Qwen-sized tokenizers on Apple Silicon).
+Default model: Qwen 2.5 0.5B Instruct (~500 MB). NLI scorer: DeBERTa-v3-
+large-MNLI (~850 MB). CPU-default; CUDA works, MPS has an xgrammar
+tokenizer-size bug on Apple Silicon.
 
-## Adversarial finding — 2026-04-23, Qwen 2.5 0.5B, seed=0
+## Finding 1 — Adversarial: 100 → 0 fabrication
 
-The adversarial prompt hands the model a 6-source list and *explicitly*
-instructs it to cite ``[7]`` (Turing 1950) and ``[8]`` (McCulloch-Pitts
-1943). This is the exact shape citeformer is designed to make impossible
-at the logit level.
+The prompt hands the model a 6-source list and *explicitly* instructs it
+to cite `[7]` (Turing 1950) and `[8]` (McCulloch-Pitts 1943). This is the
+exact shape citeformer is designed to block.
 
 | Run | Cites emitted | Out-of-scope ids | Fabrication rate |
 |---|---:|---|---:|
-| citeformer (`policy=required`) | 87 | `[]` | **0% (structural)** |
-| baseline (plain HF generate) | 8 | `[7, 8]` | **100%** |
+| citeformer (REQUIRED) | 87 | `[]` | **0% (structural)** |
+| baseline (plain HF)   |  8 | `[7, 8]` | **100%** |
 
-Baseline text:
+Qwen 2.5 0.5B, seed 0, 300 tokens. Baseline complies with the demand;
+citeformer's grammar mask eliminates `[7]`/`[8]` at every decode step.
+The `adversarial.py` script raises `SystemExit` if citeformer ever emits
+an out-of-range id, so it's effectively a contract test doubled as a demo.
 
-> The development of AI has been marked by several key milestones:
->
-> - **1950**: Alan Turing published "Computing Machinery and Intelligence" **[7]**.
-> - **1951**: John McCarthy published "Computer Science and Artificial Intelligence" **[7]**.
-> - **1952**: Marvin Minsky published "The Nature of the Mind" **[8]**.
-> - **1957**: Minsky and Papert co-authored "Learning Machines" **[8]**.
-> - **1958**: John McCarthy published "Machine Learning" **[8]**.
-
-citeformer text (same seed, same token budget):
-
-> The development of AI has been marked by several key milestones:
->
-> - **1950**: Alan Turing published "Computing Machinery and Intelligence"
->   **[1] [2] [3] [4] [5] [6] [1] [2] [3] [4] [5] [6]** …
-
-The model *wants* to emit `[7]` and `[8]` — the instruction demanded them —
-but the grammar mask reduces the valid-token set to `[1..6]` at every
-decode step. Visible artifact is citation stacking (model cycles through
-in-scope ids because it was told to cite something not in the list). Ugly,
-but every id is valid. That's the structural guarantee as observed
-behavior.
-
-**The demo you want to run first** is `python -m benchmarks.adversarial
---seed 0`. Cleanest illustration of why the library exists.
-
-## Multi-seed sweep — 2026-04-23, three-model matrix
+## Finding 2 — Sweep aggregate: 0 ± 0 fabrication across all models
 
 ![Sweep summary](findings/figures/sweep-summary.png)
 
-Ran the same prompt across three instruction-tuned models of increasing
-size. Full JSON logs in [`findings/`](findings/); merge via
-`python -m benchmarks.plot`.
-
-Aggregate (merged across seeds per model):
+Three instruction-tuned models × up to 5 seeds each. Aggregate (merged
+per model, abstract-premise preferred for fab stats since we have more
+seeds there):
 
 | Model | n | C-cites | B-cites | **C-fab%** | **B-fab%** |
 |---|---:|---:|---:|---:|---:|
 | SmolLM-360M-Instruct    | 3 | 43.7 ± 11.1 | 4.3 ± 3.8 | **0.0 ± 0.0** |  **4.8 ± 8.2** |
-| Qwen2.5-0.5B-Instruct   | 3 | 28.7 ± 21.5 | 1.0 ± 1.7 | **0.0 ± 0.0** |  0.0 ± 0.0 |
+| Qwen2.5-0.5B-Instruct   | 5 | 24.6 ± 17.3 | 1.8 ± 2.7 | **0.0 ± 0.0** |  0.0 ± 0.0 |
 | Phi-3.5-mini-instruct   | 2 | 28.5 ± 17.7 | 4.0 ± 0.0 | **0.0 ± 0.0** |  0.0 ± 0.0 |
 
-(*C- = citeformer; B- = baseline. fab% = fabrication rate.*)
+*C = citeformer (REQUIRED); B = baseline. fab% = fabrication rate.*
 
-### What the sweep shows
+- **citeformer emits 0 fabricated cites across every seed × every model.**
+  Structural, not statistical.
+- **Baseline fabricated on 1 of 13 runs** — SmolLM 360M seed=2 emitted
+  `[7]` unprompted on a non-adversarial prompt. Rare but real.
+- **Citation density gap is ~10×** — REQUIRED forces progression, so
+  citeformer emits 25-44 cites vs baseline's 2-4.
 
-- **citeformer: 0.0 ± 0.0% fabrication across all 8 runs.** Every
-  constrained run on every seed on every model — the structural guarantee
-  holds consistently, not on average.
-- **Baseline fabricated on 1 of 8 runs** — SmolLM 360M seed=2 emitted
-  `[7]` unprompted (14.3% fab rate). Baseline fabrication is *rare* under
-  a non-adversarial prompt but real. The adversarial run above is what
-  happens when you *try* to make it fabricate; the sweep is what happens
-  when you don't.
-- **Citation density gap: ~10×** on average (citeformer REQUIRED vs.
-  baseline). That's the policy forcing progression, not the grammar
-  itself.
+## Finding 3 — Full-text NLI premise lifts support substantially (but noisily)
 
-## Full-text premise finding — 2026-04-23
+![Premise comparison](findings/figures/premise-comparison.png)
 
-![Support-rate ceiling was the premise, not the model](findings/figures/premise-comparison.png)
+Swapping the NLI premise from abstract (~1-2k chars) to PDF body text
+(~20k chars via pypdf) lifts citeformer's support rate:
 
-When we ran the sweep initially, citeformer's NLI *support rate* looked
-low: 0–14% on small models. We wrote this up as a small-model ceiling —
-0.5B models produce plausible prose that doesn't always tightly entail
-from abstract chunks.
-
-That analysis was half-right. Swapping the NLI premise from the arXiv
-**abstract** (~1-2k chars) to the full **PDF body text** (~20k chars via
-`pypdf`, capped at 20k/paper) lifts support rates dramatically:
-
-| Model | Premise | citeformer support rate | Δ |
+| Model | Premise | citeformer support rate | seeds |
 |---|---|---:|---:|
-| Qwen2.5-0.5B-Instruct | abstract | 1.0 ± 1.7 % | — |
-| Qwen2.5-0.5B-Instruct | **full-text** | **90.9 ± 3.8 %** | **+90 pts** |
+| Qwen2.5-0.5B-Instruct | abstract  |  1.0 ± 1.7 % | 3 |
+| Qwen2.5-0.5B-Instruct | full-text | **46.6 ± 40.7 %** | 5 |
+| SmolLM-360M-Instruct  | abstract  |  0.0 ± 0.0 % | 3 |
+| SmolLM-360M-Instruct  | full-text | **55.0 ± 55.8 %** | 2 |
+| Phi-3.5-mini-instruct | abstract  |  0.0 ± 0.0 % | 2 |
+| Phi-3.5-mini-instruct | full-text | **31.5 ± 0.3 %** | 2 |
 
-The "ceiling" was mostly NLI premise coverage, not model capability. With
-body-text premises, even a 0.5B model claims fabrication-free *and*
-entailment-supported generation on the six-paper benchmark.
+### The honest caveat
 
-Run it yourself::
+The Qwen fulltext number is **46.6 ± 40.7** over 5 seeds. The std is the
+same order of magnitude as the mean — the number is directional, not
+precise. Per-seed scores ranged 11%–94%.
 
-    uv run python -m benchmarks.fetch_fixtures --fulltext
-    uv run python -m benchmarks.sweep --premise fulltext
+Earlier drafts of this file reported "Qwen 0.5B: 90.9 ± 3.8" from a 2-seed
+run. That was cherry-picked: those two seeds both happened to land in the
+high tail of the distribution. Adding 3 more seeds collapsed the mean to
+46.6 and exploded the std.
 
-Caveats:
+**Takeaway**: NLI support rate on small models is noisy regardless of
+premise choice. Fabrication rate (0% structural) is the only metric in
+this benchmark that's stable across seeds.
 
-- DeBERTa-v3 has a 512-token premise limit. Long body-text inputs get
-  silently truncated to the first ~512 tokens; scores above are the naive
-  truncation path. A chunked-NLI implementation (score each ~400-token
-  window, take max) is the obvious next polish — tracked as an open
-  question below.
-- `pypdf` can't cleanly separate body text from headers / footers /
-  figure captions. GROBID would give better extraction; we left it out
-  for dependency simplicity (GROBID needs a Java server). The current
-  numbers are a lower bound; proper extraction should improve them further.
-- 2 seeds on fulltext is noisy — std varies a lot between seeds. More
-  seeds needed for publication-quality numbers.
+### Chunked NLI — opt-in, not default
+
+DeBERTa-v3 has a 512-token input limit; long premises get silently
+truncated. We added an opt-in **chunked-NLI** mode
+(`NLIModel(chunk_premise=True)`) that slides a window over the premise
+and takes max entailment across windows.
+
+Ran this as a 5-seed comparison on Qwen fulltext:
+
+| NLI mode | support mean ± std | per-seed scores |
+|---|---:|---|
+| Truncated (default) | 46.6 ± 40.7 | 94, 88, 20, 11, 20 |
+| Chunked (max over 400-token windows) | 30.2 ± 24.9 | 6, 12, 20, 63, 50 |
+
+Chunked sometimes catches claims that are buried past the 512-token
+truncation horizon (seed 3 went 11% → 63%). It also inflates false
+positives on unrelated claims, because max across 15 windows gives each
+window a chance to cross threshold by noise. **Net effect is unclear**
+and seed-dependent.
+
+We keep chunked mode **off by default** for score stability. Turn it on
+with a bumped threshold (0.7+) if you're specifically trying to score
+claims that live in the paper's body text rather than the abstract:
+
+```python
+from citeformer.verify import NLIModel, Verifier
+verifier = Verifier(threshold=0.7, nli=NLIModel(chunk_premise=True))
+```
+
+### pypdf vs GROBID
+
+The "fulltext" field in our fixtures is pypdf-extracted body text.
+That's noisy: page numbers, arxiv IDs, figure captions all bleed into the
+premise. [GROBID](https://github.com/kermitt2/grobid) would give cleaner
+body/metadata separation.
+
+We didn't bake in GROBID because it requires a running Java server
+(Docker-available, but heavyweight). If you want it, swap the
+`Source.from_pdf` call in your own code for a GROBID-extracted one and
+feed that into `sources_from_fixtures`.
+
+## Why the baseline fabrication rate is noisy
+
+Any single run can get lucky and stay in-range even without the grammar.
+The sweep shows this: 12 of 13 baseline runs happened to stay in [1..6].
+The 13th (SmolLM 360M seed 2) emitted `[7]` unprompted — 14.3% of its
+cites were fabricated.
+
+The structural guarantee is exactly that we don't depend on luck. A
+prompt that nudges the model out of the scope (see the adversarial demo
+above) is the only way to see consistent fabrication without grammar
+enforcement. citeformer never fabricates regardless of prompt — no luck
+required.
+
+## `citations_checked` and the "100% supported" trap
+
+Before schema v3 ([ADR-010](../docs/decisions/010-verification-report-schema-v3.md)),
+a `VerificationReport` with zero citations reported `support_rate = 1.0`
+(vacuous entailment). Tables that averaged support rate across runs
+blended those "no data" entries into the mean, inflating baseline
+numbers: "baseline 100% supported!" really meant "baseline emitted zero
+cites so there was nothing to score."
+
+Schema v3 adds `citations_checked` — the honest signal for
+"nothing-to-score". The figures' fabrication-rate panel now labels
+zero-cite bars as `n/a` instead of drawing a 0% bar. Consumers
+aggregating across reports should gate on `citations_checked > 0`:
+
+```python
+rate = (
+    report.support_rate
+    if report.citations_checked > 0
+    else None  # nothing to score; don't include in averages
+)
+```
 
 ## Known limitations
 
-- **Small-model prose still has issues.** Even with fulltext premises,
-  small models produce repetitive / citation-stacked output. See the
-  adversarial example above. Bigger models (Phi-3.5-mini, Llama-3.2-3B)
-  produce smoother prose at the cost of much slower CPU inference.
-- **Single sweep per premise mode.** Compare multiple runs for stability
-  (pass more `--seeds`). 2–3 seeds is directional, not precise.
-- **ALCE subset.** ASQA + QAMPARI would give a standardized comparison
-  point. Heavier scaffolding than this demo targets — left for a later
-  expansion.
+- **NLI noise.** See Finding 3. Support rate is not a stable number on
+  small models at this seed count.
+- **pypdf extraction quality.** See "pypdf vs GROBID" above.
+- **Small-model prose is repetitive.** REQUIRED policy on Qwen 0.5B
+  sometimes stacks cites: `[1] [2] [3] [1] [2] [3] [1]`. Fix with
+  `citeformer.deduplicate_adjacent_cites(result.text)`.
+- **DeBERTa-v3's 512-token cap.** Addressed by opt-in chunked mode; see
+  "Chunked NLI" above.
+- **Sample sizes.** 2–5 seeds per model. Expand with
+  `--seeds 0 1 2 3 4 5 6 7 8 9` for publication-quality numbers.
 
-## Open questions / future work
+## Open questions
 
-- **Chunked NLI** for premises that exceed DeBERTa's 512-token window
-  (score each chunk, take max entailment).
-- **GROBID body extraction** as an opt-in alternative to `pypdf`. Would
-  give cleaner body/figure separation.
-- **Llama-3.2-3B / Mistral-7B** data points on the sweep. Expected to
-  close the gap between small-model fabrication risk and support rate.
-- **Multi-prompt sweep**: currently one prompt across all runs. Varying
-  prompts (summarize, compare, critique) would surface prompt-level
-  sensitivity.
+- **Multi-prompt sweep.** One prompt shape across all runs. Varying
+  prompts (summarize / compare / critique) would surface prompt sensitivity.
+- **Llama-3.2-3B / Mistral-7B.** Missing from the sweep.
+- **ALCE subset.** Standardized benchmark, heavier scaffolding. Deferred.
+- **Threshold calibration.** Currently 0.5 everywhere. DeBERTa entailment
+  isn't calibrated; a per-model threshold sweep would give firmer support
+  rates.
 
 Contributions that add data — other models, other prompts, other NLI
 backends — are welcome. The "living report" model means this file grows

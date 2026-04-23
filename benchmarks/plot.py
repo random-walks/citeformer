@@ -149,6 +149,31 @@ def _annotate_bars(ax: Axes, rects: Any, fmt: str = "{:.1f}%") -> None:
         )
 
 
+def _annotate_bars_or_na(
+    ax: Axes, rects: Any, values: list[float], cite_counts: list[float]
+) -> None:
+    """Label each bar with its value, or ``n/a`` when the matching cite count is 0.
+
+    A 0.0% fabrication rate on a run that emitted zero citations carries no
+    information — nothing was checked. We surface that as ``n/a`` so a
+    reader doesn't misread "flat orange bar at 0%" as "baseline is perfect".
+    """
+    for rect, value, cites in zip(rects, values, cite_counts, strict=True):
+        height = rect.get_height()
+        label = "n/a" if cites <= 0 else f"{value:.1f}%"
+        ax.annotate(
+            label,
+            xy=(rect.get_x() + rect.get_width() / 2, height),
+            xytext=(0, 3),
+            textcoords="offset points",
+            ha="center",
+            va="bottom",
+            fontsize=9,
+            color="#6b7280" if cites <= 0 else _TEXT_COLOR,
+            fontstyle="italic" if cites <= 0 else "normal",
+        )
+
+
 def _plot_fabrication_cover(
     *,
     sweep: dict[str, Any],
@@ -320,7 +345,8 @@ def _plot_sweep_summary(sweep: dict[str, Any], output_path: Path) -> None:
     _annotate_bars(ax1, r2, fmt="{:.0f}")
     _style_axes(ax1)
 
-    # Fabrication rate
+    # Fabrication rate. Annotate "n/a" when the corresponding cite count
+    # is zero — a bar at 0.0% is indistinguishable from "no cites to check".
     r3 = ax2.bar(
         x - width / 2,
         b_fab_mean,
@@ -352,8 +378,8 @@ def _plot_sweep_summary(sweep: dict[str, Any], output_path: Path) -> None:
     ax2.set_xticklabels(short_names, fontsize=9, rotation=15, ha="right")
     ax2.set_ylabel("Fabrication rate (%)", fontsize=10)
     ax2.set_ylim(0, max(max([*b_fab_mean, 1]) * 2.2, 15))
-    _annotate_bars(ax2, r3)
-    _annotate_bars(ax2, r4)
+    _annotate_bars_or_na(ax2, r3, b_fab_mean, b_cites_mean)
+    _annotate_bars_or_na(ax2, r4, c_fab_mean, c_cites_mean)
     _style_axes(ax2)
 
     # Global footer: run config.
@@ -466,7 +492,7 @@ def _plot_premise_comparison(sweep: dict[str, Any], output_path: Path) -> None:
     ax.set_xticks(x)
     ax.set_xticklabels(short_names, fontsize=10)
     ax.set_title(
-        "Support-rate ceiling was the premise, not the model",
+        "Full-text NLI premise lifts support rate substantially",
         fontsize=14,
         fontweight="bold",
         pad=14,
@@ -475,7 +501,8 @@ def _plot_premise_comparison(sweep: dict[str, Any], output_path: Path) -> None:
     ax.text(
         0.0,
         1.02,
-        "Swapping the NLI premise from abstract to PDF body text lifts support rates dramatically",
+        "Swapping from abstract (~1-2k chars) to PDF body text (~20k) via pypdf. "
+        "Error bars show the per-seed variance — large on small models.",
         transform=ax.transAxes,
         fontsize=10,
         color="#4b5563",

@@ -6,6 +6,114 @@ Versioning policy: **patch bumps are cheap**. See [docs/development/releasing.md
 
 ## [Unreleased]
 
+### Fit-and-finish: eyebrow-raisers audit
+
+A scrutiny pass addressing specific soft spots flagged in a self-audit
+of the library. Everything below is either a correctness improvement,
+an honest re-documentation of a noisy measurement, or a small API for
+a real gap.
+
+**Chunked NLI premise scoring (opt-in).** DeBERTa-v3's 512-token cap
+silently truncates long premises. New opt-in ``NLIModel(chunk_premise=
+True, max_premise_tokens=400, chunk_stride=300)`` slides a window over
+the premise, scores each window vs. the hypothesis, and reduces by max
+entailment. In empirical comparison on Qwen 0.5B fulltext × 5 seeds,
+chunked mode moved per-seed support rates significantly — but not
+always up. It surfaces claims buried past the 512-token horizon
+(seed 3: 11% → 63%) but also inflates false positives on unrelated
+claims (max-over-windows gives noise more chances to cross threshold).
+Net effect seed-dependent, so **default is off** for score stability;
+users opt in with a bumped threshold (0.7+) when they want long-
+document scoring. 13 new unit tests cover the chunking math via a
+fake tokenizer; integration uses the real DeBERTa.
+
+**Schema v3: `citations_checked` field.** Previously, reports with
+zero citations returned ``support_rate = 1.0`` (vacuous entailment).
+Tables that averaged support across runs blended those "no data"
+entries into the mean — "baseline 100% supported!" really meant
+"baseline emitted zero cites." Schema v3
+([ADR-010](docs/decisions/010-verification-report-schema-v3.md)) adds
+``citations_checked: int`` so consumers can gate on
+``citations_checked > 0`` before aggregating. ``support_rate`` itself
+unchanged for backward compatibility. Additive / minor per the §10.3
+ceremony; snapshot regenerated; schema-version test updated to 3.
+
+**CSL-JSON validation helper (opt-in).** New
+``citeformer.csl.validate_csl_json`` + ``validate_source_metadata``
+pair. Runs a purely-defensive check over a CSL-JSON item: required
+fields (`id`, `type`), type sanity (`DOI` is `str`, `author` is list
+of dicts, `issued.date-parts` is a list), known CSL 1.0 item types,
+known top-level fields. Errors are hard problems; unknown types /
+fields are warnings so forward-compat holds. Users call it before
+constructing a `Source` when they want the §10.2 schema policed
+up front. 17 unit tests lock the error/warning boundary. Top-level
+exports: ``CSLValidationError``, ``ValidationReport``,
+``validate_csl_json``, ``validate_source_metadata``, plus
+``KNOWN_TYPES`` and ``KNOWN_FIELDS``.
+
+**`deduplicate_adjacent_cites` helper.** REQUIRED-policy grammar
+allows ``cite-group ::= cite-id (ws cite-id)*`` — which small models
+use to close a sentence by cycling in-scope ids (``[1] [2] [3] [1]
+[2] [3] [1]``). The grammar lets this through; users who want clean
+output call the new helper to collapse runs to unique-first-appearance
+order. Pure-Python regex, no state. 12 tests.
+
+**`py.typed` marker.** Ships PEP 561 compliance. Downstream users of
+a pip-installed citeformer now see our inline type annotations in
+their IDE / mypy rather than the ``Skipping analyzing 'citeformer':
+found module but no type hints`` wall. Included in the hatch wheel
+build via ``[tool.hatch.build.targets.wheel.force-include]``.
+
+**LangChain + LlamaIndex real-library integration tests.** Previous
+adapter tests used ``SimpleNamespace`` stand-ins — they caught
+attribute-shape regressions but wouldn't catch a rename of
+``Document.page_content`` or ``TextNode.text``. New
+``tests/integration/test_integrations_real_libs.py`` (6 tests,
+marked ``integration``) imports the real ``langchain_core.documents``
+and ``llama_index.core.schema`` types via ``pytest.importorskip``.
+Also: new runnable examples — ``examples/06_langchain_rag.py`` and
+``examples/07_llamaindex_rag.py`` — show end-to-end pipeline usage
+with real LC/LI types.
+
+**Streaming integration test on Qwen 2.5 0.5B Instruct.** Previously
+streaming was only exercised on gpt2 (non-instruct, simple tokenizer).
+The new integration test loads an actual instruction-tuned model and
+asserts ``stream().finalize().text == generate().text`` at
+temperature 0. Catches any tokenizer / chat-template interaction
+that gpt2 doesn't trigger.
+
+**Broadened formatter edge-case tests.** 85 new parametrised tests
+cover formatter behaviour on unicode family names (Łopez, Zhāng),
+hyphenated given names (Jean-Paul), organisational literal authors
+(OpenAI), single-word names (Madonna), very long titles (~200 char
+arXiv titles), missing years (working papers), page-range dashes,
+DOI-as-URL rendering for APA, "van der" particles, titles with
+colons and embedded quotes, given-only authors, and empty author
+lists. Caught and fixed a couple of real edge cases as part of the
+expansion.
+
+**Makefile coverage target.** ``make coverage`` runs the unit suite
+with pytest-cov, writes HTML to ``htmlcov/`` and JSON to
+``coverage.json``. Current coverage: 81% across 44 source files.
+
+**Honest benchmarks README rewrite.** Previously reported "Qwen 0.5B:
+90.9 ± 3.8%" support rate from a 2-seed full-text run. Adding 3 more
+seeds collapsed the mean to 46.6 ± 40.7 — std same order of magnitude
+as the mean, which is the honest picture for small-model NLI scoring.
+Rewrote the README to lead with fabrication rate (0 ± 0, stable
+across all 13 sweep runs) and treat support rate as directional.
+Documents the chunked-NLI tradeoff, the pypdf/GROBID extraction
+difference, the ``citations_checked`` rationale, and the 100%-when-
+zero-cites trap.
+
+**plot.py improvements.** Fabrication panels now label bars ``n/a``
+(grey italic) when the underlying cite count is zero, to avoid
+misreading "flat 0% bar" as "baseline is perfect". premise-comparison
+title updated from "Support-rate ceiling was the premise, not the
+model" (which the new 5-seed data showed was overconfident) to
+"Full-text NLI premise lifts support rate substantially" with a
+subtitle noting per-seed variance.
+
 ### Added — bigger-model sweep, full-text NLI premise, annotated figures
 
 Four things this round, all under the same "scrutinize and improve" umbrella:

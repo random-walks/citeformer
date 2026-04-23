@@ -202,6 +202,51 @@ rate = (
 )
 ```
 
+## Finding 4 — NLI threshold calibration: DeBERTa-v3-large is bimodal
+
+![NLI calibration curve](findings/figures/nli_calibration_DeBERTa-v3-large-mnli-fever-anli-ling-wanli.png)
+
+Ran `threshold_calibration.py` against 50 hand-labelled (premise,
+hypothesis, label) triples (see `calibration_data.py`). Triples pair each
+of the six fixture abstracts with 4–10 hypotheses balanced between
+genuinely-entailed paraphrases, clear contradictions, and deliberately-
+tricky mid-scoring claims (over-specific numbers, unstated benchmarks,
+plausible-but-absent contrasts).
+
+| Threshold | Precision | Recall | F1 |
+|---|---:|---:|---:|
+| 0.05–0.15 | 0.897 | 1.000 | 0.945 |
+| **0.20–0.95** | **0.929** | **1.000** | **0.963** |
+
+- **DeBERTa-v3-large-mnli-fever-anli-ling-wanli is bimodal.** 28 of 50
+  pairs score < 0.002, 19 score > 0.998; only 3 pairs land in the
+  middle (one 0.15, two at 0.99). Thresholds from 0.20 to 0.95 give
+  identical confusion matrices.
+- **Default 0.5 is fine.** The current library default sits squarely in
+  the plateau zone. Lowering to 0.2 buys nothing but codifies the
+  empirical separability.
+- **2/50 residual FPs are plausibility hits**, not classifier bugs —
+  claims like *"LLaMA-13B outperforms GPT-3 on most benchmarks"* and
+  *"QLoRA reaches ChatGPT-level performance on Vicuna"* are plausible
+  extrapolations from the abstracts even though neither is *explicitly*
+  stated there. Realistic false positives from NLI-on-abstract scoring.
+
+**Takeaway**: DeBERTa-v3-large shouldn't be tuned by threshold. If you
+need lower FP rate, you want either (a) a stronger model with better
+calibration, (b) chunked scoring against full-text (see Finding 3), or
+(c) a structured self-consistency check — not a knob turn on the
+threshold.
+
+Reproduce:
+
+```bash
+uv run python -m benchmarks.threshold_calibration
+# optional: try a different NLI checkpoint
+uv run python -m benchmarks.threshold_calibration --model microsoft/deberta-large-mnli
+```
+
+Output: `findings/nli_calibration_<model-slug>.json` + two-panel PNG.
+
 ## Known limitations
 
 - **NLI noise.** See Finding 3. Support rate is not a stable number on

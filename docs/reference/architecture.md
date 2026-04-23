@@ -44,4 +44,15 @@ v0.1 ships at the end of P6. Each phase is a mergeable milestone with its own ex
 | **P6** | NLI verification + hand-curated AI-papers benchmark | Coverage report shows support-rate gains; see `benchmarks/README.md` |
 | **Polish** | REQUIRED progression fix ([ADR-009](../decisions/009-bounded-content-required.md)), real CLI, examples as living reports | ADR-009 integration test passes; `citeformer` CLI covers generate/verify/render; `examples/` has runnable scripts with findings READMEs |
 
-After v0.1, API-provider backends (OpenAI, Gemini), Anthropic Citations-API wrapping, and a possible `citeformer-ts` sibling are on the roadmap but not in scope here.
+After v0.1, Gemini / Mistral API backends and a possible `citeformer-ts` sibling are on the roadmap but not in scope here.
+
+## Tiered enforcement — local vs API
+
+v0.1 ships **two tiers** of backends with **one honest distinction**:
+
+- **Local backends** (`HFBackend`, `VLLMBackend`, `LlamaCppBackend`) enforce at the **logit layer** via XGrammar / llguidance / llama.cpp GBNF. A fabricated cite id is *token-impossible to sample* — the sampler never sees that token distribution.
+- **API backends** (`OpenAIBackend`, `AnthropicBackend`) enforce at the **schema layer** (OpenAI Structured Outputs `strict=true`) or via the provider's native citations mechanism (Anthropic's Citations API). The provider validates the response before returning it; fabrication is impossible *in the returned payload*, not at the sampler.
+
+Both tiers produce the same `GenerationResult` shape — the orchestration layer, verify layer, and render layer are backend-agnostic. Users who want the bulletproof structural claim pick a local backend; users who want frontier-model prose without self-hosting pick an API backend and accept the schema-tier framing.
+
+Tier choice doesn't change the bibliography pipeline: references are always rendered deterministically by our home-grown formatters, regardless of which backend produced the text.

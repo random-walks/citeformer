@@ -202,6 +202,57 @@ rate = (
 )
 ```
 
+## Finding 5 — Multi-prompt sweep: structural guarantee is prompt-invariant
+
+![Multi-prompt summary](findings/figures/multiprompt-summary.png)
+
+Ran [`multiprompt_sweep.py`](multiprompt_sweep.py) with 4 prompt shapes × 2
+models × 3 seeds = 24 runs. Prompt shapes exercise common RAG request
+patterns — survey (trace a landscape), compare (contrast approaches),
+explain (walk through a mechanism), critique (flag limitations):
+
+| prompt   |  n  | C-fab% | B-fab% | C-supp% | B-supp% | C-cites | B-cites |
+|----------|:---:|:------:|:------:|:-------:|:-------:|:-------:|:-------:|
+| survey   |  6  | **0.0 ± 0.0** | 2.4 ± 5.8  | 23.4 ± 32.9 | 0.0 ± 0.0   | 26.3 ± 22.7 | 6.0 ± 2.2 |
+| compare  |  6  | **0.0 ± 0.0** | 0.0 ± 0.0  | 2.5 ± 6.2   | 31.7 ± 40.2 | 55.8 ± 8.8  | 5.8 ± 6.3 |
+| explain  |  6  | **0.0 ± 0.0** | 0.0 ± 0.0  | 34.0 ± 31.2 | 62.0 ± 44.5 | 38.0 ± 27.8 | 2.8 ± 3.4 |
+| critique |  6  | **0.0 ± 0.0** | 0.0 ± 0.0  | 24.5 ± 38.3 | 11.7 ± 19.3 | 55.8 ± 5.7  | 6.5 ± 3.5 |
+
+*C = citeformer (REQUIRED); B = baseline. Both against Qwen 2.5 0.5B
+Instruct and SmolLM 360M Instruct, 3 seeds each per prompt.*
+
+- **citeformer fab rate is 0% across every (prompt, model, seed) triple.**
+  Not drifting on explain, not drifting on critique, not drifting under
+  the argumentative compare shape. The structural guarantee doesn't care
+  what you ask.
+- **Baseline drifted on one prompt shape.** 2.4% mean fab rate on survey
+  — small, but non-zero across 6 runs. The multi-paper trace is the
+  shape where small models occasionally wander out of scope.
+- **Citation density gap is 4-10× on citeformer**, because REQUIRED
+  forces every sentence to cite. The cost is an occasional stack; the
+  `deduplicate_adjacent_cites` helper folds runs of adjacent ids.
+- **Support rate tracks the prompt shape.** `explain` (single-source
+  focus) scores higher than `compare` (multi-source claims) across both
+  conditions — consistent with what you'd expect when NLI scores against
+  abstracts only.
+
+**Takeaway**: the structural guarantee holds identically across prompt
+shapes. Support rate, unsurprisingly, depends on what you ask for.
+
+Reproduce (defaults are 2 models × 3 seeds × 4 prompts = 24 runs on
+CPU, ~12 min):
+
+```bash
+uv run python -m benchmarks.multiprompt_sweep
+# More seeds:
+uv run python -m benchmarks.multiprompt_sweep --seeds 0 1 2 3 4
+# More models:
+uv run python -m benchmarks.multiprompt_sweep \
+    --models Qwen/Qwen2.5-0.5B-Instruct HuggingFaceTB/SmolLM-360M-Instruct microsoft/Phi-3.5-mini-instruct
+```
+
+Output: `findings/multiprompt-<timestamp>.json` + a two-panel summary PNG.
+
 ## Finding 4 — NLI threshold calibration: DeBERTa-v3-large is bimodal
 
 ![NLI calibration curve](findings/figures/nli_calibration_DeBERTa-v3-large-mnli-fever-anli-ling-wanli.png)

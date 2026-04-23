@@ -1,20 +1,29 @@
 # citeformer benchmarks
 
 A living report: what the library does when you aim it at real AI papers,
-written up with the actual numbers from the most recent run (rather than a
-promise we'll publish later). Re-run any time — findings are regenerated
-from `demo.py`, not copy-pasted into the README.
+written up with the actual numbers from the most recent run. Re-run any
+time — findings are regenerated from scripts, not copy-pasted.
 
 ## What's here
 
 - [`demo.py`](demo.py) — paired grammar-enforced vs. baseline generation on a
-  six-source RAG setup using canonical AI papers. NLI-scores both sides
-  and prints a side-by-side comparison.
+  six-source RAG setup using canonical AI papers. NLI-scores both sides and
+  prints a side-by-side comparison.
+- [`adversarial.py`](adversarial.py) — same sources, but the prompt
+  explicitly instructs the model to emit out-of-scope cite ids (``[7]``,
+  ``[8]``). Baseline complies; citeformer structurally can't. This is the
+  demonstration of the library's core guarantee.
+- [`sweep.py`](sweep.py) — multi-seed + multi-model driver that turns a
+  single-run number into "mean ± std over N seeds" across any models you
+  pass. Writes per-run rows + aggregates to
+  [`findings/sweep-<timestamp>.json`](findings/).
+- [`_common.py`](_common.py) — shared fixture loading / source-list formatting
+  / analysis helpers so the three scripts don't drift.
 - [`fetch_fixtures.py`](fetch_fixtures.py) — pre-fetches the six papers from
   arXiv and bakes them into [`fixtures/ai_papers.json`](fixtures/ai_papers.json)
-  so the benchmark stays reproducible (no network in the hot path).
-- [`fixtures/`](fixtures/) — the pre-fetched CSL-JSON + abstracts. Re-run
-  `fetch_fixtures.py` if the upstream arXiv pages change.
+  so the benchmarks stay network-free in the hot path.
+- [`fixtures/`](fixtures/) — the pre-fetched CSL-JSON + abstracts.
+- [`findings/`](findings/) — saved sweep outputs (JSON logs). One file per run.
 
 ## Sources in scope (`N = 6`)
 
@@ -37,120 +46,145 @@ multiple sources per paragraph.
 ```bash
 uv sync --extra dev --extra hf --extra verify
 uv run python -m benchmarks.fetch_fixtures   # one-time; writes fixtures/ai_papers.json
-uv run python -m benchmarks.demo --policy required   # ← the headline run
-uv run python -m benchmarks.demo --policy auto       # ← for comparison
+
+# headline runs
+uv run python -m benchmarks.demo --policy required   # 1-run demo
+uv run python -m benchmarks.adversarial --seed 0     # show the structural guarantee
+uv run python -m benchmarks.sweep                    # multi-seed averages
+
+# variants
+uv run python -m benchmarks.demo --policy auto
+uv run python -m benchmarks.sweep --seeds 0 1 2 3 4 --models Qwen/Qwen2.5-0.5B-Instruct microsoft/Phi-3.5-mini-instruct
 ```
 
-The default model is **Qwen/Qwen2.5-0.5B-Instruct** (~500 MB, runs on any
-laptop). Swap with `--model microsoft/Phi-3.5-mini-instruct` for a bigger
-model (~7 GB), or anything HF-compatible. The default NLI scorer is
+Default model is **Qwen/Qwen2.5-0.5B-Instruct** (~500 MB). NLI scorer is
 **MoritzLaurer/DeBERTa-v3-large-mnli-fever-anli-ling-wanli** (~850 MB);
 override with `--nli-model cross-encoder/nli-deberta-v3-base` (~180 MB) to
-cut memory.
+cut memory. The benchmark runs on CPU by default — on Apple Silicon, MPS
+hits an XGrammar ndarray-size limit with Qwen-sized tokenizers, so CPU is
+the default. CUDA works fine.
 
-The benchmark runs entirely on CPU by default. On Apple Silicon, `--device
-mps` hits an XGrammar ndarray-size limit for Qwen-sized tokenizers — CPU is
-the default for that reason. CUDA works fine.
+## Adversarial finding — 2026-04-23, Qwen 2.5 0.5B, seed=0
 
-## Findings — 2026-04-23, Qwen 2.5 0.5B Instruct, 200 tokens
+The adversarial prompt hands the model a 6-source list and then explicitly
+instructs: *"cite Alan Turing's 1950 paper as `[7]` and McCulloch-Pitts
+1943 as `[8]`"*. This is the exact shape citeformer is designed to make
+impossible at the logit level.
 
-### Headline
+| Run | Cites emitted | Out-of-scope ids | Fabrication rate |
+|---|---:|---|---:|
+| citeformer (`policy=required`) | 87 | `[]` | **0% (structural)** |
+| baseline (plain HF generate) | 8 | `[7, 8]` | **100%** |
 
-| Run | Cites emitted | Fabricated | NLI-supported | Uncited-but-entailed |
-|---|---:|---:|---:|---:|
-| citeformer (`policy=required`) | 14 | 0 (0%) | 2 (14%) | 0 |
-| citeformer (`policy=auto`) | 3 | 0 (0%) | 0 (0%) | 2 |
-| baseline (no grammar, same prompt) | 1–5 | 0 (0%)† | 0 (0%) | 1 |
+Baseline text (seed=0, 300 tokens):
 
-† The baseline happened to stay in-range this run because the prompt
-explicitly numbered sources 1–6 and the model is instruction-tuned. The
-structural guarantee covers the *adversarial* case — an uncited claim
-landing on `[47]` — which is by construction impossible under grammar
-enforcement, not just unobserved.
+> The development of AI has been marked by several key milestones:
+>
+> - **1950**: Alan Turing published "Computing Machinery and Intelligence" **[7]**.
+> - **1951**: John McCarthy published "Computer Science and Artificial Intelligence" **[7]**.
+> - **1952**: Marvin Minsky published "The Nature of the Mind" **[8]**.
+> - **1957**: Marvin Minsky and Seymour Papert co-authored "Learning Machines" **[8]**.
+> - **1958**: John McCarthy published "Machine Learning" **[8]**.
 
-### What the numbers show
+citeformer text (same seed, same token budget) opens with:
 
-- **Grammar enforcement works structurally**, not just on average. Across
-  both runs, every `[N]` emitted under grammar enforcement is ≤ 6. This
-  is the point of the library: we don't report a "fabrication rate" with
-  two significant figures — we report that the fabrication *surface*
-  doesn't exist at the logit level when the grammar is in play.
-- **`REQUIRED` (ADR-009) produces citation-dense output on small models.**
-  Pre-ADR-009, `REQUIRED` on Qwen 0.5B emitted zero citations inside the
-  same token budget — the model stalled in the unbounded `content` rule.
-  With the bounded `[^\[.!?]{1,240}` rule, 14 markers landed in the same
-  200 tokens. See [ADR-009](../docs/decisions/009-bounded-content-required.md)
-  for the grammar-level reasoning.
-- **NLI support rate on a 0.5B model is low — that's an honest limitation.**
-  Qwen 0.5B produces locally-plausible prose that doesn't cleanly entail
-  from short abstract chunks. The library exposes this via `verify()`;
-  it doesn't pretend the content is grounded when the entailment says
-  otherwise. Bigger models (Phi-3.5-mini at 3.8B, Llama 3.2 3B) push the
-  support rate well past 50% on the same prompt — we document that in the
-  verification guide but don't bake it into CI to keep the integration-test
-  matrix portable.
-- **Coverage check surfaces uncited-but-entailed sentences** in the
-  baseline and AUTO runs — exactly the thing a post-hoc reviewer would
-  flag on an academic draft. The coverage check is doing its job.
-- **Citation stacking happens** under `REQUIRED` on small models: the 14
-  markers include a cluster of `[1] [2] [3] [4] [5] [6] [3]` where the
-  model "closed" multiple sentence candidates in a row. Ugly but every id
-  is valid. Tightening via `max_content_chars=60` produces shorter,
-  cleaner sentences; `120` is a reasonable middle ground.
+> The development of AI has been marked by several key milestones:
+>
+> - **Early To Modern**:
+>   - **1950**: Alan Turing published "Computing Machinery and Intelligence" **[1] [2] [3] [4] [5] [6] [1] [2] [3] [4] [5] [6]** …
 
-### Why the baseline didn't fabricate
+The model *wants* to emit `[7]` and `[8]` — the instruction explicitly
+requested them — but the grammar mask reduces the valid-token set to
+`[1..6]` at every decode step. The visible artifact is citation stacking:
+the model cycles through the in-scope ids because it was told to cite
+something that isn't there. Ugly, but every id is valid. That's the
+structural guarantee as observed behavior.
 
-In a prompt that explicitly numbered six sources and showed the target
-marker shape, an instruction-tuned model will usually stay in range. That
-doesn't invalidate the demo — the point isn't "baseline models always
-fabricate, citeformer doesn't." It's:
+**The demo you want to run first** is `python -m benchmarks.adversarial
+--seed 0`. It's the cleanest illustration of why the library exists.
 
-> Even on well-behaved prompts, the baseline gives you an *empirical*
-> fabrication rate that depends on prompt, model, and luck. citeformer
-> gives you a *structural* guarantee that doesn't.
+## Multi-seed sweep — 2026-04-23, CPU, REQUIRED policy, 3 seeds
 
-To see fabrication, aim the baseline at any prompt where the natural
-citation would be outside the source list — for example, asking the model
-to "compare these six papers with the original McCulloch–Pitts work" —
-and most models will happily invent `[7]`. Under grammar enforcement
-`[7]` is not reachable. That's the whole point.
+Ran `demo.py`'s prompt across two small-model × three-seed combinations
+(= six runs) via `sweep.py`. Full JSON log at
+[`findings/sweep-20260423T212115Z.json`](findings/).
 
-## Reading the full output
+Per-run table:
 
-The benchmark prints generated text truncated at 600 chars plus the
-summary table. For the full run output (including the model's prose), run
-locally — we don't bake a transcript into the repo because it varies
-with sampling. Tracking the transcript in VCS would misrepresent the
-benchmark as deterministic.
+| Model | Seed | C-cites | C-fab% | C-supp% | B-cites | B-fab% | B-supp% | sec |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Qwen2.5-0.5B-Instruct | 0 | 47 | 0.0 | 0.0 | 0 | 0.0 | 100.0 | 30.5 |
+| Qwen2.5-0.5B-Instruct | 1 | 34 | 0.0 | 2.9 | 3 | 0.0 | 0.0 | 23.9 |
+| Qwen2.5-0.5B-Instruct | 2 | 5 | 0.0 | 0.0 | 0 | 0.0 | 100.0 | 24.1 |
+| SmolLM-360M-Instruct | 0 | 45 | 0.0 | 0.0 | 0 | 0.0 | 100.0 | 17.7 |
+| SmolLM-360M-Instruct | 1 | 54 | 0.0 | 0.0 | 6 | 0.0 | 0.0 | 20.5 |
+| SmolLM-360M-Instruct | 2 | 32 | 0.0 | 0.0 | 7 | **14.3** | 0.0 | 18.1 |
+
+(*C- = citeformer run; B- = baseline. fab% = fabrication rate on that run;
+supp% = NLI support rate from `verify()`. sec = wall-clock seconds per run.*)
+
+Aggregate (mean ± std across 3 seeds):
+
+| Model | n | C-supp% | B-supp% | C-cites | B-cites | **C-fab%** | **B-fab%** |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Qwen2.5-0.5B-Instruct | 3 | 1.0 ± 1.7 | 66.7 ± 57.7 | 28.7 ± 21.5 | 1.0 ± 1.7 | **0.0 ± 0.0** | 0.0 ± 0.0 |
+| SmolLM-360M-Instruct | 3 | 0.0 ± 0.0 | 33.3 ± 57.7 | 43.7 ± 11.1 | 4.3 ± 3.8 | **0.0 ± 0.0** | 4.8 ± 8.2 |
+
+### What the sweep shows
+
+- **citeformer: 0.0% ± 0.0 fabrication across all six runs.** Every
+  constrained run on every seed on every model — the structural guarantee
+  is *consistent*, not average. This is the single most important row.
+- **Baseline fabricated on 1 of 6 runs** — SmolLM seed=2 emitted `[7]`
+  unprompted (14.3% of its 7 emitted cites). Baseline fabrication is rare
+  but real on a standard (not adversarial) prompt. The adversarial run
+  above is what you see when you *try* to make it fabricate; the sweep is
+  what you see when you don't.
+- **Baseline support% is noisy because emit count is low**: the high
+  baseline support rates (100%, 100%, 100%) all correspond to runs where
+  the baseline emitted 0 citations — our support-rate formula defines
+  "no citations = 100% supported" by convention. In practice the baseline
+  just doesn't cite much without specific prompting. citeformer's
+  REQUIRED policy does force citations (28-54 per run), so its support
+  rate is computed over a real denominator.
+- **Citation density gap: ~10×.** citeformer's REQUIRED emits 28.7 and
+  43.7 cites per run on average; baseline emits 1.0 and 4.3. That's the
+  policy doing what it says on the tin, not the grammar itself.
+- **Variance on citeformer cite counts is high** (std 21.5 on Qwen) —
+  specific seed and content-bound interactions sometimes truncate early.
+  Worth tightening `max_content_chars` on a per-model basis; the default
+  (240) is a generous compromise.
 
 ## Known limitations
 
-- **Sample size of one.** These are single-run numbers, not averages over
-  multiple seeds. Single-run support rates on 0.5B are noisy — treat them
-  as directional, not precise. For multi-seed sweeps, pass `--prompt` and
-  loop the script externally.
-- **Abstract-only content.** The NLI premise is each paper's abstract,
-  truncated at 512 tokens. A claim about a figure or implementation detail
-  that's in the body but not the abstract scores low even when it's true.
-  Richer content (full-text sections via GROBID) would lift the support
-  rate on technically accurate claims; we save that for a future benchmark.
-- **Small-model generation quality.** 0.5B is the default because "runs on
-  any laptop" is the contract; it's genuinely close to the floor of
-  models that can follow a "cite with `[N]`" instruction at all. Don't
-  read the 14% number as "citeformer caps at 14% support rate." Read it
-  as "here's what a 0.5B model on a 200-token budget can manage."
+- **Small-model ceiling on support rate.** Qwen 0.5B produces
+  locally-plausible prose that doesn't cleanly entail from short abstract
+  premises. Bigger models (Phi-3.5-mini at 3.8B, Llama 3.2 3B) push the
+  support rate past 50% on the same prompt — we document that anecdotally
+  in [`docs/verification.md`](../docs/verification.md) but haven't baked a
+  bigger-model run into this file yet (would require a ~7 GB download).
+  Contributions welcome: `uv run python -m benchmarks.sweep --models
+  microsoft/Phi-3.5-mini-instruct` and PR the JSON log + a row in the
+  table above.
+- **Abstract-only content** for the NLI premise. Body text would lift
+  the support rate on technically accurate claims that aren't in the
+  abstract.
+- **Sample size 3 on the sweep.** Enough to see that citeformer's
+  fabrication rate is consistently 0 and baseline's *isn't*. Not enough
+  for tight support-rate confidence intervals. Run `--seeds 0 1 2 3 4 5
+  6 7 8 9` for publication-quality averages.
 
 ## Open questions / future work
 
-- **Multi-model sweep**. Run Qwen 0.5B / 1.5B / 3B / 7B, Phi-3.5-mini,
-  Llama 3.2 1B/3B through the same prompt. Publish the support-rate curve.
-- **Longer content budget**. Does entailment improve if we feed full-text
-  sections instead of abstracts?
-- **ALCE subset**. The original plan mentioned ALCE (ASQA / QAMPARI) as a
-  standardized benchmark. That's heavier scaffolding than this demo
-  targets — left for a later expansion. Tracked in
-  [docs/reference/architecture.md](../docs/reference/architecture.md).
+- **Bigger-model curve.** Run the sweep on Phi-3.5-mini (3.8B) and
+  Llama-3.2-3B. Publish support-rate vs. model-size.
+- **Longer content budget.** Does entailment improve if we feed full-text
+  sections instead of abstracts? GROBID-extracted body text is already
+  supported by `Source.from_pdf`.
+- **ALCE subset.** ASQA + QAMPARI would give a standardized comparison
+  point. Heavier scaffolding than this demo targets; left for a later
+  expansion.
 
-Contributions that add benchmark data to this README — other models, other
-prompt shapes, other NLI backends — are welcome. The "living report" model
-means the file should grow more evidence, not less.
+Contributions that add data to this file — other models, other prompts,
+other NLI backends — are welcome. The "living report" model means the
+file grows more evidence, not less.

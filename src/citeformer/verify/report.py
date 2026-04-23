@@ -1,9 +1,10 @@
 """`VerificationReport` pydantic schema — §10.3 contract.
 
-Shape is locked in P1 (and refined in P6); the `schema_version` is bumped
-when fields change. Current version: **2** (P6 promoted
-`uncited_but_entailed` from a list of sentence-index ints to a list of
-`UncitedClaim` records that carry the span + candidate source + score).
+The `schema_version` is bumped any time the model's shape changes. Current
+version: **2** (promoted `uncited_but_entailed` from a list of
+sentence-index ints to a list of `UncitedClaim` records that carry the
+span + candidate source + score — see
+``docs/decisions/008-generation-result-schema-v2.md``).
 
 §10.3 ceremony: every change goes through the `release-bump` rubric, the
 snapshot tests in `tests/integration/test_schemas.py`, and a CHANGELOG

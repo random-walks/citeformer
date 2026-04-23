@@ -6,6 +6,108 @@ Versioning policy: **patch bumps are cheap**. See [docs/development/releasing.md
 
 ## [Unreleased]
 
+### Added — adversarial benchmark + multi-seed sweep
+
+New `benchmarks/adversarial.py` wraps the six-paper fixtures with a prompt
+that *explicitly instructs* the model to cite out-of-scope ids (``[7]`` for
+Turing 1950, ``[8]`` for McCulloch-Pitts 1943). This is the demonstration
+that had been missing from the README: on Qwen 2.5 0.5B / seed=0, the
+baseline complies (100% fabrication — `[7]` and `[8]` appear repeatedly)
+and citeformer structurally cannot (0% — grammar mask eliminates those
+tokens at the logit level). Sends up a `SystemExit` if the constrained
+run ever emits an out-of-range id, so it's effectively a contract test.
+
+New `benchmarks/sweep.py` runs any (models × seeds) grid and reports mean
+± std per metric. Ships with defaults of Qwen 0.5B + SmolLM 360M × 3 seeds
+(both cached from earlier demo runs, ~20-30s per run on CPU). Writes
+per-run rows + aggregates to `benchmarks/findings/sweep-<timestamp>.json`.
+First run captured: citeformer 0.0 ± 0.0% fabrication across all 6 runs;
+baseline fabricated on 1 of 6 (SmolLM 360M seed=2, 14.3% fab rate). That
+single real-world baseline fabrication under a *non-adversarial* prompt
+is the motivating evidence; the sweep makes it reproducible.
+
+Shared helpers in new `benchmarks/_common.py` so `demo.py` / `adversarial.py`
+/ `sweep.py` don't drift on fixture loading, source formatting, or
+verification analysis.
+
+`benchmarks/README.md` updated with full adversarial + sweep tables
+(per-run + aggregate), the honest caveats (small-model support-rate
+ceiling, noisy baseline support-rate when emit counts are low), and
+open questions for future multi-model extensions.
+
+### Added — `citeformer.prompts.build_rag_prompt()`
+
+First-class prompt assembly helper. Users were stitching their own RAG
+prompts before calling `Citeformer.generate()` — easy to get subtly wrong
+(misnumber sources, forget to show the `[N]` shape, bury the task). Now:
+
+```python
+from citeformer import Source, build_rag_prompt
+prompt = build_rag_prompt(
+    query="Explain self-attention.",
+    sources=sources,
+    system="You are writing a technical survey. Cite every claim.",
+    example="Self-attention weighs relationships across positions [1].",
+    answer_prefix="Survey:",
+)
+```
+
+String-in / string-out, every section optional. `build_rag_prompt` is
+re-exported from the top-level `citeformer` package for discoverability
+alongside `fetch_crossref` / `fetch_arxiv` / `render_references`. 13 unit
+tests in `tests/unit/test_prompts.py` pin the section ordering, author-tag
+format (Smith / Smith & Jones / Smith et al.), source numbering, and
+input validation (empty query, empty sources).
+
+Both `benchmarks/demo.py` and `benchmarks/sweep.py` were refactored to
+use it — the helper is real, not just a stub shipped without first-party
+adoption.
+
+### Added — streaming support (`HFBackend.stream`, `LlamaCppBackend.stream`, `Citeformer.stream`)
+
+`Citeformer.stream()` returns a `StreamingResult` — iterable for realtime
+chunk consumption, finalizable to a complete `GenerationResult` after the
+stream ends. Grammar enforcement applies to every yielded chunk exactly
+as in non-streaming `generate()`.
+
+```python
+stream = cf.stream(prompt="…", sources=sources, max_new_tokens=120)
+for chunk in stream:
+    sys.stdout.write(chunk)
+    sys.stdout.flush()
+result = stream.finalize()  # full GenerationResult with refs + verify()
+```
+
+Backend-side: `Backend.stream()` added to the ABC with a concrete default
+that falls back to `generate()` and yields the full text as one chunk —
+so any backend works with `Citeformer.stream()`, but only those that
+override deliver real token-by-token behavior. `HFBackend` uses
+transformers' `TextIteratorStreamer` on a background thread; the
+LogitsProcessor stays wired in. `LlamaCppBackend` uses
+`llama_cpp.Llama(..., stream=True)`, which already supports grammar.
+`MockBackend` splits the scripted response at 10-char boundaries for
+test exercises. `VLLMBackend` uses the default ABC fallback for now —
+vLLM's offline engine doesn't stream; async engine integration is
+deferred.
+
+12 new unit tests in `tests/unit/test_streaming.py` plus one new
+integration test
+(`test_hf_backend_stream_yields_multiple_chunks_and_matches_generate`)
+cover the stream-to-finalize lifecycle, idempotent finalize, and
+parity with `generate()` at temperature=0.
+
+`examples/05_streaming.py` demonstrates end-to-end usage.
+
+### Changed — cleanup of stale phase wording
+
+Removed "P1 stub", "P2 lands", "P3 consumes" and similar phase-pointer
+docstrings across `citeformer.py`, `core.py`, `render/styles.py`,
+`grammar/builder.py`, `verify/report.py`, `backends/__init__.py`,
+`backends/hf.py`, `cli/__init__.py`, `docs/index.md`, and
+`docs/development/dev-setup.md`. These references pointed at milestones
+we've already hit; keeping them made the code read as still-in-progress.
+Historical context preserved in CHANGELOG and ADRs, where it belongs.
+
 ### Fixed — REQUIRED policy stalls on small models (ADR-009)
 
 Supersedes [ADR-007](docs/decisions/007-required-policy-progression-gap.md).

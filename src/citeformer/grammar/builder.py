@@ -17,7 +17,7 @@ Three policies sit on top:
   state indefinitely — see ``docs/decisions/009-bounded-content-required.md``.
 - `QUOTES_ONLY`: only quoted spans require a trailing `cite-group`. Narrative
   prose can stand alone.
-- `AUTO`: `cite-group` is allowed anywhere but not required. The P6 `verify()`
+- `AUTO`: `cite-group` is allowed anywhere but not required. The `verify()`
   coverage check surfaces missing citations post-hoc instead.
 
 Format note: we emit GBNF (the GGML grammar format used by llama.cpp and

@@ -25,8 +25,9 @@ Python 3.11+ (tested up to 3.14).
 
 ## Get started
 
-- [Getting started](getting-started.md) — quickstart once P2 lands.
+- [Getting started](getting-started.md) — install, quickstart, verification.
 - [Guarantees](guarantees.md) — what "bulletproof" actually means, tier by tier.
+- [Verification](verification.md) — how NLI-based `verify()` works.
 - [Reference](reference/index.md) — architecture, the three §10 contracts, releasing.
 - [Historical spec](spec/v0.md) — the frozen genesis plan this was built from.
 

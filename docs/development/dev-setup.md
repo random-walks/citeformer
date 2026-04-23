@@ -23,7 +23,7 @@ make release-check    # dry-run sdist + wheel build
 
 ## Environment variables
 
-Copy `.env.example` → `.env` and fill in any you need. For P0, none are required. `HF_TOKEN` is the one you'll want once P2 backends land — only strictly needed for gated models like Llama 3.2. The default demo model (`microsoft/Phi-3.5-mini-instruct`) is open-access.
+Copy `.env.example` → `.env` and fill in any you need. Most work flows don't need anything. `HF_TOKEN` is only required for gated models (e.g. Llama 3.2); the default benchmark model (`Qwen/Qwen2.5-0.5B-Instruct`) and the examples' default (`gpt2`) are both open-access. `CITEFORMER_CROSSREF_MAILTO` is optional politeness — set it to your email to route Crossref / arXiv requests through the polite pool.
 
 ## Python version
 

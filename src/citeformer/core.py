@@ -217,8 +217,9 @@ class GenerationResult(BaseModel):
 
     §10.3 contract: `schema_version` is pinned by `tests/integration/test_schemas.py`.
     Any shape change requires bumping `schema_version` and following the ceremony in
-    `docs/reference/contracts.md`. Current version: **2** (P6 added `sources`
-    so `verify()` is self-contained).
+    `docs/reference/contracts.md`. Current version: **2** — added the
+    ``sources`` field so ``verify()`` is self-contained. See
+    ``docs/decisions/008-generation-result-schema-v2.md``.
 
     Attributes:
         schema_version: Contract version. Bump on any field add/rename/removal.
@@ -286,7 +287,7 @@ class GenerationResult(BaseModel):
         Raises:
             ImportError: If ``citeformer[verify]`` extras aren't installed.
             ValueError: If this result was constructed without `sources` (e.g.
-                a pre-P6 serialization that predates the schema_version=2
+                a ``schema_version=1`` serialization that predates the current
                 shape).
         """
         from citeformer.verify import Verifier

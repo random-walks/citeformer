@@ -28,7 +28,14 @@ from citeformer.csl import (
     validate_csl_json,
     validate_source_metadata,
 )
-from citeformer.metadata import extract_pdf, extract_url, fetch_arxiv, fetch_crossref
+from citeformer.metadata import (
+    extract_pdf,
+    extract_url,
+    fetch_arxiv,
+    fetch_crossref,
+    load_bibtex,
+    load_zotero_csl,
+)
 from citeformer.prompts import build_rag_prompt
 from citeformer.render import bundled_style_names, render_references
 from citeformer.verify import CitationSupport, VerificationReport
@@ -55,6 +62,8 @@ __all__ = [
     "extract_url",
     "fetch_arxiv",
     "fetch_crossref",
+    "load_bibtex",
+    "load_zotero_csl",
     "render_references",
     "validate_csl_json",
     "validate_source_metadata",

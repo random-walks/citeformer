@@ -147,6 +147,53 @@ class Source(BaseModel):
         metadata, content = extract_url(url, **kwargs)
         return cls(metadata=metadata, content=content)
 
+    @classmethod
+    def from_bibtex(cls, source: str | Any, **kwargs: Any) -> list[Self]:
+        """Build `Source` instances from a BibTeX file or string.
+
+        Each BibTeX entry becomes one `Source`. ``content`` is left empty
+        — BibTeX is bibliographic metadata only. Users who need chunk
+        text should either extend the returned items after load (e.g.
+        pair with PDF fetches for the same DOI) or use
+        ``Source.from_doi`` for per-entry DOI lookups.
+
+        Args:
+            source: Filesystem path to a ``.bib`` file or a BibTeX string.
+            **kwargs: Reserved for future options (none currently).
+
+        Returns:
+            A list of `Source` objects in document order.
+        """
+        from citeformer.metadata import load_bibtex
+
+        del kwargs  # reserved for future options
+        items = load_bibtex(source)
+        return [cls(metadata=item, content="") for item in items]
+
+    @classmethod
+    def from_zotero(cls, source: str | Any, **kwargs: Any) -> list[Self]:
+        """Build `Source` instances from a Zotero "Export → CSL JSON" file.
+
+        The CSL JSON export is the shape we consume natively; this
+        classmethod is sugar for ``[Source(metadata=item, content="")
+        for item in load_zotero_csl(path)]``. Also supports the
+        Better BibTeX CSL-JSON export format (identical schema).
+
+        Args:
+            source: Filesystem path to a ``.json`` export, raw JSON
+                string, or an iterable of items.
+            **kwargs: Forwarded to
+                :func:`citeformer.metadata.load_zotero_csl`
+                (``filter_fn``, ``dedupe``).
+
+        Returns:
+            A list of `Source` objects in the export's order.
+        """
+        from citeformer.metadata import load_zotero_csl
+
+        items = load_zotero_csl(source, **kwargs)
+        return [cls(metadata=item, content="") for item in items]
+
 
 class Citation(BaseModel):
     """A single inline citation marker emitted by the model.

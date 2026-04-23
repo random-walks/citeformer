@@ -1,7 +1,7 @@
 """HuggingFace transformers backend with grammar-level citation enforcement.
 
-This is the flagship P2 backend: loads a transformers causal LM, builds the
-§10.1 citation grammar for the in-scope sources, compiles it with XGrammar's
+The flagship backend: loads a transformers causal LM, builds the §10.1
+citation grammar for the in-scope sources, compiles it with XGrammar's
 tokenizer-aware compiler, and masks logits at every decode step so the model
 **cannot** emit a citation marker that refers to a non-existent source.
 
@@ -17,6 +17,8 @@ stateful per-generation: we construct a new one for every ``generate()`` call
 from __future__ import annotations
 
 import logging
+import threading
+from collections.abc import Iterator
 from typing import Any
 
 from citeformer.backends.base import Backend
@@ -148,16 +150,87 @@ class HFBackend(Backend):
         Raises:
             ValueError: If ``sources`` is empty.
         """
+        inputs, generate_kwargs = self._prepare_generation(prompt, sources, policy, options)
+        with self._torch.no_grad():
+            output_ids = self.model.generate(**inputs, **generate_kwargs)
+
+        generated = output_ids[0][inputs["input_ids"].shape[1] :]
+        decoded: Any = self.tokenizer.decode(generated, skip_special_tokens=True)
+        return str(decoded)
+
+    def stream(
+        self,
+        prompt: str,
+        sources: list[Source],
+        policy: Policy,
+        **options: Any,
+    ) -> Iterator[str]:
+        """Stream text chunks as the model decodes them.
+
+        Runs ``model.generate`` on a background thread and yields decoded chunks
+        via transformers' ``TextIteratorStreamer``. Grammar enforcement is
+        identical to ``generate()`` — the XGrammar LogitsProcessor is wired in
+        regardless of whether consumers are streaming or not.
+
+        Args:
+            prompt: See ``generate()``.
+            sources: See ``generate()``.
+            policy: See ``generate()``.
+            **options: Same options as ``generate()`` (``max_new_tokens``,
+                ``temperature``, ``max_content_chars``). A ``timeout`` option
+                (seconds, default 60) caps how long a single chunk read blocks
+                — useful to fail loudly if the background thread hangs.
+
+        Yields:
+            Decoded text chunks in order. Joining them reproduces what
+            ``generate()`` would have returned.
+
+        Raises:
+            ValueError: If ``sources`` is empty.
+        """
+        from transformers import TextIteratorStreamer
+
+        inputs, generate_kwargs = self._prepare_generation(prompt, sources, policy, options)
+        streamer = TextIteratorStreamer(
+            self.tokenizer,
+            skip_prompt=True,
+            skip_special_tokens=True,
+            timeout=float(options.get("timeout", 60.0)),
+        )
+        generate_kwargs["streamer"] = streamer
+
+        def _run() -> None:
+            with self._torch.no_grad():
+                self.model.generate(**inputs, **generate_kwargs)
+
+        thread = threading.Thread(target=_run, daemon=True)
+        thread.start()
+        try:
+            for chunk in streamer:
+                if chunk:
+                    yield str(chunk)
+        finally:
+            # Thread lifetime is bounded by the streamer queue; join is cheap.
+            thread.join(timeout=1.0)
+
+    def _prepare_generation(
+        self,
+        prompt: str,
+        sources: list[Source],
+        policy: Policy,
+        options: dict[str, Any],
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Build tokenizer inputs + generate kwargs shared by generate/stream."""
         if len(sources) < 1:
-            raise ValueError("HFBackend.generate requires at least 1 source")
+            raise ValueError("HFBackend requires at least 1 source")
 
         max_new_tokens = int(options.get("max_new_tokens", _DEFAULT_MAX_NEW_TOKENS))
         temperature = float(options.get("temperature", _DEFAULT_TEMPERATURE))
+        max_content_chars = options.get("max_content_chars", DEFAULT_MAX_CONTENT_CHARS)
 
         # Build + compile the citation grammar. Compiler cache means compilation
         # is near-free after the first call with a given (n_sources, policy,
         # max_content_chars) triple.
-        max_content_chars = options.get("max_content_chars", DEFAULT_MAX_CONTENT_CHARS)
         grammar = build_grammar(
             n_sources=len(sources),
             policy=policy,
@@ -173,19 +246,14 @@ class HFBackend(Backend):
         processor = self._xgr.contrib.hf.LogitsProcessor(compiled)
 
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
-        with self._torch.no_grad():
-            output_ids = self.model.generate(
-                **inputs,
-                max_new_tokens=max_new_tokens,
-                temperature=temperature,
-                do_sample=temperature > 0,
-                logits_processor=[processor],
-                pad_token_id=self.tokenizer.eos_token_id or self.tokenizer.pad_token_id,
-            )
-
-        generated = output_ids[0][inputs.input_ids.shape[1] :]
-        decoded: Any = self.tokenizer.decode(generated, skip_special_tokens=True)
-        return str(decoded)
+        generate_kwargs: dict[str, Any] = {
+            "max_new_tokens": max_new_tokens,
+            "temperature": temperature,
+            "do_sample": temperature > 0,
+            "logits_processor": [processor],
+            "pad_token_id": self.tokenizer.eos_token_id or self.tokenizer.pad_token_id,
+        }
+        return inputs, generate_kwargs
 
     @staticmethod
     def _autodetect_device(torch_module: Any) -> str:

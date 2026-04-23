@@ -52,6 +52,18 @@ after the first run.
 uv run python examples/04_fetch_and_render.py
 ```
 
+### 5. [`05_streaming.py`](05_streaming.py) — realtime chunk streaming
+
+Prints tokens as the model decodes them via `Citeformer.stream()`, then
+calls `.finalize()` to get the full `GenerationResult` with parsed
+citations + rendered references. Grammar enforcement applies to every
+chunk exactly as in `generate()`.
+
+```bash
+uv sync --extra dev --extra hf
+uv run python examples/05_streaming.py
+```
+
 ## Adding a new citation style
 
 Adding a seventh (or seventieth) citation style is handled by the

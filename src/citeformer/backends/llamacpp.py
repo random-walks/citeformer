@@ -13,6 +13,7 @@ to-gguf`` script in the llama.cpp repo to produce one).
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterator
 from typing import Any
 
 from citeformer.backends.base import Backend
@@ -106,10 +107,54 @@ class LlamaCppBackend(Backend):
         Returns:
             Generated text with only valid ``[N]`` markers.
         """
+        max_new_tokens, temperature, llama_grammar = self._prepare(sources, policy, options)
+
+        result: Any = self.llm(
+            prompt,
+            grammar=llama_grammar,
+            max_tokens=max_new_tokens,
+            temperature=temperature,
+        )
+        return str(result["choices"][0]["text"])
+
+    def stream(
+        self,
+        prompt: str,
+        sources: list[Source],
+        policy: Policy,
+        **options: Any,
+    ) -> Iterator[str]:
+        """Stream text chunks from llama.cpp's native streaming mode.
+
+        `llama-cpp-python`'s `Llama.__call__(..., stream=True)` yields dicts
+        shaped like the non-streaming result: each has
+        ``["choices"][0]["text"]`` with the newly-decoded piece. Grammar
+        enforcement is identical to `generate()`.
+        """
+        max_new_tokens, temperature, llama_grammar = self._prepare(sources, policy, options)
+        stream_iter: Any = self.llm(
+            prompt,
+            grammar=llama_grammar,
+            max_tokens=max_new_tokens,
+            temperature=temperature,
+            stream=True,
+        )
+        for chunk in stream_iter:
+            piece = chunk.get("choices", [{}])[0].get("text", "")
+            if piece:
+                yield str(piece)
+
+    def _prepare(
+        self,
+        sources: list[Source],
+        policy: Policy,
+        options: dict[str, Any],
+    ) -> tuple[int, float, Any]:
+        """Shared setup for generate/stream: validate, build + compile grammar."""
         from llama_cpp import LlamaGrammar  # type: ignore[attr-defined,unused-ignore]
 
         if len(sources) < 1:
-            raise ValueError("LlamaCppBackend.generate requires at least 1 source")
+            raise ValueError("LlamaCppBackend requires at least 1 source")
 
         max_new_tokens = int(options.get("max_new_tokens", _DEFAULT_MAX_NEW_TOKENS))
         temperature = float(options.get("temperature", _DEFAULT_TEMPERATURE))
@@ -121,12 +166,4 @@ class LlamaCppBackend(Backend):
             max_content_chars=max_content_chars,
         )
         llama_grammar = LlamaGrammar.from_string(grammar.gbnf, verbose=False)
-
-        result: Any = self.llm(
-            prompt,
-            grammar=llama_grammar,
-            max_tokens=max_new_tokens,
-            temperature=temperature,
-        )
-        # llama-cpp-python returns a dict with `choices[0]["text"]`.
-        return str(result["choices"][0]["text"])
+        return max_new_tokens, temperature, llama_grammar

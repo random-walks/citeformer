@@ -9,6 +9,7 @@ scoped to the backend that cares about them.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterator
 from typing import Any
 
 from citeformer.core import Policy, Source
@@ -17,12 +18,17 @@ from citeformer.core import Policy, Source
 class Backend(ABC):
     """Abstract backend for citeformer.
 
-    Subclasses implement `generate()` against a specific model runtime (HF transformers
-    in P2, vLLM and llama.cpp in P5, plus the `MockBackend` available since P1).
-    Constrained-decoding grammar construction is the backend's responsibility — each
-    runtime has a different native format (XGrammar object, GBNF string, etc.), so the
-    shared `grammar/builder.py` module (P2) emits a backend-agnostic intermediate
-    representation that each backend converts as needed.
+    Subclasses implement `generate()` against a specific model runtime (HF transformers,
+    vLLM, llama.cpp, plus the `MockBackend`). Constrained-decoding grammar construction
+    is the backend's responsibility — each runtime has a different native format
+    (XGrammar object, GBNF string, etc.), so the shared `grammar/builder.py` module
+    emits a backend-agnostic intermediate representation that each backend converts as
+    needed.
+
+    Subclasses may optionally override `stream()` to yield chunks as the model decodes
+    them. The default implementation falls back to `generate()` and emits the full
+    text as a single chunk — any backend works with `Citeformer.stream()`, but only
+    overriding backends deliver true token-by-token behavior.
     """
 
     @abstractmethod
@@ -52,6 +58,34 @@ class Backend(ABC):
 
         Returns:
             The generated text with inline markers. References are not part of the
-            backend output — the orchestration layer renders them separately via
-            citeproc-py (P3+).
+            backend output — the orchestration layer renders them separately.
         """
+
+    def stream(
+        self,
+        prompt: str,
+        sources: list[Source],
+        policy: Policy,
+        **options: Any,
+    ) -> Iterator[str]:
+        """Yield generation output as a stream of text chunks.
+
+        The default implementation is not a true stream: it calls `generate()` and
+        yields the full text as a single chunk. Backends that can produce
+        token-by-token output (HF, llama.cpp) should override this to yield chunks
+        as they're decoded — the grammar constraints apply to every yielded chunk
+        exactly as in `generate()`.
+
+        Args:
+            prompt: See `generate()`.
+            sources: See `generate()`.
+            policy: See `generate()`.
+            **options: See `generate()`. Most backends also accept streaming-specific
+                hints here (e.g. XGrammar's LogitsProcessor is already stateful, so
+                no extra plumbing is needed).
+
+        Yields:
+            Text chunks in the order they're produced. Joining all yielded chunks
+            reconstructs what `generate()` would have returned.
+        """
+        yield self.generate(prompt=prompt, sources=sources, policy=policy, **options)

@@ -7,6 +7,7 @@ orchestration layer be tested end-to-end without loading a real model.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from typing import Any
 
 from citeformer.backends.base import Backend
@@ -54,3 +55,23 @@ class MockBackend(Backend):
         if sources:
             return f"Mock response for: {prompt!r} [1]."
         return f"Mock response for: {prompt!r}."
+
+    def stream(
+        self,
+        prompt: str,
+        sources: list[Source],
+        policy: Policy,
+        **options: Any,
+    ) -> Iterator[str]:
+        """Yield the mock response in small chunks to exercise stream consumers.
+
+        Splits the scripted response at word boundaries so downstream
+        streaming tests see more than one chunk without relying on tokenizer
+        behavior.
+        """
+        text = self.generate(prompt=prompt, sources=sources, policy=policy, **options)
+        # Rough word-ish split: 10 char groups keep the chunk count moderate for
+        # short outputs while still giving >1 chunk for anything non-trivial.
+        chunk_size = 10
+        for i in range(0, len(text), chunk_size):
+            yield text[i : i + chunk_size]

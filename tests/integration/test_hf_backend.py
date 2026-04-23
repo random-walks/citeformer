@@ -135,6 +135,42 @@ def test_hf_backend_required_with_tight_bound_emits_citations(hf_backend) -> Non
 
 
 @pytest.mark.integration
+def test_hf_backend_stream_yields_multiple_chunks_and_matches_generate(hf_backend) -> None:  # type: ignore[no-untyped-def]
+    """Streamed output joined should equal what generate() returns.
+
+    The XGrammar LogitsProcessor is stateful per call; this asserts that the
+    stream() path (which runs generate() in a background thread via
+    TextIteratorStreamer) honors the same grammar constraints.
+    """
+    sources = _sources(3)
+    cf = Citeformer(backend=hf_backend, citation_policy=Policy.AUTO)
+
+    stream = cf.stream(
+        prompt="Two short sentences:",
+        sources=sources,
+        max_new_tokens=40,
+        temperature=0.0,  # deterministic
+    )
+    chunks = list(stream)
+    assert len(chunks) > 1, f"expected >1 chunk, got {chunks!r}"
+    result = stream.finalize()
+
+    # Cross-check: the streamed text should match what generate() produces
+    # when given the same seed-less deterministic setup (temperature=0).
+    direct = cf.generate(
+        prompt="Two short sentences:",
+        sources=sources,
+        max_new_tokens=40,
+        temperature=0.0,
+    )
+    assert result.text == direct.text
+    # And any emitted cite is still in-range — the structural guarantee applies
+    # to streams exactly as it does to non-streamed generate().
+    for cite in result.citations:
+        assert 1 <= cite.source_id <= 3
+
+
+@pytest.mark.integration
 def test_hf_backend_compiler_caches_across_calls(hf_backend) -> None:  # type: ignore[no-untyped-def]
     """Two generate() calls with the same (n_sources, policy) should hit the compiler
     cache rather than recompile the grammar.

@@ -56,7 +56,7 @@ Environment variables live in `.env.example`. Copy to `.env` when needed. For P0
 
 ## The three §10 contracts (short form)
 
-1. **§10.1** — `CITE_ID: "[" <digits> "]"` + the policies (`required`, `quotes_only`, `auto`) in `src/citeformer/grammar/`.
+1. **§10.1** — `cite-id ::= "[" <digits> "]"` (GBNF) + the policies (`required`, `quotes_only`, `auto`) in `src/citeformer/grammar/`.
 2. **§10.2** — `Source.metadata` is CSL-JSON; shape consumed by citeproc-py.
 3. **§10.3** — `GenerationResult` and `VerificationReport` pydantic models with `schema_version: 1`.
 

@@ -9,7 +9,7 @@ You are the contract reviewer for citeformer. Your job is to audit a diff or set
 
 ## The three contracts
 
-1. **§10.1 — Citation marker grammar.** `CITE_ID: "[" <digits> "]"` and the three policies (`required`, `quotes_only`, `auto`). Anything touching `src/citeformer/grammar/` or the `Policy` enum is a contract touch.
+1. **§10.1 — Citation marker grammar.** `cite-id ::= "[" <digits> "]"` (GBNF) and the three policies (`required`, `quotes_only`, `auto`). Anything touching `src/citeformer/grammar/` or the `Policy` enum is a contract touch.
 2. **§10.2 — `Source.metadata` shape.** CSL-JSON item. Changing required fields or renaming fields breaks it; adding optionals is additive.
 3. **§10.3 — Output schemas.** `GenerationResult` and `VerificationReport` pydantic models carry `schema_version: 1`. Any shape change requires a `schema_version` bump.
 

@@ -22,7 +22,7 @@ The piggyback map lives in `docs/reference/architecture.md`. The short version:
 
 ## What citeformer actually owns
 
-- The **citation grammar shape** (§10.1 contract) — `CITE_ID` terminal + policy rules.
+- The **citation grammar shape** (§10.1 contract) — `cite-id` GBNF rule + policy rules.
 - The **CSL-JSON source metadata contract** (§10.2).
 - The **output pydantic models** and their schema versions (§10.3).
 - The **inline-marker-to-reference coupling** (no reference without a matching marker; no marker without a reference).

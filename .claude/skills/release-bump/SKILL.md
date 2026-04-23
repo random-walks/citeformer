@@ -32,7 +32,7 @@ Pick minor if:
 
 Pick major if any of the three §10 contracts is *broken* (not additive):
 
-- **§10.1** — the `CITE_ID` terminal shape changes; the semantics of an existing policy change; a policy is removed.
+- **§10.1** — the `cite-id` rule shape changes; the semantics of an existing policy change; a policy is removed.
 - **§10.2** — a field is renamed or removed from the `Source.metadata` expected shape.
 - **§10.3** — a field is renamed or removed from `GenerationResult` or `VerificationReport`; `schema_version` must be bumped (1 → 2).
 

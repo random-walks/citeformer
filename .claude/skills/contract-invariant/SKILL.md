@@ -9,14 +9,14 @@ Three files carry §10 contracts. Edits require a ceremony, not a silent commit.
 
 ## §10.1 — `src/citeformer/grammar/`
 
-Changes the grammar shape (`CITE_ID` terminal) or the semantics of a policy (`required` / `quotes_only` / `auto`).
+Changes the grammar shape (`cite-id` rule) or the semantics of a policy (`required` / `quotes_only` / `auto`).
 
 **Ceremony:**
 1. Regenerate `tests/unit/test_grammar_builder.py` snapshots via `pytest --regen-all tests/unit/test_grammar_builder.py`.
 2. Classify the change:
    - Adding a new policy → **minor** bump.
    - Changing an existing policy's semantics → **major** bump.
-   - Changing the `CITE_ID` terminal shape → **major** bump.
+   - Changing the `cite-id` rule shape → **major** bump.
 3. Add a "Contracts (§10)" section to `CHANGELOG.md` [Unreleased] noting the change.
 4. Fill the PR template's "Invariant touched?" section with §10.1.
 

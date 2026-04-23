@@ -10,7 +10,7 @@ One-screen brief for Claude Code working in this repo. Canonical wider guide is 
 
 Three §10 contracts (full detail: [`docs/reference/contracts.md`](docs/reference/contracts.md)). Touching any is a deliberate ceremony.
 
-1. **§10.1 — Citation marker grammar.** `CITE_ID: "[" <digits> "]"` terminal + `required` / `quotes_only` / `auto` policies. Lives in `src/citeformer/grammar/`. Changing the shape or policy semantics = **major** bump.
+1. **§10.1 — Citation marker grammar.** `cite-id ::= "[" <digits> "]"` (GBNF) + `required` / `quotes_only` / `auto` policies. Lives in `src/citeformer/grammar/`. Changing the marker shape or policy semantics = **major** bump.
 2. **§10.2 — `Source.metadata` CSL-JSON shape.** The shape citeproc-py consumes. Additive fields = minor; renames or removals = major. Regression snapshot in `tests/unit/test_csl_rendering.py`.
 3. **§10.3 — Output schemas.** `GenerationResult` + `VerificationReport` pydantic models carry `schema_version: 1`. Any shape change bumps `schema_version`.
 
@@ -61,7 +61,7 @@ make release-check    # preflight for tag push
 
 - `piggyback-first` — consult the piggyback map before writing new code.
 - `contract-invariant` — ceremony when touching §10 files.
-- `grammar-shape` — the `CITE_ID` terminal is load-bearing.
+- `grammar-shape` — the `cite-id` rule is load-bearing.
 - `release-bump` — patch/minor/major rubric.
 
 ## Phase status

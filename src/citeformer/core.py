@@ -9,7 +9,7 @@ the ceremony documented in `docs/reference/contracts.md`.
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -57,6 +57,91 @@ class Source(BaseModel):
     content: str = Field(
         description="Raw text the model may cite from.",
     )
+
+    @classmethod
+    def from_doi(cls, doi: str, **kwargs: Any) -> Self:
+        """Build a `Source` from a Crossref DOI lookup.
+
+        The returned `content` field is empty — DOI metadata alone doesn't
+        ship the paper text. If you have the PDF, use `Source.from_pdf` to
+        get the text and merge with `metadata=source.metadata | pdf_meta`,
+        or construct the combined `Source` directly.
+
+        Args:
+            doi: DOI in bare, URL, or ``doi:`` form.
+            **kwargs: Forwarded to `citeformer.metadata.fetch_crossref`
+                (``timeout``, ``use_cache``).
+
+        Returns:
+            A `Source` with `metadata` = CSL-JSON from Crossref and empty
+            `content`.
+        """
+        from citeformer.metadata import fetch_crossref
+
+        metadata = fetch_crossref(doi, **kwargs)
+        return cls(metadata=metadata, content="")
+
+    @classmethod
+    def from_arxiv(cls, arxiv_id: str, **kwargs: Any) -> Self:
+        """Build a `Source` from an arXiv API lookup.
+
+        The abstract becomes `content` so the model has something concrete
+        to cite. For the full paper body, fetch the PDF and use
+        `Source.from_pdf` separately.
+
+        Args:
+            arxiv_id: arXiv id (bare, URL, or ``arxiv:`` form; version
+                suffix is stripped).
+            **kwargs: Forwarded to `citeformer.metadata.fetch_arxiv`.
+
+        Returns:
+            A `Source` with the arXiv CSL-JSON and the abstract in `content`.
+        """
+        from citeformer.metadata import fetch_arxiv
+
+        metadata = dict(fetch_arxiv(arxiv_id, **kwargs))
+        # abstract lives in the fetcher output but doesn't belong in CSL
+        # metadata — pull it into content.
+        abstract = str(metadata.pop("abstract", ""))
+        return cls(metadata=metadata, content=abstract)
+
+    @classmethod
+    def from_pdf(cls, path: str | Any, **kwargs: Any) -> Self:
+        """Build a `Source` from a local PDF via pypdf.
+
+        Args:
+            path: Filesystem path to the PDF.
+            **kwargs: Reserved for future fetcher options (none currently).
+
+        Returns:
+            A `Source` with best-effort CSL metadata (``title``, ``author``,
+            ``issued`` when the PDF info dict has them) and the concatenated
+            page text as `content`.
+        """
+        from citeformer.metadata import extract_pdf
+
+        metadata, content = extract_pdf(path, **kwargs)
+        return cls(metadata=metadata, content=content)
+
+    @classmethod
+    def from_url(cls, url: str, **kwargs: Any) -> Self:
+        """Build a `Source` from an HTTP(S) URL.
+
+        Uses readability-lxml for the article body and meta-tag parsing
+        (OpenGraph / Twitter / article) for title / author / date / site.
+
+        Args:
+            url: HTTP(S) URL.
+            **kwargs: Forwarded to `citeformer.metadata.extract_url`.
+
+        Returns:
+            A `Source` with webpage CSL metadata and the article body in
+            `content`.
+        """
+        from citeformer.metadata import extract_url
+
+        metadata, content = extract_url(url, **kwargs)
+        return cls(metadata=metadata, content=content)
 
 
 class Citation(BaseModel):

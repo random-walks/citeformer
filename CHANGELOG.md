@@ -6,6 +6,42 @@ Versioning policy: **patch bumps are cheap**. See [docs/development/releasing.md
 
 ## [Unreleased]
 
+### Added — P4 metadata adapters (Source.from_doi / from_arxiv / from_pdf / from_url)
+
+Four classmethods on `Source` for building Source instances from common
+identifier + content sources. Each wraps a standalone fetcher function that
+can also be imported directly from `citeformer.metadata`.
+
+- `Source.from_doi(doi)` → `citeformer.metadata.fetch_crossref`. Hits
+  `api.crossref.org/works/{doi}/transform` with the CSL-JSON Accept
+  header; returns the CSL-JSON dict. Honors the
+  `CITEFORMER_CROSSREF_MAILTO` env var for Crossref's polite pool.
+- `Source.from_arxiv(arxiv_id)` → `citeformer.metadata.fetch_arxiv`. Hits
+  arXiv's Atom export API and parses the XML into CSL-JSON
+  (`type: article-journal`, `container-title: "arXiv preprint"`, plus an
+  `abstract` field that `from_arxiv` pops into `Source.content`).
+- `Source.from_pdf(path)` → `citeformer.metadata.extract_pdf`. Uses
+  `pypdf` for PDF-info dict metadata (`/Title`, `/Author`,
+  `/CreationDate` → year) and per-page text extraction.
+  `type: "report"` by default.
+- `Source.from_url(url)` → `citeformer.metadata.extract_url`. Uses
+  `readability-lxml` for the article body and `lxml` meta-tag parsing
+  (OpenGraph / Twitter / article:*) for title / author / date / site.
+
+Metadata caching via diskcache. Default path:
+`~/.cache/citeformer/metadata/`. Override with `CITEFORMER_CACHE_DIR`.
+Fetchers accept `use_cache=False` for cache-bypass.
+
+Tests (16 new, total 79 unit):
+- `test_metadata_cache.py`: env-var override, default path, lazy
+  directory creation.
+- `test_metadata_pdf.py`: generates a minimal PDF at test-time via
+  `PdfWriter`, asserts title / author / year recovery. Plus the
+  no-metadata fallback and the missing-file error path.
+- `test_metadata_fetchers.py`: pytest-vcr cassettes replay real
+  Crossref / arXiv / example.com responses. Stable identifiers
+  (Nature paper DOI `10.1038/s41586-023-06221-2`, arXiv `2305.14627`).
+
 ### Added — P2b HF backend with logit-level citation enforcement
 
 The flagship demo: load any HuggingFace causal LM, pass sources, and citation

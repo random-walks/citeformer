@@ -1,0 +1,53 @@
+interactions:
+- request:
+    body: ''
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Host:
+      - example.com
+      User-Agent:
+      - citeformer/0.0.1 (+https://github.com/random-walks/citeformer)
+    method: GET
+    uri: https://example.com/
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAA/2VRy27bMBC89ytY+WqJFpoEAU0JKNDecswPbMSVtAgfArmSqxj+99JScsqF4A53
+        dmaH+qcJHa8TipGdbfX9FBb80BToi1wjmFYzscX27z9wk0XxJzggr+WOaocMwoPDplgIL1OIXIgu
+        eEbPTXEhw2NjcKEOy604CvLEBLZMHVhs6iyTeM2j3oJZr2/QvQ8xzN6oAyKeN456Oi2Xs4M4kFf1
+        4zIKmDmc+6xS9uDIriqtidGVMx0T+FQmjNTfxvq69ST6QFVXj+huhpZrmKAjXtWper6BsuTfj6AW
+        SsRorl2wIarDr4fnm5a7MS33HO4GW50n5GDqb3lkSE/t60hJmA0S+daHKOaEeecMdrPLoQBT8AJ3
+        dhIX4jHMLDyiIT+ICaOjlHJPJX4vgcwXP+SXjZsqLae7lgYxRuybYmSekpKSwEMV4iB3A0l+qhTt
+        C0L0woWIWkK78eW2iNyXktv///gP4HAcLRACAAA=
+    headers:
+      Age:
+      - '10498'
+      CF-RAY:
+      - 9f0f19150f4d62e2-ORD
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - text/html
+      Date:
+      - Thu, 23 Apr 2026 18:58:08 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      allow:
+      - GET, HEAD
+      cf-cache-status:
+      - HIT
+      last-modified:
+      - Sat, 18 Apr 2026 00:49:31 GMT
+    status:
+      code: 200
+      message: OK
+version: 1

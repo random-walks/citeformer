@@ -17,6 +17,7 @@ from citeformer._version import __version__
 from citeformer.backends import Backend, MockBackend
 from citeformer.citeformer import Citeformer
 from citeformer.core import Citation, GenerationResult, Policy, Reference, Source
+from citeformer.metadata import extract_pdf, extract_url, fetch_arxiv, fetch_crossref
 from citeformer.render import bundled_style_names, render_references
 from citeformer.verify import CitationSupport, VerificationReport
 
@@ -33,5 +34,9 @@ __all__ = [
     "VerificationReport",
     "__version__",
     "bundled_style_names",
+    "extract_pdf",
+    "extract_url",
+    "fetch_arxiv",
+    "fetch_crossref",
     "render_references",
 ]

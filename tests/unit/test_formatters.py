@@ -269,3 +269,23 @@ def test_chicago_uses_et_al_only_beyond_ten_authors() -> None:
     many = f.bibliography(_article(author=_many_authors(11)), 1)
     assert "et al." not in few
     assert "et al." in many
+
+
+@pytest.mark.parametrize(
+    "style,n_authors",
+    [
+        ("mla-9", 5),
+        ("chicago-author-date", 12),
+        ("vancouver", 8),
+    ],
+)
+def test_et_al_bibliography_has_no_double_period(style, n_authors) -> None:  # type: ignore[no-untyped-def]
+    """Regression: ``ensure_period`` must not emit ``et al..`` in bibliographies.
+
+    Before the fix, ``f"{authors}."`` appended a second period when the author
+    list already ended in ``et al.``. Observed on the standalone-rendering
+    example when we pointed it at the real arXiv / Crossref fixtures.
+    """
+    f = get_formatter(style)
+    out = f.bibliography(_article(author=_many_authors(n_authors)), 1)
+    assert "et al.." not in out, f"{style} emits double-period: {out!r}"

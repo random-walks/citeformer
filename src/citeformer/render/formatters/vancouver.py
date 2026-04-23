@@ -21,6 +21,7 @@ from citeformer.render.formatters._base import (
     Author,
     CitationFormatter,
     CSLItem,
+    ensure_period,
     format_page_range,
     get_str,
     get_title,
@@ -84,7 +85,7 @@ class VancouverFormatter(CitationFormatter):
 
         chunks: list[str] = []
         if authors:
-            chunks.append(f"{authors}.")
+            chunks.append(ensure_period(authors))
         if title:
             chunks.append(f"{title}.")
         if journal:
@@ -118,7 +119,7 @@ class VancouverFormatter(CitationFormatter):
 
         chunks: list[str] = []
         if authors:
-            chunks.append(f"{authors}.")
+            chunks.append(ensure_period(authors))
         if title:
             chunks.append(f"{title}.")
         location_parts: list[str] = [p for p in (place, publisher) if p]
@@ -142,7 +143,7 @@ class VancouverFormatter(CitationFormatter):
 
         chunks: list[str] = []
         if authors:
-            chunks.append(f"{authors}.")
+            chunks.append(ensure_period(authors))
         if title:
             chunks.append(f"{title}.")
         in_parts: list[str] = ["In:"]
@@ -176,7 +177,7 @@ class VancouverFormatter(CitationFormatter):
 
         chunks: list[str] = []
         if authors:
-            chunks.append(f"{authors}.")
+            chunks.append(ensure_period(authors))
         if title:
             chunks.append(f"{title} [{genre}].")
         if publisher and year:
@@ -196,7 +197,7 @@ class VancouverFormatter(CitationFormatter):
 
         chunks: list[str] = []
         if authors:
-            chunks.append(f"{authors}.")
+            chunks.append(ensure_period(authors))
         if title:
             chunks.append(f"{title} [Internet].")
         if site:

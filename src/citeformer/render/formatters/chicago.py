@@ -21,6 +21,7 @@ from citeformer.render.formatters._base import (
     Author,
     CitationFormatter,
     CSLItem,
+    ensure_period,
     format_page_range,
     get_str,
     get_title,
@@ -108,7 +109,7 @@ class ChicagoAuthorDateFormatter(CitationFormatter):
 
         chunks: list[str] = []
         if authors:
-            chunks.append(f"{authors}.")
+            chunks.append(ensure_period(authors))
         chunks.append(f"{year if year is not None else 'n.d.'}.")
         if title:
             chunks.append(f'"{title}."')
@@ -132,7 +133,7 @@ class ChicagoAuthorDateFormatter(CitationFormatter):
 
         chunks: list[str] = []
         if authors:
-            chunks.append(f"{authors}.")
+            chunks.append(ensure_period(authors))
         chunks.append(f"{year if year is not None else 'n.d.'}.")
         if title:
             chunks.append(f"{title}.")
@@ -153,7 +154,7 @@ class ChicagoAuthorDateFormatter(CitationFormatter):
 
         chunks: list[str] = []
         if authors:
-            chunks.append(f"{authors}.")
+            chunks.append(ensure_period(authors))
         chunks.append(f"{year if year is not None else 'n.d.'}.")
         if title:
             chunks.append(f'"{title}."')
@@ -185,7 +186,7 @@ class ChicagoAuthorDateFormatter(CitationFormatter):
 
         chunks: list[str] = []
         if authors:
-            chunks.append(f"{authors}.")
+            chunks.append(ensure_period(authors))
         chunks.append(f"{year if year is not None else 'n.d.'}.")
         if title:
             chunks.append(f'"{title}."')
@@ -205,7 +206,7 @@ class ChicagoAuthorDateFormatter(CitationFormatter):
 
         chunks: list[str] = []
         if authors:
-            chunks.append(f"{authors}.")
+            chunks.append(ensure_period(authors))
         chunks.append(f"{year if year is not None else 'n.d.'}.")
         if title:
             chunks.append(f'"{title}."')
@@ -224,7 +225,7 @@ class ChicagoAuthorDateFormatter(CitationFormatter):
 
         chunks: list[str] = []
         if authors:
-            chunks.append(f"{authors}.")
+            chunks.append(ensure_period(authors))
         chunks.append(f"{year if year is not None else 'n.d.'}.")
         if title:
             chunks.append(f'"{title}."')

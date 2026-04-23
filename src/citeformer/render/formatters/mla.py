@@ -19,6 +19,7 @@ from citeformer.render.formatters._base import (
     Author,
     CitationFormatter,
     CSLItem,
+    ensure_period,
     format_page_range,
     get_str,
     get_title,
@@ -101,7 +102,7 @@ class MLAFormatter(CitationFormatter):
 
         chunks: list[str] = []
         if authors:
-            chunks.append(f"{authors}.")
+            chunks.append(ensure_period(authors))
         if title:
             chunks.append(f'"{title}."')
         parts: list[str] = []
@@ -127,7 +128,7 @@ class MLAFormatter(CitationFormatter):
 
         chunks: list[str] = []
         if authors:
-            chunks.append(f"{authors}.")
+            chunks.append(ensure_period(authors))
         if title:
             chunks.append(f"{title}.")
         tail: list[str] = []
@@ -150,7 +151,7 @@ class MLAFormatter(CitationFormatter):
 
         chunks: list[str] = []
         if authors:
-            chunks.append(f"{authors}.")
+            chunks.append(ensure_period(authors))
         if title:
             chunks.append(f'"{title}."')
         tail_parts: list[str] = []
@@ -178,7 +179,7 @@ class MLAFormatter(CitationFormatter):
 
         chunks: list[str] = []
         if authors:
-            chunks.append(f"{authors}.")
+            chunks.append(ensure_period(authors))
         if title:
             chunks.append(f"{title}.")
         if year:
@@ -199,7 +200,7 @@ class MLAFormatter(CitationFormatter):
 
         chunks: list[str] = []
         if authors:
-            chunks.append(f"{authors}.")
+            chunks.append(ensure_period(authors))
         if title:
             chunks.append(f'"{title}."')
         tail: list[str] = []

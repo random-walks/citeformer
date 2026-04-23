@@ -1,0 +1,18 @@
+cite_ids:
+- 1
+- 2
+- 3
+ebnf: 'start: (TEXT | cite_group)+
+
+  TEXT: /[^\[]+/
+
+
+
+  cite_group: CITE_ID (WS CITE_ID)*
+
+  WS: " "
+
+  CITE_ID: "[" ("1" | "2" | "3") "]"
+
+  '
+policy: auto

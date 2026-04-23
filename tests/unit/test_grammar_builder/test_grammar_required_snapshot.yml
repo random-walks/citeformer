@@ -1,0 +1,22 @@
+cite_ids:
+- 1
+- 2
+- 3
+ebnf: 'start: sentence (WS sentence)*
+
+  sentence: CONTENT cite_group SENT_END
+
+  CONTENT: /[^\[\.!?]+/
+
+  SENT_END: "." | "!" | "?"
+
+
+
+  cite_group: CITE_ID (WS CITE_ID)*
+
+  WS: " "
+
+  CITE_ID: "[" ("1" | "2" | "3") "]"
+
+  '
+policy: required

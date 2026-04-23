@@ -1,0 +1,29 @@
+cite_ids:
+- 1
+- 2
+- 3
+- 4
+- 5
+- 6
+- 7
+- 8
+- 9
+- 10
+ebnf: 'start: sentence (WS sentence)*
+
+  sentence: CONTENT cite_group SENT_END
+
+  CONTENT: /[^\[\.!?]+/
+
+  SENT_END: "." | "!" | "?"
+
+
+
+  cite_group: CITE_ID (WS CITE_ID)*
+
+  WS: " "
+
+  CITE_ID: "[" ("1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10") "]"
+
+  '
+policy: required

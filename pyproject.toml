@@ -37,6 +37,7 @@ dependencies = [
     "pydantic>=2",
     "typer>=0.12",
     "rich>=13",
+    "lark>=1.2",
 ]
 
 [project.optional-dependencies]
@@ -47,7 +48,6 @@ hf = [
     "accelerate>=1.0",
     "xgrammar>=0.1.30",
     "llguidance>=0.5",
-    "lark>=1.2",
 ]
 # P3: deterministic CSL reference rendering.
 render = ["citeproc-py>=0.9"]

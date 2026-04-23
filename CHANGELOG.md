@@ -6,6 +6,25 @@ Versioning policy: **patch bumps are cheap**. See [docs/development/releasing.md
 
 ## [Unreleased]
 
+### Added — P2a citation grammar builder (§10.1 contract)
+
+- `citeformer.grammar.builder.build_grammar(n_sources, policy) -> Grammar`
+  emits a Lark-format EBNF grammar with the §10.1 load-bearing terminal
+  `CITE_ID: "[" ("1" | "2" | ... | "N") "]"`. Dynamic enum reflects
+  `len(sources)` per generate call.
+- Three policy bodies implemented: `REQUIRED` (every sentence must end with
+  `cite_group SENT_END`), `AUTO` (`cite_group` optional anywhere), and
+  `QUOTES_ONLY` (`cite_group` required after each quoted span).
+- `citeformer.grammar.parse_ok(grammar, text) -> bool` — lark round-trip
+  check, useful for debugging and post-hoc verification.
+- `lark>=1.2` promoted from `hf` extra to main dependencies — it's a core
+  runtime dep now, not just an HF-backend concern.
+- 17 new tests in `tests/unit/test_grammar_builder.py`: 4 pinned
+  `pytest-regressions` snapshots (one per policy plus a scaling check for
+  `n_sources=10`), explicit `CITE_ID` terminal assertions, input-validation
+  tests (`n_sources >= 1`), and a full semantic matrix — each policy admits
+  its expected syntactic shape AND rejects out-of-range `[N+k]` markers.
+
 ### Added — P1 core types + mock orchestration
 
 - `citeformer.Citeformer` orchestrator — composes a `Backend` with a CSL style

@@ -17,6 +17,7 @@ from citeformer._version import __version__
 from citeformer.backends import Backend, MockBackend
 from citeformer.citeformer import Citeformer
 from citeformer.core import Citation, GenerationResult, Policy, Reference, Source
+from citeformer.render import bundled_style_names, render_references
 from citeformer.verify import CitationSupport, VerificationReport
 
 __all__ = [
@@ -31,4 +32,6 @@ __all__ = [
     "Source",
     "VerificationReport",
     "__version__",
+    "bundled_style_names",
+    "render_references",
 ]

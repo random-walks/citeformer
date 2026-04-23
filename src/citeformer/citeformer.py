@@ -15,6 +15,7 @@ from typing import Any
 
 from citeformer.backends.base import Backend
 from citeformer.core import Citation, GenerationResult, Policy, Reference, Source
+from citeformer.render import render_references
 
 # Pattern for extracting [N] markers from generated text. The N is constrained at
 # decode time (P2+) to the valid source id range — this pattern only does the
@@ -112,30 +113,11 @@ class Citeformer:
         sources: list[Source],
         citations: list[Citation],
     ) -> list[Reference]:
-        """Render the reference list for the unique cited sources.
+        """Render the reference list via citeproc-py in the configured style.
 
-        P1 emits a stub rendering — one `Reference` per unique cited source_id,
-        using the source's `metadata["title"]` (or `"Untitled"` fallback). P3
-        replaces this with a citeproc-py wrapper that renders the full CSL entry
-        in `self.style`.
+        Delegates to `citeformer.render.render_references`. Out-of-range cite
+        ids are skipped silently (grammar-level enforcement prevents them at
+        decode time; this is the belt-and-suspenders path for mock backends
+        and hand-constructed tests).
         """
-        cited_ids = sorted({c.source_id for c in citations})
-        references: list[Reference] = []
-        for cid in cited_ids:
-            if not (1 <= cid <= len(sources)):
-                # Shouldn't happen under grammar-level enforcement, but the mock
-                # backend and hand-constructed tests could produce out-of-range
-                # ids. Silently skip rather than crash — verify() will surface it.
-                continue
-            source = sources[cid - 1]
-            title = source.metadata.get("title", "Untitled")
-            references.append(
-                Reference(
-                    source_id=cid,
-                    inline_marker=f"[{cid}]",
-                    rendered=(
-                        f"[{cid}] {title} (stub rendering — citeproc-py CSL rendering lands in P3)"
-                    ),
-                )
-            )
-        return references
+        return render_references(sources, citations, self.style)

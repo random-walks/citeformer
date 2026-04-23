@@ -30,6 +30,50 @@ from citeformer.render import render_references
 # does the post-hoc parsing, not enforcement.
 _CITE_PATTERN = re.compile(r"\[(\d+)\]")
 
+# Run-of-markers pattern used by `deduplicate_adjacent_cites`. Matches two or
+# more `[N]` markers separated only by whitespace — the exact "stacking"
+# shape the REQUIRED policy produces on small models that want to close a
+# sentence but keep choosing in-range cite ids.
+_CITE_RUN_PATTERN = re.compile(r"(?:\[\d+\]\s*){2,}\[\d+\]")
+
+
+def deduplicate_adjacent_cites(text: str) -> str:
+    """Collapse runs of adjacent ``[N]`` markers to the unique ids only.
+
+    The REQUIRED policy's grammar allows ``cite-group ::= cite-id (ws
+    cite-id)*`` — more than one citation between content and ``sent-end``.
+    Small instruction-tuned models under REQUIRED often emit runs like
+    ``[1] [2] [3] [1] [2] [3] [1]`` when closing a sentence where they
+    *wanted* to cite something out-of-scope: the grammar forces progress,
+    but the model fills the cite-group by cycling valid ids.
+
+    This helper rewrites each such run to contain each cite id at most
+    once, preserving order of first appearance. ``[1] [2] [3] [1] [2]`` →
+    ``[1] [2] [3]``. Single markers are untouched.
+
+    Args:
+        text: The generated text (``GenerationResult.text``).
+
+    Returns:
+        The same string with adjacent-cite runs deduplicated. Non-citation
+        content is copied verbatim.
+
+    Example:
+        >>> deduplicate_adjacent_cites("Foo [1] [2] [3] [1] [2]. Bar [4].")
+        'Foo [1] [2] [3]. Bar [4].'
+    """
+
+    def _collapse(match: re.Match[str]) -> str:
+        ids = _CITE_PATTERN.findall(match.group(0))
+        # Dedupe preserving first-appearance order.
+        seen: list[str] = []
+        for i in ids:
+            if i not in seen:
+                seen.append(i)
+        return " ".join(f"[{i}]" for i in seen)
+
+    return _CITE_RUN_PATTERN.sub(_collapse, text)
+
 
 class Citeformer:
     """High-level orchestrator for generating citation-backed text.

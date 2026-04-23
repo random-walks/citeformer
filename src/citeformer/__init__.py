@@ -20,8 +20,14 @@ from __future__ import annotations
 
 from citeformer._version import __version__
 from citeformer.backends import Backend, MockBackend
-from citeformer.citeformer import Citeformer, StreamingResult
+from citeformer.citeformer import Citeformer, StreamingResult, deduplicate_adjacent_cites
 from citeformer.core import Citation, GenerationResult, Policy, Reference, Source
+from citeformer.csl import (
+    CSLValidationError,
+    ValidationReport,
+    validate_csl_json,
+    validate_source_metadata,
+)
 from citeformer.metadata import extract_pdf, extract_url, fetch_arxiv, fetch_crossref
 from citeformer.prompts import build_rag_prompt
 from citeformer.render import bundled_style_names, render_references
@@ -29,6 +35,7 @@ from citeformer.verify import CitationSupport, VerificationReport
 
 __all__ = [
     "Backend",
+    "CSLValidationError",
     "Citation",
     "CitationSupport",
     "Citeformer",
@@ -38,13 +45,17 @@ __all__ = [
     "Reference",
     "Source",
     "StreamingResult",
+    "ValidationReport",
     "VerificationReport",
     "__version__",
     "build_rag_prompt",
     "bundled_style_names",
+    "deduplicate_adjacent_cites",
     "extract_pdf",
     "extract_url",
     "fetch_arxiv",
     "fetch_crossref",
     "render_references",
+    "validate_csl_json",
+    "validate_source_metadata",
 ]

@@ -117,9 +117,12 @@ path = "src/citeformer/_version.py"
 [tool.hatch.build.targets.wheel]
 packages = ["src/citeformer"]
 
-# Bundled CSL files are gone since the home-grown rewrite (P3-rewrite).
-# All six built-in styles are pure Python. If we later ship CSL files for
-# the `citeproc-compat` path, re-add a force-include block here.
+# Include the py.typed marker so downstream mypy picks up our inline
+# annotations per PEP 561. Without this, users of a pip-installed
+# citeformer see `Skipping analyzing 'citeformer': found module but no
+# type hints or library stubs`.
+[tool.hatch.build.targets.wheel.force-include]
+"src/citeformer/py.typed" = "citeformer/py.typed"
 
 [tool.ruff]
 line-length = 100

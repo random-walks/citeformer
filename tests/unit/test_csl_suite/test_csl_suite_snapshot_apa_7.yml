@@ -1,0 +1,173 @@
+- bib: Poe, E. A. (1845). The Raven and Other Poems. Wiley and Putnam.
+  case_id: classic_book_single_author
+  inline: (Poe, 1845)
+- bib: Smith, A., & Jones, B. (2023). Constrained Decoding for RAG. Journal of Applied
+    AI, 12(3), 45–62. https://doi.org/10.1234/jaai.2023.12.3.45
+  case_id: article_two_authors_doi
+  inline: (Smith & Jones, 2023)
+- bib: Chen, W. (2024). Short Note on Type Systems. SIGPLAN Notices, 59(2), 7.
+  case_id: article_single_page
+  inline: (Chen, 2024)
+- bib: Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A.,
+    Kaiser, L., & Polosukhin, I. (2017). Attention Is All You Need. Advances in Neural
+    Information Processing Systems, 30.
+  case_id: article_many_authors_et_al
+  inline: (Vaswani et al., 2017)
+- bib: Melville, H. (1851). Loomings. In T. Tanner (Ed.), Moby-Dick or The Whale (pp.
+    1–6). Harper & Brothers.
+  case_id: book_chapter_with_editor
+  inline: (Melville, 1851)
+- bib: Austen, J. (1813). A Critical Edition of Early Novels [PhD dissertation, University
+    of Oxford].
+  case_id: phd_thesis
+  inline: (Austen, 1813)
+- bib: 'Devlin, J., Chang, M.-W., Lee, K., & Toutanova, K. (2019). BERT: Pre-training
+    of Deep Bidirectional Transformers for Language Understanding. NAACL-HLT.'
+  case_id: conference_paper
+  inline: (Devlin et al., 2019)
+- bib: OpenAI (2023). GPT-4 Technical Report. OpenAI.
+  case_id: technical_report
+  inline: (OpenAI, 2023)
+- bib: (2025). Claude Documentation. Anthropic. https://docs.anthropic.com/claude
+  case_id: webpage_with_accessed
+  inline: (Anon, 2025)
+- bib: Strunk, W., & White, E. B. (2000). The Elements of Style. Macmillan.
+  case_id: book_with_edition
+  inline: (Strunk & White, 2000)
+- bib: Turing, A. M. (1950). Computing Machinery and Intelligence. Mind, 59(236),
+    433–460.
+  case_id: journal_with_issn
+  inline: (Turing, 1950)
+- bib: Knuth, D. E. (1998). The Art of Computer Programming. Addison-Wesley.
+  case_id: multi_volume_series
+  inline: (Knuth, 1998)
+- bib: van der Maaten, L., & Hinton, G. (2008). Visualizing Data using t-SNE. Journal
+    of Machine Learning Research, 9, 2579–2605.
+  case_id: author_with_particle_van_der
+  inline: (van der Maaten & Hinton, 2008)
+- bib: de la Torre, F. (2012). A Least-Squares Framework for Component Analysis. IEEE
+    Transactions on PAMI, 34(6), 1041–1055.
+  case_id: author_with_particle_de_la
+  inline: (de la Torre, 2012)
+- bib: von Neumann, J. (1945). First Draft of a Report on the EDVAC. University of
+    Pennsylvania.
+  case_id: author_with_particle_von
+  inline: (von Neumann, 1945)
+- bib: World Wide Web Consortium (2023). Web Content Accessibility Guidelines (WCAG)
+    2.2. W3C.
+  case_id: literal_organization_author
+  inline: (World Wide Web Consortium, 2023)
+- bib: Plato (-380). The Republic. Penguin Classics.
+  case_id: single_word_family_name
+  inline: (Plato, -380)
+- bib: (1850). A Treatise on Diverse Topics. Smith and Co.
+  case_id: missing_author
+  inline: (Anon, 1850)
+- bib: 'Doe, J. (n.d.). Draft: Notes on Reproducibility. Preprint.'
+  case_id: missing_year
+  inline: (Doe, n.d.)
+- bib: Okafor, N. (2024). Fall 2024 Roundup. Annals of Statistics, 52(3), 1100–1125.
+  case_id: date_with_month
+  inline: (Okafor, 2024)
+- bib: Patel, P. (2026). What We Learned Shipping v1.0. Engineering Blog.
+  case_id: date_with_month_and_day
+  inline: (Patel, 2026)
+- bib: Ramirez, I. (2022). An Exceedingly Verbose and Deliberately Over-specified
+    Title Intended to Stress-test the Formatter's Line-wrap and Punctuation Behaviour
+    Across All Bundled Styles. Journal of Unusually Long Titles, 1, 1–2.
+  case_id: very_long_title
+  inline: (Ramirez, 2022)
+- bib: 'Sutton, R. S., & Barto, A. G. (2018). Reinforcement Learning: An Introduction.
+    MIT Press.'
+  case_id: title_with_colon_subtitle
+  inline: (Sutton & Barto, 2018)
+- bib: 'Bender, E. M., Gebru, T., McMillan-Major, A., & Shmitchell, S. (2021). On
+    the Dangers of Stochastic Parrots: Can Language Models Be Too Big? FAccT ''21.'
+  case_id: title_with_question_mark
+  inline: (Bender et al., 2021)
+- bib: Brown, T. B. (2020). Language Models are Few-Shot Learners (GPT-3). NeurIPS,
+    33.
+  case_id: title_with_parentheses
+  inline: (Brown, 2020)
+- bib: Ødegård, Á. (2015). Unicode Handling in Scientific Software. Software Engineering
+    Research, 5(2), 12–28.
+  case_id: unicode_scandinavian_surname
+  inline: (Ødegård, 2015)
+- bib: 王伟, & 田中花子 (2024). Cross-lingual Representation Learning. Journal of Multilingual
+    NLP, 3, 100–120.
+  case_id: cjk_literal_author
+  inline: (王伟 & 田中花子, 2024)
+- bib: Johnson, K. (2019). The Rhetoric of "Truth" in Late Modern Fiction. Harvard
+    University Press.
+  case_id: title_with_italics_quotes
+  inline: (Johnson, 2019)
+- bib: O'Brien, L. (2025). AI Tools Reshape Newsroom Practices. The New York Times.
+  case_id: newspaper_article
+  inline: (O'Brien, 2025)
+- bib: Nguyen, T. (2024). Inside the Quiet Revolution of Structured Decoding. Wired,
+    48–55.
+  case_id: magazine_article
+  inline: (Nguyen, 2024)
+- bib: Ubik, B. (2026). citeformer.
+  case_id: software_with_version
+  inline: (Ubik, 2026)
+- bib: 'Deng, J., Dong, W., & Socher, R. (2009). ImageNet: A Large-Scale Hierarchical
+    Image Database. https://doi.org/10.1109/CVPR.2009.5206848'
+  case_id: dataset_with_doi
+  inline: (Deng et al., 2009)
+- bib: Edison, T. (1880). A Method and Apparatus for Electric Illumination.
+  case_id: patent_item
+  inline: (Edison, 1880)
+- bib: 'Ordnance Survey (2020). OS Landranger Map 89: West Cumbria.'
+  case_id: map_item
+  inline: (Ordnance Survey, 2020)
+- bib: NASA Voyager Imaging Team (1981). Saturn from Voyager 2.
+  case_id: figure_item
+  inline: (NASA Voyager Imaging Team, 1981)
+- bib: King, M. L. (1963). I Have a Dream.
+  case_id: speech_item
+  inline: (King, 1963)
+- bib: Feynman, R. P. (1981). The Pleasure of Finding Things Out. BBC Horizon.
+  case_id: interview_item
+  inline: (Feynman, 1981)
+- bib: (2025). Consumer Privacy Act of 2025.
+  case_id: legislation_item
+  inline: (Anon, 2025)
+- bib: (2024). Algorithmic Accountability Bill.
+  case_id: bill_item
+  inline: (Anon, 2024)
+- bib: Garcia, M. E. (2012). Review of 'Thinking, Fast and Slow'. The New York Review
+    of Books.
+  case_id: review_item
+  inline: (Garcia, 2012)
+- bib: Hassan, Y. (2013). A Lively Polemic. London Review of Books.
+  case_id: review_book_item
+  inline: (Hassan, 2013)
+- bib: 'Shapiro, A. (2024). All Things Considered: AI in Schools. NPR.'
+  case_id: broadcast_item
+  inline: (Shapiro, 2024)
+- bib: van Beethoven, L. (1826). Symphony No. 9 in D minor, Op. 125.
+  case_id: musical_score_item
+  inline: (van Beethoven, 1826)
+- bib: '(1968). 2001: A Space Odyssey.'
+  case_id: motion_picture_item
+  inline: (Anon, 1968)
+- bib: Smith, J. (2025). Email to the author.
+  case_id: personal_communication
+  inline: (Smith, 2025)
+- bib: (2023). Serendipity. Oxford English Dictionary.
+  case_id: entry_dictionary
+  inline: (Anon, 2023)
+- bib: Russell, S. (2024). Artificial intelligence. Encyclopaedia Britannica.
+  case_id: entry_encyclopedia
+  inline: (Russell, 2024)
+- bib: 'Emerson, R. W. (1838). Notebook C: Unpublished Reflections.'
+  case_id: manuscript_item
+  inline: (Emerson, 1838)
+- bib: Watson, M.-J. (2020). Kinetic Analysis in Early Cinema. Film Studies Quarterly,
+    15, 33–44.
+  case_id: hyphenated_given_name
+  inline: (Watson, 2020)
+- bib: Sun Tzu (-500). The Art of War. Public Domain.
+  case_id: bc_year_date
+  inline: (Sun Tzu, -500)

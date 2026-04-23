@@ -1,0 +1,174 @@
+- bib: Poe, Edgar Allan. The Raven and Other Poems. Wiley and Putnam, 1845.
+  case_id: classic_book_single_author
+  inline: (Poe)
+- bib: Smith, Alice, and Bob Jones. "Constrained Decoding for RAG." Journal of Applied
+    AI, vol. 12, no. 3, 2023, pp. 45–62.
+  case_id: article_two_authors_doi
+  inline: (Smith and Jones)
+- bib: Chen, Wei. "Short Note on Type Systems." SIGPLAN Notices, vol. 59, no. 2, 2024,
+    pp. 7.
+  case_id: article_single_page
+  inline: (Chen)
+- bib: Vaswani, Ashish, et al. "Attention Is All You Need." Advances in Neural Information
+    Processing Systems, vol. 30, 2017.
+  case_id: article_many_authors_et_al
+  inline: (Vaswani et al.)
+- bib: Melville, Herman. "Loomings." Moby-Dick or The Whale, edited by Tony Tanner,
+    Harper & Brothers, 1851, pp. 1–6.
+  case_id: book_chapter_with_editor
+  inline: (Melville)
+- bib: Austen, Jane. A Critical Edition of Early Novels. 1813. University of Oxford,
+    PhD dissertation.
+  case_id: phd_thesis
+  inline: (Austen)
+- bib: 'Devlin, Jacob, et al. "BERT: Pre-training of Deep Bidirectional Transformers
+    for Language Understanding." NAACL-HLT, 2019, pp. 4171–4186.'
+  case_id: conference_paper
+  inline: (Devlin et al.)
+- bib: OpenAI. GPT-4 Technical Report. OpenAI, 2023.
+  case_id: technical_report
+  inline: (OpenAI)
+- bib: '"Claude Documentation." Anthropic, 2025, https://docs.anthropic.com/claude.'
+  case_id: webpage_with_accessed
+  inline: (Anon.)
+- bib: Strunk, William, and E. B. White. The Elements of Style. Macmillan, 2000.
+  case_id: book_with_edition
+  inline: (Strunk and White)
+- bib: Turing, Alan M. "Computing Machinery and Intelligence." Mind, vol. 59, no.
+    236, 1950, pp. 433–460.
+  case_id: journal_with_issn
+  inline: (Turing)
+- bib: Knuth, Donald E. The Art of Computer Programming. Addison-Wesley, 1998.
+  case_id: multi_volume_series
+  inline: (Knuth)
+- bib: van der Maaten, Laurens, and Geoffrey Hinton. "Visualizing Data using t-SNE."
+    Journal of Machine Learning Research, vol. 9, 2008, pp. 2579–2605.
+  case_id: author_with_particle_van_der
+  inline: (van der Maaten and Hinton)
+- bib: de la Torre, Fernando. "A Least-Squares Framework for Component Analysis."
+    IEEE Transactions on PAMI, vol. 34, no. 6, 2012, pp. 1041–1055.
+  case_id: author_with_particle_de_la
+  inline: (de la Torre)
+- bib: von Neumann, John. First Draft of a Report on the EDVAC. University of Pennsylvania,
+    1945.
+  case_id: author_with_particle_von
+  inline: (von Neumann)
+- bib: World Wide Web Consortium. Web Content Accessibility Guidelines (WCAG) 2.2.
+    W3C, 2023.
+  case_id: literal_organization_author
+  inline: (World Wide Web Consortium)
+- bib: Plato. The Republic. Penguin Classics, -380.
+  case_id: single_word_family_name
+  inline: (Plato)
+- bib: A Treatise on Diverse Topics. Smith and Co., 1850.
+  case_id: missing_author
+  inline: (Anon.)
+- bib: 'Doe, Jane. "Draft: Notes on Reproducibility." Preprint.'
+  case_id: missing_year
+  inline: (Doe)
+- bib: Okafor, Ngozi. "Fall 2024 Roundup." Annals of Statistics, vol. 52, no. 3, 2024,
+    pp. 1100–1125.
+  case_id: date_with_month
+  inline: (Okafor)
+- bib: Patel, Priya. "What We Learned Shipping v1.0." Engineering Blog, 2026.
+  case_id: date_with_month_and_day
+  inline: (Patel)
+- bib: Ramirez, Isabella. "An Exceedingly Verbose and Deliberately Over-specified
+    Title Intended to Stress-test the Formatter's Line-wrap and Punctuation Behaviour
+    Across All Bundled Styles." Journal of Unusually Long Titles, vol. 1, 2022, pp.
+    1–2.
+  case_id: very_long_title
+  inline: (Ramirez)
+- bib: 'Sutton, Richard S., and Andrew G. Barto. Reinforcement Learning: An Introduction.
+    MIT Press, 2018.'
+  case_id: title_with_colon_subtitle
+  inline: (Sutton and Barto)
+- bib: 'Bender, Emily M., et al. "On the Dangers of Stochastic Parrots: Can Language
+    Models Be Too Big?" FAccT ''21, 2021, pp. 610–623.'
+  case_id: title_with_question_mark
+  inline: (Bender et al.)
+- bib: Brown, Tom B. "Language Models are Few-Shot Learners (GPT-3)." NeurIPS, vol.
+    33, 2020.
+  case_id: title_with_parentheses
+  inline: (Brown)
+- bib: Ødegård, Ástor. "Unicode Handling in Scientific Software." Software Engineering
+    Research, vol. 5, no. 2, 2015, pp. 12–28.
+  case_id: unicode_scandinavian_surname
+  inline: (Ødegård)
+- bib: 王伟, and 田中花子. "Cross-lingual Representation Learning." Journal of Multilingual
+    NLP, vol. 3, 2024, pp. 100–120.
+  case_id: cjk_literal_author
+  inline: (王伟 and 田中花子)
+- bib: Johnson, Karen. The Rhetoric of "Truth" in Late Modern Fiction. Harvard University
+    Press, 2019.
+  case_id: title_with_italics_quotes
+  inline: (Johnson)
+- bib: O'Brien, Liam. "AI Tools Reshape Newsroom Practices." The New York Times, 2025.
+  case_id: newspaper_article
+  inline: (O'Brien)
+- bib: Nguyen, Thao. "Inside the Quiet Revolution of Structured Decoding." Wired,
+    2024, pp. 48–55.
+  case_id: magazine_article
+  inline: (Nguyen)
+- bib: Ubik, Blaise. "citeformer." 2026.
+  case_id: software_with_version
+  inline: (Ubik)
+- bib: 'Deng, Jia, et al. "ImageNet: A Large-Scale Hierarchical Image Database." 2009.'
+  case_id: dataset_with_doi
+  inline: (Deng et al.)
+- bib: Edison, Thomas. "A Method and Apparatus for Electric Illumination." 1880.
+  case_id: patent_item
+  inline: (Edison)
+- bib: 'Ordnance Survey. "OS Landranger Map 89: West Cumbria." 2020.'
+  case_id: map_item
+  inline: (Ordnance Survey)
+- bib: NASA Voyager Imaging Team. "Saturn from Voyager 2." 1981.
+  case_id: figure_item
+  inline: (NASA Voyager Imaging Team)
+- bib: King, Martin Luther. "I Have a Dream." 1963.
+  case_id: speech_item
+  inline: (King)
+- bib: Feynman, Richard P. "The Pleasure of Finding Things Out." BBC Horizon, 1981.
+  case_id: interview_item
+  inline: (Feynman)
+- bib: '"Consumer Privacy Act of 2025." 2025.'
+  case_id: legislation_item
+  inline: (Anon.)
+- bib: '"Algorithmic Accountability Bill." 2024.'
+  case_id: bill_item
+  inline: (Anon.)
+- bib: Garcia, María Elena. "Review of 'Thinking, Fast and Slow'." The New York Review
+    of Books, 2012.
+  case_id: review_item
+  inline: (Garcia)
+- bib: Hassan, Yasmin. "A Lively Polemic." London Review of Books, 2013.
+  case_id: review_book_item
+  inline: (Hassan)
+- bib: 'Shapiro, Ari. "All Things Considered: AI in Schools." NPR, 2024.'
+  case_id: broadcast_item
+  inline: (Shapiro)
+- bib: van Beethoven, Ludwig. "Symphony No. 9 in D minor, Op. 125." 1826.
+  case_id: musical_score_item
+  inline: (van Beethoven)
+- bib: '"2001: A Space Odyssey." 1968.'
+  case_id: motion_picture_item
+  inline: (Anon.)
+- bib: Smith, Jane. "Email to the author." 2025.
+  case_id: personal_communication
+  inline: (Smith)
+- bib: '"Serendipity." Oxford English Dictionary, 2023.'
+  case_id: entry_dictionary
+  inline: (Anon.)
+- bib: Russell, Stuart. "Artificial intelligence." Encyclopaedia Britannica, 2024.
+  case_id: entry_encyclopedia
+  inline: (Russell)
+- bib: 'Emerson, Ralph Waldo. "Notebook C: Unpublished Reflections." 1838.'
+  case_id: manuscript_item
+  inline: (Emerson)
+- bib: Watson, Mary-Jane. "Kinetic Analysis in Early Cinema." Film Studies Quarterly,
+    vol. 15, 2020, pp. 33–44.
+  case_id: hyphenated_given_name
+  inline: (Watson)
+- bib: Sun Tzu. The Art of War. Public Domain, -500.
+  case_id: bc_year_date
+  inline: (Sun Tzu)

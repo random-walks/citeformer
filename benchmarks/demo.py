@@ -119,6 +119,8 @@ def _both_runs(
     max_new_tokens: int,
     *,
     device: str | None = None,
+    policy: Policy = Policy.REQUIRED,
+    max_content_chars: int | None = None,
 ) -> tuple[str, str]:
     """Run constrained + baseline through a single shared HF model instance.
 
@@ -127,6 +129,12 @@ def _both_runs(
     full HFBackend pipeline; the baseline reaches into the backend's
     already-loaded model/tokenizer and calls ``model.generate`` with no
     LogitsProcessor.
+
+    With ``Policy.REQUIRED`` the grammar's bounded-content rule
+    (``docs/decisions/009-bounded-content-required.md``) forces progression
+    on small models — previously the benchmark had to use AUTO to avoid
+    stall on Qwen 0.5B. ``max_content_chars`` overrides the default bound;
+    ``None`` uses the ADR-009 default of 240.
 
     Returns:
         ``(constrained_text, baseline_text)``.
@@ -137,16 +145,11 @@ def _both_runs(
 
     backend = HFBackend(model=model_name, device=device)
 
-    # Constrained path via citeformer. AUTO policy lets cites happen
-    # anywhere but the grammar still constrains which ``[N]`` tokens are
-    # reachable — that's the core guarantee we're demonstrating. (REQUIRED
-    # would force every sentence to end with a cite, but the current v0.1
-    # GBNF grammar lets the model stall in content state and never transition
-    # to the cite group — a known limitation for small models that don't
-    # naturally bias toward closing brackets. Documented in
-    # docs/decisions/007-required-policy-progression.md.)
-    cf = Citeformer(backend=backend, citation_policy=Policy.AUTO)
-    result = cf.generate(prompt=prompt, sources=sources, max_new_tokens=max_new_tokens)
+    cf = Citeformer(backend=backend, citation_policy=policy)
+    generate_kwargs: dict[str, Any] = {"max_new_tokens": max_new_tokens}
+    if max_content_chars is not None:
+        generate_kwargs["max_content_chars"] = max_content_chars
+    result = cf.generate(prompt=prompt, sources=sources, **generate_kwargs)
     constrained_text = result.text
 
     # Baseline path: same model, no grammar. Reuse backend internals.
@@ -269,6 +272,26 @@ def main() -> None:
             "Override to 'mps' or 'cuda' if your combination works."
         ),
     )
+    parser.add_argument(
+        "--policy",
+        choices=["required", "auto", "quotes_only"],
+        default="required",
+        help=(
+            "Citation policy for the constrained run. 'required' forces every "
+            "sentence to carry a citation (default — rely on ADR-009's bounded "
+            "content for small-model progression). 'auto' lets the model decide."
+        ),
+    )
+    parser.add_argument(
+        "--max-content-chars",
+        type=int,
+        default=None,
+        help=(
+            "Override the REQUIRED-policy content bound. Default uses "
+            "DEFAULT_MAX_CONTENT_CHARS (240). Smaller (e.g. 60) forces cites to "
+            "land more often per sentence; larger (e.g. 500) allows longer prose."
+        ),
+    )
     args = parser.parse_args()
 
     fixture_path = Path(__file__).parent / "fixtures" / "ai_papers.json"
@@ -278,9 +301,19 @@ def main() -> None:
     prompt_template = args.prompt or DEFAULT_PROMPT
     prompt = prompt_template.format(source_list=_format_source_list(sources))
 
-    print(f"[1/2] Running constrained + baseline generation on device={args.device}…")
+    policy = Policy(args.policy)
+    print(
+        f"[1/2] Running constrained (policy={policy.value}) + baseline generation "
+        f"on device={args.device}…"
+    )
     constrained_text, baseline_text = _both_runs(
-        sources, prompt, args.model, args.max_new_tokens, device=args.device
+        sources,
+        prompt,
+        args.model,
+        args.max_new_tokens,
+        device=args.device,
+        policy=policy,
+        max_content_chars=args.max_content_chars,
     )
 
     print("[2/2] Scoring with NLI …")
@@ -292,7 +325,7 @@ def main() -> None:
     nli = NLIModel(**nli_kwargs)
 
     constrained_stats = _analyze_run(
-        "GRAMMAR-ENFORCED (citeformer)",
+        f"GRAMMAR-ENFORCED (citeformer — policy={policy.value})",
         constrained_text,
         sources,
         nli=nli,

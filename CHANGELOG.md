@@ -6,6 +6,125 @@ Versioning policy: **patch bumps are cheap**. See [docs/development/releasing.md
 
 ## [Unreleased]
 
+### Fixed — REQUIRED policy stalls on small models (ADR-009)
+
+Supersedes [ADR-007](docs/decisions/007-required-policy-progression-gap.md).
+
+The REQUIRED policy's grammar body used ``content ::= [^\[.!?]+`` — unbounded
+repetition. Small instruction-tuned models (Qwen 2.5 0.5B, similar) could
+stay in content state for the full `max_new_tokens` budget and never emit a
+single ``[N]``. Documentation-as-mitigation (use AUTO on small models) left
+the hero-line claim fuzzy.
+
+xgrammar 0.1.30+ accepts bounded repetition in GBNF (``{m, n}`` syntax)
+— verified by inspecting the compiled grammar's internal form and
+confirmed by an integration test against gpt2 with a tight bound. The
+grammar now emits:
+
+```text
+content ::= [^\[.!?]{1, 240}
+```
+
+After 240 non-terminating chars since the last sentence boundary, xgrammar's
+mask reduces the valid-token set to whatever can advance ``cite-group`` —
+the model *must* progress. New keyword-only argument
+`build_grammar(..., max_content_chars=...)` exposes the bound (threaded
+through HFBackend / VLLMBackend / LlamaCppBackend via their `**options`).
+Pass `None` for legacy unbounded behavior; default is 240 via
+`DEFAULT_MAX_CONTENT_CHARS`.
+
+The §10.1 grammar contract grows a fourth admitted variant of the REQUIRED
+body; snapshots cover both bounded and unbounded paths. No `schema_version`
+bump — `content` is an internal rule, not a schema-level field.
+
+Integration test:
+- ``test_hf_backend_required_with_tight_bound_emits_citations`` runs
+  REQUIRED on gpt2 with `max_content_chars=16` and asserts at least one
+  in-range citation lands — would have failed pre-ADR-009.
+
+Benchmark (`benchmarks/demo.py`) now defaults to REQUIRED (previously
+forced to AUTO to avoid the stall), with a `--policy` flag and a
+`--max-content-chars` override. See the [benchmarks README](benchmarks/README.md)
+for the current numbers from Qwen 2.5 0.5B on the six-AI-paper RAG setup.
+
+### Fixed — MLA / Chicago / Vancouver emit double-period after `et al.`
+
+Live rendering against real multi-author Crossref / arXiv metadata
+surfaced a double-period artifact: `"Vaswani, Ashish, et al.."` (MLA),
+`"Auth0 et al.."` (Vancouver), `"Auth0, Gi0, et al.."` (Chicago). The
+bibliography templates used `f"{authors}."` to terminate the author
+chunk, which stacked a period after an `et al.` that already ended in
+one. Fixed by routing all three through the pre-existing `ensure_period`
+helper (which is idempotent against trailing punctuation).
+
+Regression test: `test_et_al_bibliography_has_no_double_period` —
+parametrised across the three affected formatters; asserts `"et al.."`
+never appears in bibliography output.
+
+### Added — CLI surface beyond `--version`
+
+`citeformer` gains four subcommands built on the existing library API:
+
+- `citeformer version` — installed version (unchanged).
+- `citeformer styles` — list bundled style names.
+- `citeformer render <csl.json> --style apa-7` — render CSL-JSON items
+  as bibliography entries in the chosen style. Accepts single items or
+  JSON arrays; works entirely offline.
+- `citeformer fetch <DOI | arXiv id | URL | path.pdf>` — dispatch to the
+  right metadata adapter and print CSL-JSON. `--include-content` keeps
+  the extracted body text for URL / PDF sources; `--output FILE` writes
+  to disk instead of stdout.
+
+`generate` / `verify` are deliberately left out — at model sizes where
+generation is useful, command-line invocation is awkward. Use the Python
+API for that.
+
+Six new unit tests under `tests/unit/test_cli.py` exercise the command
+plumbing through typer's test runner.
+
+### Added — runnable examples as living reports
+
+New `examples/` directory with four self-contained scripts:
+
+- `01_quickstart_mock.py` — shortest demo, no ML dependencies, works
+  off `MockBackend`. Shape check for downstream users.
+- `02_rag_with_hf_and_verify.py` — full pipeline on gpt2 with NLI
+  verification. Asserts structural non-fabrication + every emitted
+  marker having a rendered reference.
+- `03_standalone_rendering.py` — all six formatters against the same
+  CSL-JSON item. Useful as a preview tool and as the visual diff for
+  new formatters.
+- `04_fetch_and_render.py` — DOI + arXiv → full pipeline. Hits the
+  network; disk-cached after the first run.
+
+Each script doubles as a living report — rerunning is how you audit
+current behavior. `examples/README.md` explains the set.
+
+### Added — benchmark findings + fresh benchmark run data
+
+`benchmarks/README.md` is now a living report with actual numbers from
+the most recent Qwen 2.5 0.5B run on the six-AI-paper RAG setup. Covers
+the REQUIRED vs AUTO vs baseline comparison, citation density, NLI
+support rates, and the honest limitations (low support rate on 0.5B,
+single-seed noise, abstract-only NLI premise). Reproducibility
+instructions + open questions for future multi-model sweeps.
+
+### Changed — cleaner docs + trimmed surface
+
+- Removed the `citeproc-compat` pyproject extra (placeholder without
+  an implementation; users who want citeproc-py can install it directly).
+  ADR-004 + ADR-005 updated to reflect this.
+- Stale references to "rendered by citeproc-py" across `README.md`,
+  `docs/index.md`, `docs/guarantees.md`, `docs/reference/architecture.md`,
+  `docs/reference/contracts.md`, `docs/conf.py`, `CLAUDE.md`, `AGENTS.md`,
+  `src/citeformer/core.py`, `src/citeformer/citeformer.py`,
+  `src/citeformer/render/csl.py`, `src/citeformer/render/styles.py` —
+  all replaced with the home-grown-formatter reality.
+- `docs/reference/architecture.md` phase table reflects completion through
+  P6 and notes the current Polish tier.
+- `CLAUDE.md` phase status updated from "P0 — scaffolding" to the accurate
+  post-P6 state.
+
 ### Added — P6 NLI-based verification + AI-paper benchmark
 
 The final v0.1 phase. `GenerationResult.verify()` is no longer a stub —
@@ -44,10 +163,10 @@ Shared helpers in `_base.py`: `Author`, `parse_authors()`, `parse_year()`,
 fallbacks.
 
 Dependency changes:
-- `citeproc-py` removed from main dependencies.
-- New optional `citeproc-compat` extra (holds `citeproc-py>=0.9`). No code
-  uses it yet; reserved for a future compat wrapper that lets users plug
-  arbitrary `.csl` files back in.
+- `citeproc-py` removed from main dependencies. (A `citeproc-compat` extra
+  was initially added as a placeholder for a future compat wrapper but
+  removed same-release once we confirmed no implementation was landing;
+  users who want citeproc-py can install it directly.)
 - Bundled `apa.csl`, `modern-language-association.csl`,
   `chicago-author-date.csl`, `ieee.csl`, `nature.csl` files deleted — no
   longer consulted by the render path.

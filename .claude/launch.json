@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "docs-preview",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": [
+        "run",
+        "sphinx-autobuild",
+        "-a",
+        "--watch",
+        "src",
+        "docs",
+        "docs/_build/html",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "5190"
+      ],
+      "port": 5190
+    },
+    {
+      "name": "pytest-watch",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "pytest", "--lf", "--ff", "-x"],
+      "description": "Re-run pytest focused on last-failed, first-failed."
+    }
+  ]
+}

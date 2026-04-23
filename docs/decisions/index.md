@@ -18,4 +18,5 @@ and link to the replacement rather than editing history.
 007-required-policy-progression-gap
 008-generation-result-schema-v2
 009-bounded-content-required
+010-verification-report-schema-v3
 ```

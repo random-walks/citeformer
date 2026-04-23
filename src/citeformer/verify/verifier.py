@@ -76,8 +76,10 @@ class Verifier:
 
         if not citations and not (run_coverage and sources):
             # Nothing to check — every citation is supported vacuously.
+            # citations_checked=0 is the honest signal for consumers.
             return VerificationReport(
                 support_rate=1.0,
+                citations_checked=0,
                 per_citation=[],
                 uncited_but_entailed=[],
             )
@@ -130,6 +132,7 @@ class Verifier:
 
         return VerificationReport(
             support_rate=support_rate,
+            citations_checked=len(per_citation),
             per_citation=per_citation,
             uncited_but_entailed=uncited,
         )

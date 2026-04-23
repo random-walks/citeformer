@@ -133,12 +133,13 @@ def test_citation_support_rejects_out_of_range_score() -> None:
 
 def test_verification_report_defaults() -> None:
     report = VerificationReport(support_rate=1.0)
-    assert report.schema_version == 2
+    assert report.schema_version == 3
+    assert report.citations_checked == 0
     assert report.per_citation == []
     assert report.uncited_but_entailed == []
 
 
-def test_verification_report_schema_version_is_2() -> None:
-    """§10.3 contract — schema_version MUST be 2 after the P6 bump."""
+def test_verification_report_schema_version_is_3() -> None:
+    """§10.3 contract — schema_version=3 since the citations_checked addition."""
     report = VerificationReport(support_rate=0.5)
-    assert report.schema_version == 2
+    assert report.schema_version == 3

@@ -1,10 +1,11 @@
 """`VerificationReport` pydantic schema — §10.3 contract.
 
 The `schema_version` is bumped any time the model's shape changes. Current
-version: **2** (promoted `uncited_but_entailed` from a list of
-sentence-index ints to a list of `UncitedClaim` records that carry the
-span + candidate source + score — see
-``docs/decisions/008-generation-result-schema-v2.md``).
+version: **3** — added `citations_checked` so downstream tooling can tell
+"no citations" apart from "all citations supported" without probing
+`per_citation`. The old ``support_rate = 1.0 when per_citation is empty``
+convention is preserved for continuity; consumers that want the
+honest "there's nothing to rate" signal read `citations_checked` now.
 
 §10.3 ceremony: every change goes through the `release-bump` rubric, the
 snapshot tests in `tests/integration/test_schemas.py`, and a CHANGELOG
@@ -81,8 +82,14 @@ class VerificationReport(BaseModel):
     Attributes:
         schema_version: Contract version. Bump on any shape change.
         support_rate: Fraction of citations with `supported == True`, in [0, 1].
-            Defined as 1.0 when `per_citation` is empty (no citations → no
-            unsupported claims).
+            Kept at 1.0 when `per_citation` is empty for backward compat, but
+            consumers reporting aggregate numbers should gate on
+            `citations_checked > 0` to avoid publishing "100% supported" for
+            runs that emitted no citations at all.
+        citations_checked: Count of citations the verifier actually scored
+            (equals ``len(per_citation)``). ``0`` is the honest signal that
+            the run produced no citations for NLI to check — not that
+            everything was supported.
         per_citation: One `CitationSupport` entry per citation in the
             `GenerationResult`, in the same order.
         uncited_but_entailed: Sentences where the NLI coverage check flagged
@@ -94,13 +101,21 @@ class VerificationReport(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     schema_version: int = Field(
-        default=2,
+        default=3,
         description="§10.3 contract version. Bumped on any shape change.",
     )
     support_rate: float = Field(
         ge=0.0,
         le=1.0,
         description="Fraction of citations with supported=True.",
+    )
+    citations_checked: int = Field(
+        default=0,
+        ge=0,
+        description=(
+            "Count of citations the verifier scored; 0 means 'no citations "
+            "existed', not 'all supported'. Added in schema v3."
+        ),
     )
     per_citation: list[CitationSupport] = Field(
         default_factory=list,

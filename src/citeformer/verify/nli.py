@@ -10,6 +10,18 @@ Default model: ``MoritzLaurer/DeBERTa-v3-large-mnli-fever-anli-ling-wanli``
 kwarg on `Verifier`. A smaller / faster default can be swapped in at build
 time by setting the ``CITEFORMER_NLI_MODEL`` env var.
 
+Long premises (>512 tokens) can be **chunked** (opt-in): we slide a
+fixed-size window over the premise, score each chunk against the
+hypothesis, and take the maximum entailment as the pair's result. That
+surfaces claim-to-source entailment that lives past the first 512
+tokens — useful when scoring against full PDF body text. But max-over-
+windows also inflates false positives on unrelated claims (each extra
+window is another chance for noise to cross the threshold), so we keep
+it **off by default** for score stability and enable it explicitly via
+``chunk_premise=True`` when the caller wants long-document scoring.
+When chunking is on, consider raising ``threshold`` on the Verifier
+(0.7–0.8 rather than 0.5) to compensate for the max-reduction bias.
+
 Requires the ``verify`` extra: ``pip install citeformer[verify]``.
 """
 
@@ -42,6 +54,15 @@ _LABEL_ALIASES = {
     "label_1": "neutral",
     "label_2": "contradiction",
 }
+
+# DeBERTa-v3 has a 512-token input limit; the joint (premise, hypothesis)
+# encoding needs room for CLS/SEP specials + the hypothesis. 400 leaves
+# comfortable headroom for typical hypotheses (20-60 tokens).
+_DEFAULT_MAX_PREMISE_TOKENS = 400
+# Stride = max_tokens - overlap. Default stride of 300 gives ~100 tokens of
+# overlap, so a claim that straddles a chunk boundary has a chance to land
+# in one of the two neighboring windows.
+_DEFAULT_CHUNK_STRIDE = 300
 
 
 @dataclass(frozen=True)
@@ -82,11 +103,24 @@ class NLIModel:
         device: Torch device (``cuda`` / ``mps`` / ``cpu``) resolved at
             construction.
         batch_size: Max pairs to score in a single forward pass.
+        chunk_premise: When ``True``, long premises are split into
+            overlapping windows; max entailment across windows is the
+            pair's result. Default is ``False`` — max-over-windows
+            inflates false positives on unrelated claims. Enable for
+            long-document scoring with a bumped ``threshold`` on the
+            Verifier (0.7+) to compensate.
+        max_premise_tokens: Window size in tokens. Default 400 (leaves room
+            for the hypothesis + special tokens inside DeBERTa's 512 cap).
+        chunk_stride: Token stride between windows. Default 300; overlap =
+            max_premise_tokens - stride.
     """
 
     model_name: str
     device: str
     batch_size: int
+    chunk_premise: bool
+    max_premise_tokens: int
+    chunk_stride: int
 
     def __init__(
         self,
@@ -94,6 +128,9 @@ class NLIModel:
         *,
         device: str | None = None,
         batch_size: int = 8,
+        chunk_premise: bool = False,
+        max_premise_tokens: int = _DEFAULT_MAX_PREMISE_TOKENS,
+        chunk_stride: int = _DEFAULT_CHUNK_STRIDE,
     ) -> None:
         """Construct an `NLIModel`.
 
@@ -102,9 +139,18 @@ class NLIModel:
             device: ``None`` auto-detects CUDA > MPS > CPU.
             batch_size: Max pairs per forward pass; adjust down on low-VRAM
                 hardware.
+            chunk_premise: If ``True`` (default), long premises are chunked
+                and scored with max-entailment reduction. Set to ``False``
+                for raw truncation at ``max_premise_tokens + hypothesis``.
+            max_premise_tokens: Window size when chunking. 400 is a safe
+                default under DeBERTa's 512-token limit.
+            chunk_stride: Stride between windows. Lower = more overlap =
+                slower but more thorough.
 
         Raises:
             ImportError: If ``citeformer[verify]`` extras aren't installed.
+            ValueError: If `chunk_stride >= max_premise_tokens` (would make
+                windows non-overlapping or skip content).
         """
         try:
             import torch  # noqa: F401 — probed for device detection
@@ -113,9 +159,19 @@ class NLIModel:
                 "NLIModel requires the `verify` extra. "
                 "Install with `pip install citeformer[verify]`."
             ) from e
+        if chunk_stride <= 0 or max_premise_tokens <= 0:
+            raise ValueError("chunk_stride and max_premise_tokens must be > 0")
+        if chunk_stride > max_premise_tokens:
+            raise ValueError(
+                f"chunk_stride ({chunk_stride}) must not exceed "
+                f"max_premise_tokens ({max_premise_tokens}); that would skip content."
+            )
         self.model_name = model_name
         self.device = device if device is not None else self._autodetect_device()
         self.batch_size = batch_size
+        self.chunk_premise = chunk_premise
+        self.max_premise_tokens = max_premise_tokens
+        self.chunk_stride = chunk_stride
 
     @staticmethod
     def _autodetect_device() -> str:
@@ -130,6 +186,9 @@ class NLIModel:
     def entail(self, premise: str, hypothesis: str) -> NLIResult:
         """Score a single (premise, hypothesis) pair.
 
+        Uses chunked scoring when ``chunk_premise`` is enabled and the
+        premise is long enough to benefit.
+
         Args:
             premise: The evidence / source text.
             hypothesis: The claim being checked against the premise.
@@ -143,7 +202,9 @@ class NLIModel:
     def entail_batch(self, pairs: list[tuple[str, str]]) -> list[NLIResult]:
         """Score a list of (premise, hypothesis) pairs in batches.
 
-        Empty input returns an empty list.
+        Empty input returns an empty list. Uses chunked scoring when the
+        model's ``chunk_premise`` is True; otherwise falls back to the
+        naive 512-token truncation path.
 
         Args:
             pairs: A list of ``(premise, hypothesis)`` tuples.
@@ -153,7 +214,12 @@ class NLIModel:
         """
         if not pairs:
             return []
+        if self.chunk_premise:
+            return self._entail_batch_chunked(pairs)
+        return self._entail_batch_truncated(pairs)
 
+    def _entail_batch_truncated(self, pairs: list[tuple[str, str]]) -> list[NLIResult]:
+        """Naive path: tokenizer handles truncation at max_length=512."""
         import torch
         from torch.nn import functional as torch_functional
 
@@ -183,6 +249,90 @@ class NLIModel:
                 contra = float(row[label_map["contradiction"]])
                 outputs.append(NLIResult(entailment=entail, neutral=neutral, contradiction=contra))
         return outputs
+
+    def _entail_batch_chunked(self, pairs: list[tuple[str, str]]) -> list[NLIResult]:
+        """Chunked path: window each premise, score all windows, take max entailment.
+
+        For each (premise, hypothesis) pair we split the premise into one or
+        more overlapping token-windows (size `max_premise_tokens`, stride
+        `chunk_stride`), score every (window, hypothesis) sub-pair via the
+        truncated path, and reduce by taking the `NLIResult` with the
+        highest `entailment` probability.
+
+        Pairs whose premises fit in a single window (i.e. short premises
+        like abstracts) take exactly one forward pass — no extra cost.
+        """
+        tokenizer, _, _ = _load_nli(self.model_name, self.device)
+
+        expanded: list[tuple[str, str]] = []
+        # For each original pair, track [start, end) in the expanded list.
+        group_bounds: list[tuple[int, int]] = []
+        for premise, hypothesis in pairs:
+            windows = _split_premise_into_windows(
+                premise,
+                tokenizer,
+                max_tokens=self.max_premise_tokens,
+                stride=self.chunk_stride,
+            )
+            start = len(expanded)
+            for window_text in windows:
+                expanded.append((window_text, hypothesis))
+            group_bounds.append((start, len(expanded)))
+
+        flat = self._entail_batch_truncated(expanded)
+
+        reduced: list[NLIResult] = []
+        for start, end in group_bounds:
+            group = flat[start:end]
+            if not group:  # shouldn't happen — every input yields ≥1 window
+                reduced.append(NLIResult(0.0, 0.0, 0.0))
+                continue
+            best = max(group, key=lambda r: r.entailment)
+            reduced.append(best)
+        return reduced
+
+
+def _split_premise_into_windows(
+    premise: str,
+    tokenizer: Any,
+    *,
+    max_tokens: int,
+    stride: int,
+) -> list[str]:
+    """Split a premise string into overlapping token-windows.
+
+    Returns a list of decoded text strings, one per window. Each window
+    is at most ``max_tokens`` tokens long; consecutive windows start
+    ``stride`` tokens apart (so overlap = max_tokens - stride).
+
+    Short premises (<=max_tokens when tokenized) return a single-element
+    list containing the original string — no decode round-trip cost.
+
+    Implementation note: we decode each window back to text so the
+    downstream joint (premise, hypothesis) tokenization handles special
+    tokens + token type ids correctly. Slight overhead vs. manual
+    tensor construction but far more robust across model variants.
+    """
+    if max_tokens <= 0 or stride <= 0:
+        raise ValueError("max_tokens and stride must be > 0")
+
+    # Tokenize without special tokens so length reflects just the content.
+    encoded = tokenizer(premise, add_special_tokens=False)
+    ids = list(encoded["input_ids"])
+    if len(ids) <= max_tokens:
+        return [premise]
+
+    windows: list[str] = []
+    start = 0
+    while start < len(ids):
+        end = min(start + max_tokens, len(ids))
+        window_ids = ids[start:end]
+        decoded = tokenizer.decode(window_ids, skip_special_tokens=True)
+        windows.append(decoded)
+        if end == len(ids):
+            break
+        start += stride
+    return windows
 
 
 @lru_cache(maxsize=4)

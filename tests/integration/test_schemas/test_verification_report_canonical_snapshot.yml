@@ -1,3 +1,4 @@
+citations_checked: 2
 per_citation:
 - citation_index: 0
   entailment_score: 0.32
@@ -5,7 +6,7 @@ per_citation:
 - citation_index: 1
   entailment_score: 0.88
   supported: true
-schema_version: 2
+schema_version: 3
 support_rate: 0.5
 uncited_but_entailed:
 - candidate_source_id: 2

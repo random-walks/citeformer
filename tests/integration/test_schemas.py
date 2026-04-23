@@ -68,6 +68,7 @@ def test_verification_report_canonical_snapshot(data_regression) -> None:  # typ
     """§10.3 — snapshot the JSON serialization of a canonical VerificationReport."""
     report = VerificationReport(
         support_rate=0.5,
+        citations_checked=2,
         per_citation=[
             CitationSupport(citation_index=0, entailment_score=0.32, supported=False),
             CitationSupport(citation_index=1, entailment_score=0.88, supported=True),
@@ -88,7 +89,11 @@ def test_generation_result_schema_version_is_2() -> None:
     assert result.schema_version == 2
 
 
-def test_verification_report_schema_version_is_2() -> None:
-    """Belt-and-suspenders for VerificationReport too."""
+def test_verification_report_schema_version_is_3() -> None:
+    """VerificationReport schema_version bumped to 3 when `citations_checked`
+    was added. See CHANGELOG for the additive-field ceremony.
+    """
     report = VerificationReport(support_rate=1.0)
-    assert report.schema_version == 2
+    assert report.schema_version == 3
+    # Default is 0 — the honest "no citations to check" signal.
+    assert report.citations_checked == 0

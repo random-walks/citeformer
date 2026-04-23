@@ -10,7 +10,7 @@
 
 ![Citation fabrication is structural, not statistical](benchmarks/findings/figures/fabrication-structural-vs-empirical.png)
 
-> **Status**: pre-1.0, under active development. v0.1 ships local-backend support only (HF transformers, vLLM, llama.cpp). API-provider backends come in v0.2+. Follow [CHANGELOG.md](CHANGELOG.md) for progress.
+> **Status**: pre-1.0, under active development. v0.1 ships local-backend support (HF transformers, vLLM, llama.cpp) plus opt-in API-provider backends (OpenAI, Anthropic) added during the fit-and-finish pass. Follow [CHANGELOG.md](CHANGELOG.md) for progress.
 
 ## Why citeformer
 
@@ -19,8 +19,8 @@ LLM-generated citations are wrong 14–95% of the time depending on the benchmar
 That's the [jsonformer](https://github.com/1rgs/jsonformer) insight applied to citations. citeformer wraps modern constrained-decoding libraries ([XGrammar](https://github.com/mlc-ai/xgrammar), [llguidance](https://github.com/guidance-ai/llguidance)) plus six hand-written CSL formatters (APA 7, MLA 9, Chicago author-date, IEEE, Nature, Vancouver — see [ADR-004](docs/decisions/004-citeproc-rewrite.md) for why we rolled our own) into a single API. The guarantee is honest and tiered:
 
 - **Local backends** (HF / vLLM / llama.cpp + XGrammar/llguidance): citation markers are **structurally impossible to fabricate** at the logit level.
-- **API-provider backends** (future v0.2+): schema-level enforcement via OpenAI / Gemini structured outputs with enum-constrained cite IDs.
-- **Anthropic users** should use [Anthropic's Citations API](https://platform.claude.com/docs/en/build-with-claude/citations) directly — it already solves the problem on Claude; citeformer adds no value there.
+- **OpenAI backend**: schema-level enforcement via Structured Outputs with `strict=true`. The JSON schema's `citations` items are `enum`-bounded to the in-scope source ids — provider rejects out-of-enum responses before returning. Install with `pip install 'citeformer[openai]'`.
+- **Anthropic backend**: thin adapter over Anthropic's native [Citations API](https://platform.claude.com/docs/en/build-with-claude/citations) — Claude's native system already prevents fabrication; citeformer translates its per-block citation structure into the same `Citation` / `Reference` shapes so API output mixes with local-backend output in one pipeline. Install with `pip install 'citeformer[anthropic]'`.
 
 ## Install
 
@@ -31,9 +31,19 @@ pip install citeformer
 # With the HF transformers backend (P2+).
 pip install 'citeformer[hf]'
 
+# API-provider backends (schema-tier enforcement).
+pip install 'citeformer[openai]'
+pip install 'citeformer[anthropic]'
+
 # Everything cross-platform (excludes vLLM, which is Linux/CUDA-only).
 pip install 'citeformer[all]'
 ```
+
+**Try it without installing** — the [HF Space demo](hf-space/) runs the
+adversarial "100% → 0% fabrication" swing on CPU in your browser. The
+[literature-review notebook](examples/08_literature_review.ipynb) walks
+through an end-to-end academic workflow (arXiv fetch → citeformer →
+NLI verify → APA-7 bibliography) on a laptop-friendly model.
 
 Python 3.11+ (tested through 3.14).
 

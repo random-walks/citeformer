@@ -64,6 +64,13 @@ development/releasing
 
 ```{toctree}
 :hidden:
+:caption: Architecture decisions
+
+decisions/index
+```
+
+```{toctree}
+:hidden:
 :caption: History
 
 spec/v0

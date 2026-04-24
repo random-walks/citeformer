@@ -5,12 +5,13 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 [![Python](https://img.shields.io/pypi/pyversions/citeformer)](https://pypi.org/project/citeformer/)
 [![CI](https://github.com/random-walks/citeformer/actions/workflows/ci.yml/badge.svg)](https://github.com/random-walks/citeformer/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/random-walks/citeformer/branch/main/graph/badge.svg)](https://codecov.io/gh/random-walks/citeformer)
 
 ***A bulletproof way to generate verifiably cited text from language models.***
 
 ![Citation fabrication is structural, not statistical](benchmarks/findings/figures/fabrication-structural-vs-empirical.png)
 
-> **Status**: pre-1.0 on `feat/p0-scaffolding`; v0.1 tag is imminent. Ships five backends (HF + vLLM + llama.cpp local, OpenAI + Anthropic API), six hand-written CSL styles, deterministic bibliography rendering, and claim-level NLI verification. Follow [CHANGELOG.md](CHANGELOG.md) for the full change log.
+> **Status**: v0.1.0 on PyPI. Ships five backends (HF + vLLM + llama.cpp local, OpenAI + Anthropic API), six hand-written CSL styles, deterministic bibliography rendering, and claim-level NLI verification. Follow [CHANGELOG.md](CHANGELOG.md) for the full change log.
 
 ## Why citeformer
 

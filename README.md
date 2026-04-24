@@ -9,17 +9,35 @@
 
 ***A bulletproof way to generate verifiably cited text from language models.***
 
-![Citation fabrication is structural, not statistical](benchmarks/findings/figures/fabrication-structural-vs-empirical.png)
+![Side-by-side: baseline HF generation happily emits [7] and [8] when only 6 sources are in scope; citeformer's grammar mask makes [7]/[8] token-impossible to sample](benchmarks/findings/figures/cover-annotated.png)
 
-> **Status**: v0.1.0 on PyPI. Ships seven backends (HF + vLLM + llama.cpp local, OpenAI + Anthropic + Gemini + Mistral API), six hand-written CSL styles, deterministic bibliography rendering, and claim-level NLI verification. Follow [CHANGELOG.md](CHANGELOG.md) for the full change log.
+### What it does — one paragraph for everyone
 
-## Why citeformer
+Language models hallucinate citations. Ask GPT-4, Claude, or an open-source model to cite "source [7]" when you only gave it six sources and a solid chunk of the time it will invent `[7]`, `[8]`, sometimes `[42]`. citeformer makes that **physically impossible**. Before the model picks its next token, we compile a tiny grammar that only admits citation markers pointing at sources you actually supplied, and we hand that grammar to the decoder. Fabricated citations don't get generated less often — they cannot be generated at all. Bibliographies are rendered deterministically by the library in six academic styles (APA, MLA, Chicago, IEEE, Nature, Vancouver), and every emitted claim can be NLI-verified against its cited source after the fact. [Try the live demo](https://huggingface.co/spaces/random-walks/citeformer-demo) or `pip install citeformer`.
+
+### What makes it interesting — for the applied-AI crowd
+
+> If you've read the jsonformer source or thought about logit-layer structured output, skip to [Backends](#backends).
+
+- **Logit-masked GBNF.** The `cite-id` terminal is compiled per call to `"[" ("1" | "2" | ... | "N") "]"` and handed to [XGrammar](https://github.com/mlc-ai/xgrammar) (default) or [llguidance](https://github.com/guidance-ai/llguidance). Out-of-scope tokens get masked to zero probability before sampling — the sampler *never sees them*. This is structural, not rejection-sampled.
+- **Seven backends, three enforcement tiers, one `GenerationResult`.** HF + vLLM + llama.cpp enforce at the logit layer. OpenAI + Gemini + Mistral enforce at the schema layer (`enum`-bounded `citations` in `strict=true` JSON schema — server-side rejection of non-conforming payloads). Anthropic is adapted from its native Citations API. All collapse to the same typed output for downstream verify / render / streaming.
+- **The model never touches the bibliography.** Six hand-written CSL formatters (~1 kLOC, no citeproc-py dependency — see [ADR-004](docs/decisions/004-citeproc-rewrite.md)) render references deterministically. 300 locked snapshots pin the formatter outputs.
+- **Verify is real, not a hit rate.** `result.verify()` runs DeBERTa-v3-large-MNLI over every (source content, cited sentence) pair and returns a typed `VerificationReport` — with a coverage check for uncited-but-entailed sentences. Threshold calibration + the honest bimodal-score finding live in [benchmarks/README.md#finding-4](benchmarks/README.md#finding-4--nli-threshold-calibration-deberta-v3-large-is-bimodal).
+- **0.0 ± 0.0 fabrication across 40 runs.** 4 prompt shapes × 2 models × 5 seeds in [`benchmarks/multiprompt_sweep.py`](benchmarks/multiprompt_sweep.py). The stds are identically zero because there's no variance to measure — the guarantee is a contract, not a mean.
+
+### Hi, I'm [Blaise](https://blaiseab.com) — how this got built
+
+Hi — I'm [Blaise Albis-Burdige](https://blaiseab.com) ([@blaiseab](https://github.com/blaiseab)). I wrote citeformer on and immediately around a trip to [Ramp's](https://ramp.com) NYC office. On the subway ride up I was rereading [jsonformer](https://github.com/1rgs/jsonformer) by [Nick Kapur](https://github.com/1rgs) — partly to sharpen my intuition for how the applied-AI folks at Ramp think about structured output, partly because jsonformer is one of those projects whose core insight ("don't prompt it; constrain the token distribution") has aged extraordinarily well. By the time I got off the train I was convinced the same move applied to RAG citations, which are — empirically, in 2026 benchmarks — wrong [14–95% of the time depending on what you measure](https://arxiv.org/search/?query=RAG+citation+fabrication&searchtype=all). jsonformer has been dormant since early 2024; no successor had applied the insight to citation markers. This is that successor. The heavy lifting lives in dependencies I didn't write (XGrammar, transformers, vLLM, DeBERTa, httpx, pypdf, GROBID, readability) — citeformer's contribution is the composition plus the six §10 contracts that keep the seams honest as the surface grows. Paper-shaped write-up: [PREPRINT.md](PREPRINT.md).
+
+> **Status**: v0.1.0 on [PyPI](https://pypi.org/project/citeformer/). Seven backends (HF + vLLM + llama.cpp local, OpenAI + Anthropic + Gemini + Mistral API), six hand-written CSL styles, deterministic bibliography rendering, and claim-level NLI verification. Follow [CHANGELOG.md](CHANGELOG.md) for the full change log.
+
+## Why structural, not statistical
 
 LLM-generated citations are wrong 14–95% of the time depending on the benchmark. RAG systems still fabricate 3–13% of cited URLs. NeurIPS 2025 accepted ~50 papers with AI-generated fake references. Prompting doesn't fix it; post-hoc verification doesn't fix it. The only real fix is **structural** — make the invalid output token-impossible before the model reaches the decision point.
 
-That's the [jsonformer](https://github.com/1rgs/jsonformer) insight applied to citations. citeformer wraps modern constrained-decoding libraries ([XGrammar](https://github.com/mlc-ai/xgrammar), [llguidance](https://github.com/guidance-ai/llguidance)) and six hand-written CSL formatters (APA 7, MLA 9, Chicago author-date, IEEE, Nature, Vancouver — see [ADR-004](docs/decisions/004-citeproc-rewrite.md)) into a single API where:
+citeformer delivers that in three independent ways:
 
-- **Citation markers can't be fabricated.** `[N]` where `N > len(sources)` is token-impossible to sample on local backends, and schema-rejected on OpenAI. Proven across [40 multi-prompt runs](benchmarks/README.md#finding-5--multi-prompt-sweep-structural-guarantee-is-prompt-invariant) — **0% fabrication on every prompt × model × seed triple**.
+- **Citation markers can't be fabricated.** `[N]` where `N > len(sources)` is token-impossible to sample on local backends, and schema-rejected on the API tier. Proven across [40 multi-prompt runs](benchmarks/README.md#finding-5--multi-prompt-sweep-structural-guarantee-is-prompt-invariant) — **0% fabrication on every prompt × model × seed triple**.
 - **Bibliographies are rendered by the library, not the model.** Six styles, deterministic output, [300 locked snapshots](tests/unit/test_csl_suite/).
 - **Every citation is claim-verifiable.** `result.verify()` runs NLI entailment per cite and returns a structured `VerificationReport` — not just a hit rate.
 

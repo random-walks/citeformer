@@ -1,0 +1,80 @@
+name: Bug report
+description: Something broken, unexpected, or mis-documented in citeformer.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing! A reproducible example goes a long way — if you can hand over a 20-line script that triggers the issue, we can usually have a fix out within a patch release.
+
+        **For security issues, please do NOT file here.** Email <blaise@ubik.studio> per [SECURITY.md](../SECURITY.md).
+  - type: input
+    id: version
+    attributes:
+      label: citeformer version
+      description: Output of `uv run citeformer version` (or `python -c "import citeformer; print(citeformer.__version__)"`).
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: "3.12.4"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: "macOS 14.5 / Ubuntu 24.04 / Windows 11"
+    validations:
+      required: true
+  - type: dropdown
+    id: backend
+    attributes:
+      label: Backend
+      description: Which backend were you using?
+      options:
+        - "HFBackend (local, XGrammar)"
+        - "LlamaCppBackend (local, GBNF)"
+        - "VLLMBackend (local, XGrammar/llguidance)"
+        - "OpenAIBackend (API, strict JSON)"
+        - "AnthropicBackend (API, Citations)"
+        - "GeminiBackend (API, response_schema)"
+        - "MistralBackend (API, strict JSON)"
+        - "MockBackend (tests)"
+        - "N/A — not a backend issue"
+    validations:
+      required: true
+  - type: textarea
+    id: reproducer
+    attributes:
+      label: Reproducer
+      description: Minimal Python script (ideally ≤ 20 lines) that triggers the issue.
+      render: python
+      placeholder: |
+        from citeformer import Citeformer, Source, Policy
+        from citeformer.backends.mock import MockBackend
+        # ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Paste stack traces into a ```-fenced block.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Anything else — retrieved passages, prompt content, env vars, etc.

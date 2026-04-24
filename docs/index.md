@@ -5,7 +5,7 @@
 citeformer makes citation fabrication *structurally impossible* at the logit level when you use a grammar-level constrained-decoding backend. The model can only emit citation markers that refer to sources you've actually supplied. Reference lists are rendered deterministically by home-grown formatters (APA 7, MLA 9, Chicago author-date, IEEE, Nature, Vancouver) — the model never touches the bibliography.
 
 :::{important}
-citeformer is pre-1.0 and under active development. v0.1 ships local-model backends only (HF transformers, vLLM, llama.cpp). API-provider backends come in v0.2+. See the [roadmap](reference/architecture.md) for the phase plan.
+citeformer is pre-1.0 and under active development. v0.1 ships **seven backends**: three local (HF transformers, vLLM, llama.cpp) with logit-layer enforcement, three API (OpenAI, Gemini, Mistral) with schema-layer enforcement, and an adapter over Anthropic's native Citations API. See the [architecture doc](reference/architecture.md#tiered-enforcement--local-vs-api) for the tier framing.
 :::
 
 ## Install
@@ -14,8 +14,11 @@ citeformer is pre-1.0 and under active development. v0.1 ships local-model backe
 # Minimal — no backends, just the core types.
 pip install citeformer
 
-# With the HF transformers backend (P2+).
+# With the HF transformers backend (local, logit-layer enforcement).
 pip install 'citeformer[hf]'
+
+# With an API backend.
+pip install 'citeformer[openai]'    # or: anthropic, gemini, mistral
 
 # Everything cross-platform.
 pip install 'citeformer[all]'

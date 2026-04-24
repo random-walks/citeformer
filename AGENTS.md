@@ -6,7 +6,7 @@ Canonical agent guide for this repo. Native readers: Cursor, Codex, GitHub Copil
 
 `citeformer` is a Python OSS library: **a bulletproof way to generate verifiably cited text from language models**. Full pitch: [`README.md`](README.md). Full design: [`docs/reference/architecture.md`](docs/reference/architecture.md). Frozen genesis spec: [`docs/spec/v0.md`](docs/spec/v0.md).
 
-v0.1 ships local-backend support only (HF transformers, vLLM, llama.cpp). API-provider backends come in v0.2+.
+v0.1 ships **seven backends**: three local (HF transformers, vLLM, llama.cpp) with logit-layer enforcement, three API (OpenAI, Gemini, Mistral) with schema-layer enforcement, and one provider-native (Anthropic Citations API adapter). The bulletproof structural claim is logit-tier on local backends and schema-tier on the rest — both are documented in [`docs/reference/architecture.md`](docs/reference/architecture.md#tiered-enforcement--local-vs-api).
 
 ## Where to start
 
@@ -20,8 +20,8 @@ v0.1 ships local-backend support only (HF transformers, vLLM, llama.cpp). API-pr
 - Add a conformance test to `tests/integration/test_backend_parity.py`.
 
 **For agents adding a new metadata adapter:**
-- `src/citeformer/metadata/` — one module per source kind (`doi`, `arxiv`, `pdf`, `url`).
-- Entry point: a `Source.from_X` classmethod that returns a `Source` with CSL-JSON metadata + raw content.
+- `src/citeformer/metadata/` — one module per source kind (`doi`/`crossref`, `arxiv`, `pdf`, `url`, `bibtex`, `zotero`).
+- Entry point: a `Source.from_X` classmethod that returns a `Source` (or `list[Source]` for bulk adapters) with CSL-JSON metadata + raw content.
 - VCR-record the live HTTP calls into `tests/unit/test_metadata/cassettes/` so CI doesn't hit the network.
 
 ## Hard rules
@@ -52,7 +52,7 @@ make lint           # ruff + mypy
 make docs           # live-reload Sphinx at :5190
 ```
 
-Environment variables live in `.env.example`. Copy to `.env` when needed. For P0 none are required.
+Environment variables live in `.env.example`. Copy to `.env` when needed. None are required for the default install; API keys (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` / `GOOGLE_API_KEY`, `MISTRAL_API_KEY`) are only needed for the matching API backend or the live-integration test suite.
 
 ## The three §10 contracts (short form)
 

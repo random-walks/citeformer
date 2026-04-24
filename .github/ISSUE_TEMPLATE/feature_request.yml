@@ -1,0 +1,63 @@
+name: Feature request
+description: Propose a new feature, a new backend, a new CSL style, or a new integration.
+title: "[feat] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please open an issue *before* starting a large PR — easier to align on scope up front than to rework on review. Small features (new CSL style, new metadata adapter) are fine to PR directly; larger changes that touch a §10 contract need design discussion first.
+
+        For how-to / usage questions, please use [GitHub Discussions](https://github.com/random-walks/citeformer/discussions) instead.
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - "New backend (LLM runtime / provider)"
+        - "New CSL citation style"
+        - "New metadata adapter (DOI / PDF / etc.)"
+        - "New verification check"
+        - "Ecosystem integration (framework / tool)"
+        - "API ergonomics / DX"
+        - "Benchmark / evaluation"
+        - "Other"
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: What problem does this solve? Who hits it?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed API / behavior
+      description: What would the library look like after this ships? A code snippet helps.
+      render: python
+    validations:
+      required: true
+  - type: dropdown
+    id: invariant
+    attributes:
+      label: Does this touch a §10 contract?
+      description: Grammar shape (§10.1), Source metadata (§10.2), or output schemas (§10.3)? See [contracts.md](../docs/reference/contracts.md).
+      options:
+        - "No"
+        - "§10.1 — grammar shape"
+        - "§10.2 — Source.metadata CSL shape"
+        - "§10.3 — GenerationResult / VerificationReport schema"
+        - "Not sure — need help figuring out"
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What else did you look at? Why is this the right shape?
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context

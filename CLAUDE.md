@@ -73,12 +73,15 @@ tighten-and-polish pass before cutting the tag. Phase breakdown in
 - **P1** — core types + contracts locked. ✅
 - **P2** — HF backend with grammar-level enforcement (flagship). ✅
 - **P3** — deterministic CSL rendering (home-grown; ADR-004). ✅
-- **P4** — metadata adapters (DOI, arXiv, PDF, URL). ✅
+- **P4** — metadata adapters (DOI, arXiv, PDF, URL, BibTeX, Zotero). ✅
 - **P5** — vLLM + llama.cpp backends. ✅
 - **P6** — NLI verification + AI-papers benchmark. ✅
 - **Polish** — REQUIRED progression fix (ADR-009), CLI, examples as
-  living reports. *← we are here*
-- **P7** — v0.1 PyPI release.
+  living reports. ✅
+- **Expansion** — marker shapes (ADR-011), OpenAI + Anthropic API
+  backends (schema-tier + native), threshold calibration, multi-prompt
+  benchmark, literature-review notebook, HF Space demo. ✅
+- **P7** — v0.1 PyPI release. *← next*
 
 ## Versioning policy
 

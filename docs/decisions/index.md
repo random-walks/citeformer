@@ -19,4 +19,5 @@ and link to the replacement rather than editing history.
 008-generation-result-schema-v2
 009-bounded-content-required
 010-verification-report-schema-v3
+011-configurable-marker-styles
 ```

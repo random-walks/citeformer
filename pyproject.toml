@@ -89,7 +89,7 @@ examples = [
     "jupyter>=1",
     "matplotlib>=3.8",
 ]
-all = ["citeformer[hf,llamacpp,verify]"]
+all = ["citeformer[hf,llamacpp,verify,openai,anthropic]"]
 # Intentionally lightweight during P0 — just docs + tooling, no ML deps yet.
 # Grows to include `all` in P2 once src/ actually imports transformers / xgrammar.
 dev = [

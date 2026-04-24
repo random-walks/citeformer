@@ -11,7 +11,7 @@
 
 ![Citation fabrication is structural, not statistical](benchmarks/findings/figures/fabrication-structural-vs-empirical.png)
 
-> **Status**: v0.1.0 on PyPI. Ships five backends (HF + vLLM + llama.cpp local, OpenAI + Anthropic API), six hand-written CSL styles, deterministic bibliography rendering, and claim-level NLI verification. Follow [CHANGELOG.md](CHANGELOG.md) for the full change log.
+> **Status**: v0.1.0 on PyPI. Ships seven backends (HF + vLLM + llama.cpp local, OpenAI + Anthropic + Gemini + Mistral API), six hand-written CSL styles, deterministic bibliography rendering, and claim-level NLI verification. Follow [CHANGELOG.md](CHANGELOG.md) for the full change log.
 
 ## Why citeformer
 
@@ -89,18 +89,20 @@ print(f"{report.support_rate:.0%} of cites entailed by their source")
 
 ## Backends
 
-Five backends, two enforcement tiers, one `Backend` ABC:
+Seven backends, three enforcement tiers, one `Backend` ABC:
 
 | Backend            | Extra      | Enforcement tier   | Where it lives               | Notes |
 |--------------------|------------|--------------------|------------------------------|-------|
 | `HFBackend`        | `hf`       | **Logit (XGrammar)** | `citeformer.backends.hf`    | Flagship. Grammar-level token masking. |
 | `LlamaCppBackend`  | `llamacpp` | **Logit (GBNF)**     | `citeformer.backends.llamacpp` | Native GBNF via `llama-cpp-python`. CPU + Metal + CUDA. |
 | `VLLMBackend`      | `vllm`     | **Logit (XGrammar/llguidance)** | `citeformer.backends.vllm` | vLLM guided decoding. Linux/CUDA only. |
-| `OpenAIBackend`    | `openai`   | **Schema (strict JSON)** | `citeformer.backends.openai` | OpenAI Structured Outputs with `enum`-bounded cite ids. |
-| `AnthropicBackend` | `anthropic`| **Provider-native** | `citeformer.backends.anthropic` | Adapter over Anthropic's Citations API. |
+| `OpenAIBackend`    | `openai`   | **Schema (strict JSON)** | `citeformer.backends.openai` | OpenAI Structured Outputs — live verified. |
+| `AnthropicBackend` | `anthropic`| **Provider-native** | `citeformer.backends.anthropic` | Adapter over Anthropic's Citations API — live verified. |
+| `GeminiBackend`    | `gemini`   | **Schema (response_schema)** | `citeformer.backends.gemini` | Gemini's OpenAPI-subset structured output. |
+| `MistralBackend`   | `mistral`  | **Schema (strict JSON)** | `citeformer.backends.mistral` | Mistral's `response_format` strict JSON schema. |
 | `MockBackend`      | (core)     | Scripted             | `citeformer.backends.mock`  | For tests. Honors policies + marker styles. |
 
-All five produce the same `GenerationResult`, so verify / render / streaming work identically across tiers. Full tier discussion: [architecture.md](docs/reference/architecture.md#tiered-enforcement--local-vs-api).
+All produce the same `GenerationResult`, so verify / render / streaming work identically across tiers. OpenAI + Anthropic are live-verified against production endpoints in [`tests/integration/test_api_backends_live.py`](tests/integration/test_api_backends_live.py); Gemini + Mistral ship with fake-client coverage and the same schema contract. Full tier discussion: [architecture.md](docs/reference/architecture.md#tiered-enforcement--local-vs-api).
 
 ### API backends (quickstart)
 

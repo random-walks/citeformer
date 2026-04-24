@@ -232,3 +232,77 @@ def test_anthropic_empty_sources_rejected(anthropic_cf: Citeformer) -> None:
     """The backend must reject zero-source calls before hitting the API."""
     with pytest.raises(ValueError, match="at least 1 source"):
         anthropic_cf.generate(prompt="hi", sources=[])
+
+
+# --- Gemini --------------------------------------------------------------
+
+
+requires_gemini = pytest.mark.skipif(
+    not (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")),
+    reason="GEMINI_API_KEY / GOOGLE_API_KEY not set",
+)
+
+_GEMINI_MODEL = "gemini-2.0-flash"
+
+
+@pytest.fixture(scope="module")
+def gemini_cf() -> Iterator[Citeformer]:
+    from citeformer.backends.gemini import GeminiBackend
+
+    yield Citeformer(
+        backend=GeminiBackend(model=_GEMINI_MODEL),
+        style="apa-7",
+        citation_policy=Policy.REQUIRED,
+    )
+
+
+@pytest.mark.integration
+@requires_gemini
+def test_gemini_required_honours_structural_invariant(
+    gemini_cf: Citeformer, sources: list[Source]
+) -> None:
+    result = gemini_cf.generate(
+        prompt="In 2 sentences, compare the opening tone of any two of these classics.",
+        sources=sources,
+        max_tokens=256,
+    )
+    ids = _extract_bracketed_ids(result.text)
+    assert ids, f"Expected at least one cite; got {result.text!r}"
+    assert ids.issubset({1, 2, 3}), f"Out-of-scope cite id(s): {ids - {1, 2, 3}}"
+
+
+# --- Mistral -------------------------------------------------------------
+
+
+requires_mistral = pytest.mark.skipif(
+    not os.environ.get("MISTRAL_API_KEY"),
+    reason="MISTRAL_API_KEY not set",
+)
+
+_MISTRAL_MODEL = "mistral-small-latest"
+
+
+@pytest.fixture(scope="module")
+def mistral_cf() -> Iterator[Citeformer]:
+    from citeformer.backends.mistral import MistralBackend
+
+    yield Citeformer(
+        backend=MistralBackend(model=_MISTRAL_MODEL),
+        style="apa-7",
+        citation_policy=Policy.REQUIRED,
+    )
+
+
+@pytest.mark.integration
+@requires_mistral
+def test_mistral_required_honours_structural_invariant(
+    mistral_cf: Citeformer, sources: list[Source]
+) -> None:
+    result = mistral_cf.generate(
+        prompt="In 2 sentences, compare the opening tone of any two of these classics.",
+        sources=sources,
+        max_tokens=256,
+    )
+    ids = _extract_bracketed_ids(result.text)
+    assert ids, f"Expected at least one cite; got {result.text!r}"
+    assert ids.issubset({1, 2, 3}), f"Out-of-scope cite id(s): {ids - {1, 2, 3}}"

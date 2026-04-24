@@ -18,6 +18,10 @@ their submodules — they each require the matching extra:
 - ``citeformer.backends.anthropic.AnthropicBackend`` needs ``[anthropic]``.
   Adapter over Anthropic's native Citations API — enforcement is
   provider-side.
+- ``citeformer.backends.gemini.GeminiBackend`` needs ``[gemini]``.
+  Enforces via Gemini's ``response_schema`` OpenAPI-subset validator.
+- ``citeformer.backends.mistral.MistralBackend`` needs ``[mistral]``.
+  Enforces via Mistral's ``response_format`` strict JSON schema.
 """
 
 from __future__ import annotations

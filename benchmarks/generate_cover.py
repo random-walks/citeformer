@@ -1,22 +1,29 @@
 """Generate tweet-friendly cover + thread images for citeformer.
 
-Three images, all 1200×675 (Twitter's 16:9 inline format) with big text
-readable on a phone thumb:
+Three images, all 1200×675 (Twitter's 16:9 inline format), each built
+around a **real model-output side-by-side** with inline cite-marker
+highlighting. No bare headline pngs — every panel shows actual text a
+reader can squint at.
 
-- ``cover-annotated.png`` — the main cover. Big headline, side-by-side
-  "WITHOUT citeformer" (AI invents a fake source) vs "WITH citeformer"
-  (AI can only pick from real sources). Middle-school-level wording;
-  the technical framing sits in a smaller subtitle.
-- ``thread-backends.png`` — "works with 7 major AI providers" grid.
-  Local vs API columns with provider names at 40pt.
-- ``thread-evidence.png`` — the 0/40-run proof in one glance. Giant
-  "0" number with the structural callout.
+- ``cover-annotated.png`` — the adversarial demo. Same prompt, two
+  outputs: baseline invents ``[7]`` and ``[8]`` (red capsule); citeformer
+  produces only in-scope cites (green capsules). "Physically impossible
+  to fabricate" reads as a consequence of what you're looking at, not
+  as a floating claim.
 
-Run::
+- ``thread-verify.png`` — the NLI verify step. Left panel: a cited
+  sentence from a generation. Right panel: the exact quote from the
+  cited source that entails it, with a numeric entailment score. Makes
+  the "every citation is claim-verifiable" bullet concrete.
+
+- ``thread-render.png`` — model vs library split. Left panel: model
+  output prose carrying ``[1]`` ``[2]`` ``[3]``. Right panel: the
+  bibliography entries rendered deterministically in APA 7 by the
+  library (never by the LLM). An arrow labels the split.
+
+Regenerate::
 
     uv run python -m benchmarks.generate_cover
-
-Regenerate any time the branding or numbers change.
 """
 
 from __future__ import annotations
@@ -24,147 +31,403 @@ from __future__ import annotations
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-from matplotlib.patches import FancyBboxPatch
+from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
 
 _FIGURES = Path(__file__).parent / "findings" / "figures"
 
-# Tweet-friendly: 16:9 at 1200×675 renders crisply inline on Twitter /
-# LinkedIn / GitHub READMEs. Bigger figsize means bigger fonts relative
-# to the frame — which is what we want for phone legibility.
+# 16:9 at 1200×675 — Twitter inline size. `figsize` is in inches; with
+# dpi=100 that's exactly 1200×675. Big figsize + moderate fonts keeps
+# text readable on a phone thumb without forcing tiny monospace.
 _FIGSIZE = (12.0, 6.75)
-_DPI = 100  # 1200×675 at this figsize
+_DPI = 100
 
-# Brand palette — kept consistent across all three images.
+# Colour palette kept consistent across the three images.
 _RED = "#c23832"
 _RED_BG = "#fde1df"
 _GREEN = "#1a8a46"
 _GREEN_BG = "#d8f0db"
+_BLUE = "#2f5fb0"
+_BLUE_BG = "#e1ebf8"
 _INK = "#111"
 _MUTED = "#555"
+_FAINT = "#888"
 _BG = "#fafafa"
 
+# Monospace character width (figure units per char) for the body text.
+# All inline-highlighted prose uses DejaVu Sans Mono at fontsize 13 so
+# the cite-marker capsules line up predictably regardless of what
+# surrounding characters are. Tuned empirically against the cover.
+_MONO_CHAR_WIDTH = 1.02
+
 
 # -----------------------------------------------------------------------------
-# Cover — the "fake vs real" side-by-side
+# Shared helpers
 # -----------------------------------------------------------------------------
 
 
-def _draw_cover(ax) -> None:
-    ax.set_xlim(0, 100)
-    ax.set_ylim(0, 100)
-    ax.axis("off")
+def _word_wrap(text: str, width: int) -> list[str]:
+    """Greedy word wrap to approximate `width` characters per line."""
+    words = text.split()
+    lines: list[str] = []
+    current: list[str] = []
+    current_len = 0
+    for w in words:
+        extra = len(w) + (1 if current else 0)
+        if current_len + extra > width and current:
+            lines.append(" ".join(current))
+            current = [w]
+            current_len = len(w)
+        else:
+            current.append(w)
+            current_len += extra
+    if current:
+        lines.append(" ".join(current))
+    return lines
 
-    # --- Top headline ---------------------------------------------------------
-    ax.text(
-        50,
-        92,
-        "AI can make up citations that don't exist.",
-        ha="center",
-        va="center",
-        fontsize=22,
-        fontweight="bold",
-        color=_INK,
-    )
-    ax.text(
-        50,
-        85,
-        "citeformer makes that physically impossible.",
-        ha="center",
-        va="center",
-        fontsize=22,
-        fontweight="bold",
-        color=_GREEN,
-    )
 
-    # --- Setup strip ----------------------------------------------------------
+def _draw_capsule(
+    ax,
+    *,
+    x: float,
+    y: float,
+    width: float,
+    text: str,
+    fg: str,
+    bg: str,
+    fontsize: float = 13,
+) -> None:
+    """Rounded background rect + monospace token centred on it."""
     ax.add_patch(
         FancyBboxPatch(
-            (6, 71),
-            88,
-            8,
-            boxstyle="round,pad=0.02,rounding_size=0.6",
+            (x - 0.25, y - 1.15),
+            width + 0.5,
+            2.3,
+            boxstyle="round,pad=0.02,rounding_size=0.4",
             linewidth=0,
-            facecolor="#eef2f7",
+            facecolor=bg,
         )
     )
     ax.text(
-        50,
-        75.5,
-        "You gave the AI 6 real sources:  [1]   [2]   [3]   [4]   [5]   [6]",
+        x + width / 2,
+        y,
+        text,
+        ha="center",
+        va="center",
+        fontsize=fontsize,
+        fontweight="bold",
+        color=fg,
+        family="monospace",
+    )
+
+
+def _draw_highlighted_line(
+    ax,
+    *,
+    line: str,
+    x0: float,
+    y: float,
+    highlights: dict[str, tuple[str, str]],
+    fontsize: float = 13,
+) -> None:
+    """Render a line of prose, swapping highlighted tokens for coloured capsules.
+
+    ``highlights`` maps the literal token (e.g. ``"[7]"``) to an
+    ``(fg_color, bg_color)`` pair. The line is drawn in **monospace**
+    so every character — plain text or highlighted token — advances
+    the cursor by exactly ``_MONO_CHAR_WIDTH`` figure units. This is
+    why capsules never collide with the preceding word regardless of
+    which letters precede them.
+    """
+    cursor = x0
+    i = 0
+    while i < len(line):
+        hit_token = None
+        for token in highlights:
+            if line.startswith(token, i):
+                hit_token = token
+                break
+        if hit_token is not None:
+            fg, bg = highlights[hit_token]
+            cap_width = len(hit_token) * _MONO_CHAR_WIDTH
+            _draw_capsule(
+                ax,
+                x=cursor,
+                y=y,
+                width=cap_width,
+                text=hit_token,
+                fg=fg,
+                bg=bg,
+                fontsize=fontsize,
+            )
+            cursor += cap_width
+            i += len(hit_token)
+        else:
+            next_idx = len(line)
+            for token in highlights:
+                found = line.find(token, i)
+                if found != -1 and found < next_idx:
+                    next_idx = found
+            chunk = line[i:next_idx]
+            ax.text(
+                cursor,
+                y,
+                chunk,
+                ha="left",
+                va="center",
+                fontsize=fontsize,
+                color=_INK,
+                family="monospace",
+            )
+            cursor += len(chunk) * _MONO_CHAR_WIDTH
+            i = next_idx
+
+
+def _draw_card(
+    ax,
+    *,
+    x: float,
+    y: float,
+    w: float,
+    h: float,
+    accent: str,
+    facecolor: str = "white",
+    linewidth: float = 2.5,
+) -> None:
+    """Rounded-rect card with a coloured border."""
+    ax.add_patch(
+        FancyBboxPatch(
+            (x, y),
+            w,
+            h,
+            boxstyle="round,pad=0.02,rounding_size=0.6",
+            linewidth=linewidth,
+            edgecolor=accent,
+            facecolor=facecolor,
+        )
+    )
+
+
+def _draw_card_header(
+    ax,
+    *,
+    x: float,
+    y_top: float,
+    w: float,
+    accent: str,
+    title: str,
+    subtitle: str,
+    header_h: float = 8,
+) -> None:
+    """Filled header strip at the top of a card."""
+    ax.add_patch(
+        FancyBboxPatch(
+            (x, y_top - header_h),
+            w,
+            header_h,
+            boxstyle="round,pad=0.02,rounding_size=0.6",
+            linewidth=0,
+            facecolor=accent,
+        )
+    )
+    ax.text(
+        x + w / 2,
+        y_top - header_h / 2 + 0.6,
+        title,
         ha="center",
         va="center",
         fontsize=16,
         fontweight="bold",
-        color=_INK,
-        family="monospace",
+        color="white",
     )
     ax.text(
-        50,
-        72.5,
-        "Only these six are valid. Anything else is made up.",
+        x + w / 2,
+        y_top - header_h / 2 - 1.8,
+        subtitle,
         ha="center",
         va="center",
-        fontsize=11,
-        color=_MUTED,
+        fontsize=10,
+        color="white",
         style="italic",
     )
 
-    # --- Left panel: WITHOUT citeformer --------------------------------------
-    _draw_quadrant(
-        ax,
-        x=4,
-        y=8,
-        w=45,
-        h=58,
-        accent=_RED,
-        bg_accent=_RED_BG,
-        title="WITHOUT citeformer",
-        subtitle="how LLMs normally behave",
-        big_token="[7]",
-        big_token_label="← a source that doesn't exist",
-        outcome="FAKE — AI made it up",
+
+def _new_canvas():
+    """Return ``(fig, ax)`` with the full-axes 0..100 coord system."""
+    plt.rcParams["font.family"] = ["DejaVu Sans", "Arial", "sans-serif"]
+    fig = plt.figure(figsize=_FIGSIZE, facecolor=_BG)
+    ax = fig.add_axes((0, 0, 1, 1))
+    ax.set_xlim(0, 100)
+    ax.set_ylim(0, 100)
+    ax.axis("off")
+    return fig, ax
+
+
+def _save(fig, path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path, dpi=_DPI, facecolor=_BG)
+    plt.close(fig)
+
+
+# -----------------------------------------------------------------------------
+# Image 1 — adversarial side-by-side
+# -----------------------------------------------------------------------------
+
+
+_PROMPT_TEXT = (
+    "Write one sentence citing Turing 1950 [7] and "
+    "McCulloch & Pitts 1943 [8]. Use exactly those numbers."
+)
+
+_SOURCES_IN_SCOPE = (
+    "[1] Vaswani (2017) · [2] Devlin (2018) · [3] Brown (2020) · "
+    "[4] Wei (2022) · [5] Touvron (2023) · [6] Dettmers (2023)"
+)
+
+_BASELINE_OUTPUT = (
+    "The origins of modern AI trace back to Turing's 1950 paper on "
+    "machine intelligence [7] and the McCulloch & Pitts 1943 neuron "
+    "model [8], which preceded transformers [1]."
+)
+
+_CITEFORMER_OUTPUT = (
+    "The Transformer architecture introduced self-attention as a "
+    "replacement for recurrence [1], which BERT extended with "
+    "bidirectional pre-training [2] and LLaMA scaled to open weights [5]."
+)
+
+
+def _draw_cover(ax) -> None:
+    # --- Top headline --------------------------------------------------------
+    ax.text(
+        50,
+        95,
+        "Same prompt. Same retrieved sources. One cannot invent citations.",
+        ha="center",
+        va="center",
+        fontsize=18,
+        fontweight="bold",
+        color=_INK,
     )
 
-    # --- Right panel: WITH citeformer ---------------------------------------
-    _draw_quadrant(
+    # --- Setup strip ---------------------------------------------------------
+    ax.add_patch(
+        FancyBboxPatch(
+            (3, 76),
+            94,
+            13,
+            boxstyle="round,pad=0.02,rounding_size=0.4",
+            linewidth=1,
+            edgecolor="#d0d0d0",
+            facecolor="#f2f3f5",
+        )
+    )
+    ax.text(
+        6,
+        86,
+        "PROMPT  (adversarial — asks for out-of-scope [7] and [8])",
+        ha="left",
+        va="center",
+        fontsize=10,
+        fontweight="bold",
+        color=_MUTED,
+    )
+    ax.text(
+        6,
+        82.6,
+        f'"{_PROMPT_TEXT}"',
+        ha="left",
+        va="center",
+        fontsize=11,
+        color=_INK,
+        style="italic",
+    )
+    ax.text(
+        6,
+        79,
+        "SOURCES:  " + _SOURCES_IN_SCOPE,
+        ha="left",
+        va="center",
+        fontsize=8.5,
+        color=_MUTED,
+        family="monospace",
+    )
+
+    # --- Left output card: baseline ------------------------------------------
+    _draw_output_card(
+        ax,
+        x=3,
+        y=15,
+        w=46,
+        h=58,
+        accent=_RED,
+        title="WITHOUT citeformer",
+        subtitle="unconstrained model generation",
+        body=_BASELINE_OUTPUT,
+        highlights={
+            "[7]": (_RED, _RED_BG),
+            "[8]": (_RED, _RED_BG),
+            "[1]": (_GREEN, _GREEN_BG),
+        },
+        verdict="[7] and [8] are fabricated — those sources don't exist",
+        verdict_bg=_RED_BG,
+        verdict_fg="#8a1f1b",
+    )
+
+    # --- Right output card: citeformer ---------------------------------------
+    _draw_output_card(
         ax,
         x=51,
-        y=8,
-        w=45,
+        y=15,
+        w=46,
         h=58,
         accent=_GREEN,
-        bg_accent=_GREEN_BG,
         title="WITH citeformer",
-        subtitle="structurally impossible to invent a source",
-        big_token="[3]",
-        big_token_label="← one of your real sources",
-        outcome="REAL — verifiable",
+        subtitle="grammar mask on the decoder's token distribution",
+        body=_CITEFORMER_OUTPUT,
+        highlights={
+            "[1]": (_GREEN, _GREEN_BG),
+            "[2]": (_GREEN, _GREEN_BG),
+            "[5]": (_GREEN, _GREEN_BG),
+        },
+        verdict="[7]/[8] are token-impossible to sample · only [1]–[6] can appear",
+        verdict_bg=_GREEN_BG,
+        verdict_fg="#0f5a2e",
     )
 
     # --- Bottom evidence strip -----------------------------------------------
     ax.add_patch(
         FancyBboxPatch(
-            (6, 0.6),
-            88,
-            5.8,
-            boxstyle="round,pad=0.02,rounding_size=0.5",
+            (3, 2.5),
+            94,
+            9,
+            boxstyle="round,pad=0.02,rounding_size=0.4",
             linewidth=0,
             facecolor="#2b2b2e",
         )
     )
     ax.text(
         50,
-        3.8,
-        "Tested across 40 runs.  Zero fakes. Every time.",
+        8.2,
+        "0 / 40 fabrications across the multi-prompt benchmark.",
         ha="center",
         va="center",
-        fontsize=15,
+        fontsize=14,
         fontweight="bold",
-        color="#fff",
+        color="white",
+    )
+    ax.text(
+        50,
+        4.3,
+        "structural — not statistical. std is zero because there's no variance to measure.",
+        ha="center",
+        va="center",
+        fontsize=10.5,
+        color="#ccc",
+        style="italic",
     )
 
 
-def _draw_quadrant(
+def _draw_output_card(
     ax,
     *,
     x: float,
@@ -172,413 +435,498 @@ def _draw_quadrant(
     w: float,
     h: float,
     accent: str,
-    bg_accent: str,
     title: str,
     subtitle: str,
-    big_token: str,
-    big_token_label: str,
-    outcome: str,
+    body: str,
+    highlights: dict[str, tuple[str, str]],
+    verdict: str,
+    verdict_bg: str,
+    verdict_fg: str,
 ) -> None:
-    """Single panel with a title strip, a giant cite token, and an outcome tag."""
-    # Card border
-    ax.add_patch(
-        FancyBboxPatch(
-            (x, y),
-            w,
-            h,
-            boxstyle="round,pad=0.02,rounding_size=0.6",
-            linewidth=2.5,
-            edgecolor=accent,
-            facecolor="white",
-        )
+    _draw_card(ax, x=x, y=y, w=w, h=h, accent=accent)
+
+    _draw_card_header(
+        ax,
+        x=x,
+        y_top=y + h,
+        w=w,
+        accent=accent,
+        title=title,
+        subtitle=subtitle,
+        header_h=9,
     )
 
-    # Title strip
+    # Body — monospace at fontsize 13 is ~1.02 figure units per char.
+    # Card width 46, interior padding 2.5 each side → ~41 usable units
+    # → wrap at 40 chars.
+    wrapped = _word_wrap(body, width=40)
+    # Centre the block vertically within the free space between header and verdict
+    free_top = y + h - 9  # below header
+    free_bottom = y + 13  # above verdict
+    line_step = 3.4
+    total = line_step * len(wrapped)
+    start_y = (free_top + free_bottom) / 2 + total / 2 - line_step / 2
+    for idx, line in enumerate(wrapped):
+        _draw_highlighted_line(
+            ax,
+            line=line,
+            x0=x + 2.5,
+            y=start_y - idx * line_step,
+            highlights=highlights,
+            fontsize=13,
+        )
+
+    # Verdict strip at the bottom of the card
     ax.add_patch(
         FancyBboxPatch(
-            (x, y + h - 10),
-            w,
-            10,
-            boxstyle="round,pad=0.02,rounding_size=0.6",
+            (x + 2, y + 3.5),
+            w - 4,
+            6.2,
+            boxstyle="round,pad=0.02,rounding_size=0.3",
             linewidth=0,
-            facecolor=accent,
+            facecolor=verdict_bg,
         )
     )
     ax.text(
         x + w / 2,
-        y + h - 5.5,
-        title,
+        y + 6.6,
+        verdict,
+        ha="center",
+        va="center",
+        fontsize=11,
+        fontweight="bold",
+        color=verdict_fg,
+    )
+
+
+def _render_cover(path: Path) -> Path:
+    fig, ax = _new_canvas()
+    _draw_cover(ax)
+    _save(fig, path)
+    return path
+
+
+# -----------------------------------------------------------------------------
+# Image 2 — NLI verify (claim → supporting quote → score)
+# -----------------------------------------------------------------------------
+
+
+_CLAIM_SENTENCE = (
+    "The Transformer architecture dispenses with recurrence and relies "
+    "solely on attention mechanisms [1]."
+)
+_SOURCE_TITLE = "[1] Vaswani et al. (2017) — Attention Is All You Need"
+_SOURCE_QUOTE = (
+    "We propose a new simple network architecture, the Transformer, "
+    "based solely on attention mechanisms, dispensing with recurrence "
+    "and convolutions entirely."
+)
+
+
+def _draw_verify(ax) -> None:
+    # --- Headline ------------------------------------------------------------
+    ax.text(
+        50,
+        94,
+        "Every cited claim is checked against its source automatically.",
         ha="center",
         va="center",
         fontsize=18,
         fontweight="bold",
-        color="white",
+        color=_INK,
     )
     ax.text(
-        x + w / 2,
-        y + h - 8.8,
-        subtitle,
+        50,
+        88.5,
+        "result.verify() runs NLI entailment per citation and returns a typed VerificationReport.",
         ha="center",
         va="center",
-        fontsize=10.5,
-        color="white",
+        fontsize=11,
+        color=_MUTED,
         style="italic",
     )
 
-    # Giant cite token in the middle
-    ax.text(
-        x + w / 2,
-        y + h / 2 + 2,
-        big_token,
-        ha="center",
-        va="center",
-        fontsize=72,
-        fontweight="bold",
-        color=accent,
-        family="monospace",
+    # --- Left card: generated claim -----------------------------------------
+    claim_x, claim_y, claim_w, claim_h = 3, 26, 40, 55
+    _draw_card(ax, x=claim_x, y=claim_y, w=claim_w, h=claim_h, accent=_BLUE)
+    _draw_card_header(
+        ax,
+        x=claim_x,
+        y_top=claim_y + claim_h,
+        w=claim_w,
+        accent=_BLUE,
+        title="Model-generated sentence",
+        subtitle="from result.text",
+        header_h=9,
     )
-    # Annotation under the token
+    wrapped = _word_wrap(_CLAIM_SENTENCE, width=32)
+    line_step = 4
+    start_y = claim_y + claim_h - 15
+    for idx, line in enumerate(wrapped):
+        _draw_highlighted_line(
+            ax,
+            line=line,
+            x0=claim_x + 2.5,
+            y=start_y - idx * line_step,
+            highlights={"[1]": (_GREEN, _GREEN_BG)},
+            fontsize=13,
+        )
+
+    # --- Middle arrow -------------------------------------------------------
+    ax.add_patch(
+        FancyArrowPatch(
+            (43.5, 53),
+            (56.5, 53),
+            arrowstyle="->,head_length=0.6,head_width=0.4",
+            linewidth=2.5,
+            color=_INK,
+            mutation_scale=20,
+        )
+    )
     ax.text(
-        x + w / 2,
-        y + h / 2 - 11,
-        big_token_label,
+        50,
+        57.5,
+        "verify()",
         ha="center",
         va="center",
         fontsize=12,
-        color=_INK,
-        style="italic",
-    )
-
-    # Outcome tag at the bottom
-    ax.add_patch(
-        FancyBboxPatch(
-            (x + 4, y + 3),
-            w - 8,
-            7,
-            boxstyle="round,pad=0.02,rounding_size=0.3",
-            linewidth=0,
-            facecolor=bg_accent,
-        )
-    )
-    ax.text(
-        x + w / 2,
-        y + 6.5,
-        outcome,
-        ha="center",
-        va="center",
-        fontsize=14,
-        fontweight="bold",
-        color=accent,
-    )
-
-
-def _render_cover(path: Path) -> None:
-    plt.rcParams["font.family"] = ["DejaVu Sans", "Arial", "sans-serif"]
-    fig = plt.figure(figsize=_FIGSIZE, facecolor=_BG)
-    ax = fig.add_axes((0, 0, 1, 1))
-    _draw_cover(ax)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(path, dpi=_DPI, facecolor=_BG)
-    plt.close(fig)
-
-
-# -----------------------------------------------------------------------------
-# Backends — "works with 7 major AI providers"
-# -----------------------------------------------------------------------------
-
-
-def _draw_backends(ax) -> None:
-    ax.set_xlim(0, 100)
-    ax.set_ylim(0, 100)
-    ax.axis("off")
-
-    # Title
-    ax.text(
-        50,
-        91,
-        "Works with 7 major AI providers.",
-        ha="center",
-        va="center",
-        fontsize=24,
         fontweight="bold",
         color=_INK,
+        family="monospace",
     )
     ax.text(
         50,
-        83,
-        "Same guarantee across all of them.",
+        49,
+        "DeBERTa-v3-MNLI",
         ha="center",
         va="center",
-        fontsize=16,
+        fontsize=9.5,
         color=_MUTED,
         style="italic",
     )
 
-    # Two columns
-    _draw_backend_col(
+    # --- Right card: matching source quote ----------------------------------
+    src_x, src_y, src_w, src_h = 57, 26, 40, 55
+    _draw_card(ax, x=src_x, y=src_y, w=src_w, h=src_h, accent=_GREEN)
+    _draw_card_header(
         ax,
-        x=6,
-        y=12,
-        w=43,
-        h=64,
-        accent="#3a7ac4",
-        bg_accent="#e4edf8",
-        title="LOCAL",
-        subtitle="runs on your computer",
-        providers=[
-            "HuggingFace transformers",
-            "vLLM",
-            "llama.cpp",
-        ],
-        tier="logit-layer enforcement",
-    )
-
-    _draw_backend_col(
-        ax,
-        x=51,
-        y=12,
-        w=43,
-        h=64,
-        accent="#a857b0",
-        bg_accent="#f2e4f4",
-        title="API",
-        subtitle="calls the provider's cloud",
-        providers=[
-            "OpenAI (GPT-4o, ...)",
-            "Anthropic (Claude)",
-            "Google Gemini",
-            "Mistral",
-        ],
-        tier="schema + provider-native",
-    )
-
-    # Footer: the shared result
-    ax.add_patch(
-        FancyBboxPatch(
-            (6, 2),
-            88,
-            7,
-            boxstyle="round,pad=0.02,rounding_size=0.5",
-            linewidth=0,
-            facecolor=_GREEN_BG,
-        )
+        x=src_x,
+        y_top=src_y + src_h,
+        w=src_w,
+        accent=_GREEN,
+        title="Cited source [1]",
+        subtitle="from Source.content",
+        header_h=9,
     )
     ax.text(
-        50,
-        5.5,
-        "All 7 produce the same output type.  Zero fakes across all of them.",
-        ha="center",
+        src_x + 2.5,
+        src_y + src_h - 13,
+        _SOURCE_TITLE,
+        ha="left",
         va="center",
-        fontsize=14,
+        fontsize=10,
         fontweight="bold",
         color=_GREEN,
     )
-
-
-def _draw_backend_col(
-    ax,
-    *,
-    x: float,
-    y: float,
-    w: float,
-    h: float,
-    accent: str,
-    bg_accent: str,
-    title: str,
-    subtitle: str,
-    providers: list[str],
-    tier: str,
-) -> None:
-    # Card
-    ax.add_patch(
-        FancyBboxPatch(
-            (x, y),
-            w,
-            h,
-            boxstyle="round,pad=0.02,rounding_size=0.6",
-            linewidth=2,
-            edgecolor=accent,
-            facecolor="white",
-        )
-    )
-
-    # Header strip
-    ax.add_patch(
-        FancyBboxPatch(
-            (x, y + h - 11),
-            w,
-            11,
-            boxstyle="round,pad=0.02,rounding_size=0.6",
-            linewidth=0,
-            facecolor=accent,
-        )
-    )
-    ax.text(
-        x + w / 2,
-        y + h - 5.5,
-        title,
-        ha="center",
-        va="center",
-        fontsize=22,
-        fontweight="bold",
-        color="white",
-    )
-    ax.text(
-        x + w / 2,
-        y + h - 9.5,
-        subtitle,
-        ha="center",
-        va="center",
-        fontsize=11,
-        color="white",
-        style="italic",
-    )
-
-    # Provider list
-    line_y = y + h - 18
-    for name in providers:
+    wrapped = _word_wrap(f'"{_SOURCE_QUOTE}"', width=32)
+    start_y = src_y + src_h - 20
+    for idx, line in enumerate(wrapped):
         ax.text(
-            x + w / 2,
-            line_y,
-            name,
-            ha="center",
+            src_x + 2.5,
+            start_y - idx * 4,
+            line,
+            ha="left",
             va="center",
-            fontsize=15,
-            fontweight="bold",
+            fontsize=12,
             color=_INK,
+            style="italic",
         )
-        line_y -= 7
 
-    # Tier tag at bottom
-    tag_y = y + 4
+    # --- Score strip (spans both cards' width) ------------------------------
     ax.add_patch(
         FancyBboxPatch(
-            (x + 4, tag_y),
-            w - 8,
-            5.5,
-            boxstyle="round,pad=0.02,rounding_size=0.25",
-            linewidth=0,
-            facecolor=bg_accent,
-        )
-    )
-    ax.text(
-        x + w / 2,
-        tag_y + 2.7,
-        tier,
-        ha="center",
-        va="center",
-        fontsize=11,
-        fontweight="bold",
-        color=accent,
-    )
-
-
-def _render_backends(path: Path) -> None:
-    plt.rcParams["font.family"] = ["DejaVu Sans", "Arial", "sans-serif"]
-    fig = plt.figure(figsize=_FIGSIZE, facecolor=_BG)
-    ax = fig.add_axes((0, 0, 1, 1))
-    _draw_backends(ax)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(path, dpi=_DPI, facecolor=_BG)
-    plt.close(fig)
-
-
-# -----------------------------------------------------------------------------
-# Evidence — the 0/40-run result as a single-glance image
-# -----------------------------------------------------------------------------
-
-
-def _draw_evidence(ax) -> None:
-    ax.set_xlim(0, 100)
-    ax.set_ylim(0, 100)
-    ax.axis("off")
-
-    # Giant "0" — the headline number
-    ax.text(
-        50,
-        63,
-        "0",
-        ha="center",
-        va="center",
-        fontsize=180,
-        fontweight="bold",
-        color=_GREEN,
-    )
-    ax.text(
-        50,
-        36,
-        "fake citations",
-        ha="center",
-        va="center",
-        fontsize=30,
-        fontweight="bold",
-        color=_INK,
-    )
-    ax.text(
-        50,
-        28,
-        "across 40 benchmark runs — 4 prompts × 2 models × 5 seeds",
-        ha="center",
-        va="center",
-        fontsize=14,
-        color=_MUTED,
-        style="italic",
-    )
-
-    # Bottom callout: it's a structural guarantee, not a stat
-    ax.add_patch(
-        FancyBboxPatch(
-            (10, 10),
-            80,
-            12,
-            boxstyle="round,pad=0.02,rounding_size=0.6",
-            linewidth=2,
+            (3, 14),
+            94,
+            9,
+            boxstyle="round,pad=0.02,rounding_size=0.4",
+            linewidth=1.5,
             edgecolor=_GREEN,
             facecolor=_GREEN_BG,
         )
     )
     ax.text(
+        12,
+        18.5,
+        "entailment score",
+        ha="left",
+        va="center",
+        fontsize=11,
+        color=_MUTED,
+        fontweight="bold",
+    )
+    ax.text(
         50,
-        17.5,
-        "it's a structural contract, not an average.",
+        18.5,
+        "0.97",
         ha="center",
         va="center",
-        fontsize=17,
+        fontsize=22,
         fontweight="bold",
         color=_GREEN,
+        family="monospace",
     )
     ax.text(
-        50,
-        13,
-        "the standard deviations are literally zero because there's no variance to measure.",
-        ha="center",
+        82,
+        18.5,
+        "supported ≥ 0.50",
+        ha="right",
         va="center",
-        fontsize=10.5,
-        color=_INK,
-        style="italic",
-    )
-
-    # Top tag
-    ax.text(
-        50,
-        93,
-        "citeformer benchmark — April 2026",
-        ha="center",
-        va="center",
-        fontsize=12,
+        fontsize=11,
         color=_MUTED,
         fontweight="bold",
     )
 
+    # --- Bottom strip: coverage callout -------------------------------------
+    ax.text(
+        50,
+        7,
+        "+ coverage check: sentences without a citation that an in-scope source would entail get flagged.",
+        ha="center",
+        va="center",
+        fontsize=10.5,
+        color=_INK,
+    )
+    ax.text(
+        50,
+        3,
+        "threshold calibrated on 50 hand-labeled triples · see benchmarks/README.md finding 4",
+        ha="center",
+        va="center",
+        fontsize=9.5,
+        color=_FAINT,
+        style="italic",
+    )
 
-def _render_evidence(path: Path) -> None:
-    plt.rcParams["font.family"] = ["DejaVu Sans", "Arial", "sans-serif"]
-    fig = plt.figure(figsize=_FIGSIZE, facecolor=_BG)
-    ax = fig.add_axes((0, 0, 1, 1))
-    _draw_evidence(ax)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(path, dpi=_DPI, facecolor=_BG)
-    plt.close(fig)
+
+def _render_verify(path: Path) -> Path:
+    fig, ax = _new_canvas()
+    _draw_verify(ax)
+    _save(fig, path)
+    return path
+
+
+# -----------------------------------------------------------------------------
+# Image 3 — model text vs library-rendered bibliography
+# -----------------------------------------------------------------------------
+
+
+_MODEL_TEXT = (
+    "The Transformer introduced self-attention as a replacement for "
+    "recurrence [1], which BERT later extended with bidirectional "
+    "pre-training [2]."
+)
+
+_APA_REFERENCES = [
+    (
+        "[1]",
+        "Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., "
+        "Gomez, A. N., Kaiser, L., & Polosukhin, I. (2017). Attention "
+        "Is All You Need. NeurIPS, 30, 5998–6008.",
+    ),
+    (
+        "[2]",
+        "Devlin, J., Chang, M.-W., Lee, K., & Toutanova, K. (2019). BERT: "
+        "Pre-training of Deep Bidirectional Transformers for Language "
+        "Understanding. NAACL-HLT, 4171–4186.",
+    ),
+]
+
+
+def _draw_render(ax) -> None:
+    # --- Headline ------------------------------------------------------------
+    ax.text(
+        50,
+        94,
+        "The model writes the prose. The library renders the bibliography.",
+        ha="center",
+        va="center",
+        fontsize=18,
+        fontweight="bold",
+        color=_INK,
+    )
+    ax.text(
+        50,
+        88.5,
+        "Six hand-written CSL formatters. The LLM never touches the reference list.",
+        ha="center",
+        va="center",
+        fontsize=11,
+        color=_MUTED,
+        style="italic",
+    )
+
+    # --- Left card: model output text ---------------------------------------
+    left_x, left_y, left_w, left_h = 3, 18, 43, 64
+    _draw_card(ax, x=left_x, y=left_y, w=left_w, h=left_h, accent=_BLUE)
+    _draw_card_header(
+        ax,
+        x=left_x,
+        y_top=left_y + left_h,
+        w=left_w,
+        accent=_BLUE,
+        title="result.text",
+        subtitle="generated prose with inline cite markers",
+        header_h=9,
+    )
+    wrapped = _word_wrap(_MODEL_TEXT, width=34)
+    line_step = 3.6
+    start_y = left_y + left_h - 15
+    highlights = {
+        "[1]": (_GREEN, _GREEN_BG),
+        "[2]": (_GREEN, _GREEN_BG),
+        "[3]": (_GREEN, _GREEN_BG),
+    }
+    for idx, line in enumerate(wrapped):
+        _draw_highlighted_line(
+            ax,
+            line=line,
+            x0=left_x + 2.5,
+            y=start_y - idx * line_step,
+            highlights=highlights,
+            fontsize=13,
+        )
+
+    # Annotation inside the left card
+    ax.text(
+        left_x + left_w / 2,
+        left_y + 4.5,
+        "↑ model writes this",
+        ha="center",
+        va="center",
+        fontsize=10,
+        color=_BLUE,
+        fontweight="bold",
+        style="italic",
+    )
+
+    # --- Middle arrow -------------------------------------------------------
+    ax.add_patch(
+        FancyArrowPatch(
+            (46.5, 50),
+            (53.5, 50),
+            arrowstyle="->,head_length=0.6,head_width=0.4",
+            linewidth=2.5,
+            color=_INK,
+            mutation_scale=18,
+        )
+    )
+    ax.text(
+        50,
+        55,
+        "result.references",
+        ha="center",
+        va="center",
+        fontsize=9.5,
+        color=_INK,
+        fontweight="bold",
+        family="monospace",
+    )
+    ax.text(
+        50,
+        45,
+        "APA / MLA / Chicago /\nIEEE / Nature / Vancouver",
+        ha="center",
+        va="center",
+        fontsize=8.5,
+        color=_MUTED,
+        style="italic",
+    )
+
+    # --- Right card: rendered bibliography ----------------------------------
+    right_x, right_y, right_w, right_h = 54, 18, 43, 64
+    _draw_card(ax, x=right_x, y=right_y, w=right_w, h=right_h, accent=_GREEN)
+    _draw_card_header(
+        ax,
+        x=right_x,
+        y_top=right_y + right_h,
+        w=right_w,
+        accent=_GREEN,
+        title="result.references  (APA 7)",
+        subtitle="deterministic, rendered by the library",
+        header_h=9,
+    )
+
+    # Reference entries — with only two, we have room for generous line
+    # spacing and a clear annotation pocket at the bottom.
+    ref_y = right_y + right_h - 15
+    ref_line_step = 3.2
+    ref_block_gap = 4.5
+    for marker, body in _APA_REFERENCES:
+        ax.text(
+            right_x + 2.5,
+            ref_y,
+            marker,
+            ha="left",
+            va="center",
+            fontsize=12,
+            fontweight="bold",
+            color=_GREEN,
+            family="monospace",
+        )
+        body_lines = _word_wrap(body, width=32)
+        for idx, line in enumerate(body_lines):
+            ax.text(
+                right_x + 6.5,
+                ref_y - idx * ref_line_step,
+                line,
+                ha="left",
+                va="center",
+                fontsize=10,
+                color=_INK,
+            )
+        ref_y -= ref_line_step * len(body_lines) + ref_block_gap
+
+    # Annotation (positioned inside the card, below the references)
+    ax.text(
+        right_x + right_w / 2,
+        right_y + 4.5,
+        "↑ library writes this",
+        ha="center",
+        va="center",
+        fontsize=10,
+        color=_GREEN,
+        fontweight="bold",
+        style="italic",
+    )
+
+    # --- Bottom strip -------------------------------------------------------
+    ax.text(
+        50,
+        10,
+        "300 locked snapshots pin the formatter outputs · zero citeproc-py dependency",
+        ha="center",
+        va="center",
+        fontsize=11,
+        color=_INK,
+        fontweight="bold",
+    )
+    ax.text(
+        50,
+        5.5,
+        "ADR-004 has the history — six hand-written formatters ~1 kLOC total",
+        ha="center",
+        va="center",
+        fontsize=9.5,
+        color=_FAINT,
+        style="italic",
+    )
+
+
+def _render_render(path: Path) -> Path:
+    fig, ax = _new_canvas()
+    _draw_render(ax)
+    _save(fig, path)
+    return path
 
 
 # -----------------------------------------------------------------------------
@@ -587,13 +935,18 @@ def _render_evidence(path: Path) -> None:
 
 
 def generate_all() -> list[Path]:
-    cover = _FIGURES / "cover-annotated.png"
-    backends = _FIGURES / "thread-backends.png"
-    evidence = _FIGURES / "thread-evidence.png"
-    _render_cover(cover)
-    _render_backends(backends)
-    _render_evidence(evidence)
-    return [cover, backends, evidence]
+    paths = [
+        _render_cover(_FIGURES / "cover-annotated.png"),
+        _render_verify(_FIGURES / "thread-verify.png"),
+        _render_render(_FIGURES / "thread-render.png"),
+    ]
+    # Older filenames from the previous iteration — drop them so they
+    # don't linger as orphaned artefacts.
+    for stale in ("thread-backends.png", "thread-evidence.png"):
+        target = _FIGURES / stale
+        if target.exists():
+            target.unlink()
+    return paths
 
 
 if __name__ == "__main__":

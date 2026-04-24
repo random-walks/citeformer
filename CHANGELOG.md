@@ -106,6 +106,36 @@ against the 50-triple set. DeBERTa-v3-base caps at F1 0.63 (vs large's
 - HF Space deploy automation: `hf-space/deploy.sh` + `make hf-space
   SPACE=<user>/<name>`. Idempotent — reruns push the latest state.
 
+### CI
+
+- **Committed `uv.lock`.** Previously gitignored; resolution was
+  re-run on every CI job. Now committed so cache keys stabilize and
+  the resolver skips work on every run. Astral recommends committing
+  lockfiles even for libraries in 2026+ (the lockfile is CI's
+  dependency graph, not the user's).
+- **`uv sync --locked` on every job.** Enforces pyproject/lockfile
+  consistency as a CI-side invariant — a silent drift fails loudly.
+- **CPU-only torch on Linux test cells** via
+  `UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu`. The
+  default torch wheel bundles CUDA (~800 MB); CPU-only is ~200 MB.
+  CI has no GPU, so this is a pure ~600 MB / ~60 s saving per Linux
+  matrix cell. macOS keeps the standard wheel.
+- Cache-dependency-glob now includes `uv.lock` alongside
+  `pyproject.toml` so the cache invalidates precisely on lockfile
+  bumps.
+
+Expected per-cell runtime (ubuntu py3.12): ~3m47s → ~2m20s cold,
+~1m30s warm reruns. py3.14 (the previously-slow cell) should land
+closer to 3-4 min.
+
+### Post-release announcement polish
+
+- **`thread-multi.png` middle column**: swapped Phi-3.5-mini (a second
+  local model) for Claude Haiku 4.5 so each column represents a
+  different enforcement tier — Qwen (local logit-mask), GPT-4o-mini
+  (API schema-layer), Claude Haiku (API provider-native). The
+  "three mechanisms, one contract" point lands in one glance.
+
 ## [0.1.0] — 2026-04-24
 
 ### Tier expansion + calibration + flagship artifacts

@@ -10,6 +10,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Point uv at PyTorch's CPU-only wheel index on Linux CI runners. The
+# default torch wheel bundles CUDA (~800 MB); CPU-only is ~200 MB. CI
+# has no GPU anyway, so this is a pure size/time win — not a semantic
+# change. macOS builds fall back to the standard PyPI wheel.
+env:
+  UV_INDEX_STRATEGY: "unsafe-best-match"
+
 jobs:
   lint:
     name: lint + type
@@ -19,9 +26,10 @@ jobs:
       - uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
-          cache-dependency-glob: "pyproject.toml"
+          # Include uv.lock so deps-locked reruns hit cache precisely.
+          cache-dependency-glob: "pyproject.toml\nuv.lock"
       - name: Install dev deps
-        run: uv sync --extra dev
+        run: uv sync --locked --extra dev
       - name: ruff check
         run: uv run ruff check .
       - name: ruff format check
@@ -46,16 +54,29 @@ jobs:
       - uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
-          cache-dependency-glob: "pyproject.toml"
+          cache-dependency-glob: "pyproject.toml\nuv.lock"
       - name: Pin Python
         run: uv python install ${{ matrix.python }}
+
+      # CPU-only torch for Linux — cuts ~600 MB of CUDA-bundled wheels
+      # off the install budget. `unsafe-best-match` lets uv fall back
+      # to PyPI for packages not on the PyTorch index.
+      - name: Configure CPU-only torch index (Linux only)
+        if: runner.os == 'Linux'
+        run: echo "UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu" >> $GITHUB_ENV
+
       - name: Install dev + backend extras
         # `all` is the cross-platform kitchen sink (hf + llamacpp + verify +
-        # openai + anthropic). The unit suite imports xgrammar (via [hf]),
-        # transformers (via [verify] / [hf]), openai, and anthropic at test-
-        # module scope, so the test job needs every extra that doesn't gate
-        # on a GPU / Linux-only wheel (vLLM stays opt-in).
-        run: uv sync --extra dev --extra all --python ${{ matrix.python }}
+        # openai + anthropic + gemini + mistral). The unit suite imports
+        # xgrammar (via [hf]), transformers (via [verify] / [hf]), openai,
+        # anthropic, google-genai, and mistralai at test-module scope, so
+        # the test job needs every extra that doesn't gate on a GPU /
+        # Linux-only wheel (vLLM stays opt-in).
+        #
+        # `--locked` asserts `uv.lock` is in sync with `pyproject.toml`
+        # — a config-drift safety net that also lets the resolver skip
+        # work on every run.
+        run: uv sync --locked --extra dev --extra all --python ${{ matrix.python }}
 
       - name: pytest
         run: uv run pytest --cov=citeformer --cov-report=xml --cov-report=term
@@ -76,9 +97,9 @@ jobs:
       - uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
-          cache-dependency-glob: "pyproject.toml"
+          cache-dependency-glob: "pyproject.toml\nuv.lock"
       - name: Install docs deps
-        run: uv sync --extra dev
+        run: uv sync --locked --extra dev
       - name: Build Sphinx docs
         run: uv run sphinx-build -W --keep-going -b html docs docs/_build/html
       - name: Upload built docs

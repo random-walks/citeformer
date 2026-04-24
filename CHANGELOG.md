@@ -6,6 +6,136 @@ Versioning policy: **patch bumps are cheap**. See [docs/development/releasing.md
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-04-24
+
+### Added — two new API backends, richer PDF extraction, ALCE harness
+
+Post-v0.1.0 expansion with no §10 contract changes — additive on every
+axis.
+
+**`GeminiBackend`** (extra `gemini`, pulls `google-genai>=0.7`). Schema-
+tier enforcement via Gemini's OpenAPI-subset `response_schema` on
+`generate_content`. Enum-bounded citation integers mirror the OpenAI
+strict-JSON path; fabrication is impossible in the returned payload.
+Uses `min_items` (snake_case) and skips `additionalProperties: false`
+— both quirks of Gemini's schema dialect. Env: `GEMINI_API_KEY` /
+`GOOGLE_API_KEY`.
+
+**`MistralBackend`** (extra `mistral`, pulls `mistralai>=2.0`). Schema-
+tier enforcement via Mistral's `response_format={"type": "json_schema",
+strict: true}` (Nov-2024 API surface). Reuses the OpenAI schema builder
+since both providers accept the same shape. Env: `MISTRAL_API_KEY`.
+Note: the extra floor is `>=2.0` because the mistralai 2.x namespace-
+package layout (`from mistralai.client import Mistral`) is the only
+supported shape; 1.x used a different entry-point name.
+
+**Four new unit-test suites** (42 new tests) covering the new backends
+with `SimpleNamespace` fake clients: schema enum bounds, strict=true
+flag, source embedding in system prompt, marker-style propagation,
+streaming chunking, empty-source rejection.
+
+**Live-API integration tests** (`tests/integration/test_api_backends_live.py`,
+marked `integration`, env-gated). Six tests hit OpenAI and Anthropic
+production endpoints; two additional tests skip cleanly when
+`GEMINI_API_KEY` / `MISTRAL_API_KEY` aren't set. Verifies the structural
+invariant (out-of-scope cite ids never appear) end-to-end on the real
+providers, not just against fake clients. Default CI without secrets
+stays green — tests skip rather than fail when a key is absent.
+
+**GROBID PDF extractor** — `Source.from_pdf(path, extractor="grobid")`
+dispatches to a new GROBID-backed path alongside the default pypdf one.
+Extra: `grobid` (`grobid-client-python>=0.0.9`). Users stand up the
+GROBID Java service separately (`docker run -p 8070:8070
+grobid/grobid:0.8.0`). What GROBID buys over pypdf: structured
+family/given author lists, extracted abstract field, section-level body
+paragraphs, and `type: "article-journal"` (vs pypdf's conservative
+`report`). 14 new unit tests with a monkey-patched client stub covering
+the happy path, 503 failures, missing-extra ImportError, and the
+`Source.from_pdf` forwarding.
+
+**ALCE-flavoured benchmark harness** — new `benchmarks/alce_subset.py`
+runs a 3-example toy subset (hand-written, no downloads) or any
+JSONL-formatted ALCE file (`--data`) and computes the three headline
+metrics: citation recall, citation precision (NLI entailment per cite),
+fabrication rate (canary for structural regression). 18 unit tests lock
+the metric math. Full-ALCE reproducibility (ASQA / QAMPARI / ELI5)
+deferred to v0.3.
+
+**`thread-flow.png` + `thread-multi.png` + refreshed cover.** Five
+tweet-friendly cover/thread images at 1200×675 rendered by
+`benchmarks/generate_cover.py`: annotated side-by-side adversarial demo
+(the cover), 4-stage pipeline flowchart, same-prompt-3-models grid, NLI
+claim-to-source verify pipeline, and the model-vs-library bibliography
+split. The cover's bottom strip now explicitly names the mechanism
+("Not prompted, not retried, not checked after. Prevented at the
+decode step.") so the "can't you just prompt the 6 sources?" objection
+gets closed at a glance.
+
+**Docs + community polish** — pre-merge audit that killed every stale
+"API backends coming in v0.2+" claim across docs (they're already in
+v0.1), updated `§10.3` schema_versions to reflect the
+`GenerationResult v2` + `VerificationReport v3` bumps, refreshed
+snapshot counts (100→300). New community files: `CODE_OF_CONDUCT.md`,
+`SECURITY.md`, `.github/ISSUE_TEMPLATE/{bug_report, feature_request,
+config}.yml`, `.github/FUNDING.yml`, `AUTHORS.md`. New `PREPRINT.md` —
+2000-word paper-shaped design + evaluation write-up.
+
+**Multi-prompt sweep — 3 → 5 seeds.** `DEFAULT_SEEDS` bumped, 40-cell
+rerun landed. citeformer fabrication: 0.0 ± 0.0 (still). Baseline
+`survey` drift tightened to 3.9% mean (up from 2.4% at 24 runs — more
+seeds surfaced more of the long-tail).
+
+**Smaller-NLI calibration finding.** Ran
+`threshold_calibration.py --model cross-encoder/nli-deberta-v3-base`
+against the 50-triple set. DeBERTa-v3-base caps at F1 0.63 (vs large's
+0.96) — perfect precision but under-confident on paraphrases. Finding
+4b added to `benchmarks/README.md`.
+
+### Changed — dep floors bumped for CI + new-backend compatibility
+
+- `torch>=2.4` → `torch>=2.8`. Needed for clean cp313 wheel resolution
+  on CI; `torch 2.5.1` on py3.13/py3.14 was dragging `triton==3.1.0`
+  which has no cp313 wheels. Local resolution on macOS arm64 was fine;
+  CI on Linux tripped. Floor raise is narrow (2.4–2.7 was a small
+  window; most HF users already on 2.8+).
+- `mistralai>=1.0` → `mistralai>=2.0` as the floor for the `mistral`
+  extra (new in this release, so no existing users impacted).
+
+### Pipeline
+
+- HF Space deploy automation: `hf-space/deploy.sh` + `make hf-space
+  SPACE=<user>/<name>`. Idempotent — reruns push the latest state.
+
+### CI
+
+- **Committed `uv.lock`.** Previously gitignored; resolution was
+  re-run on every CI job. Now committed so cache keys stabilize and
+  the resolver skips work on every run. Astral recommends committing
+  lockfiles even for libraries in 2026+ (the lockfile is CI's
+  dependency graph, not the user's).
+- **`uv sync --locked` on every job.** Enforces pyproject/lockfile
+  consistency as a CI-side invariant — a silent drift fails loudly.
+- **CPU-only torch on Linux test cells** via
+  `UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu`. The
+  default torch wheel bundles CUDA (~800 MB); CPU-only is ~200 MB.
+  CI has no GPU, so this is a pure ~600 MB / ~60 s saving per Linux
+  matrix cell. macOS keeps the standard wheel.
+- Cache-dependency-glob now includes `uv.lock` alongside
+  `pyproject.toml` so the cache invalidates precisely on lockfile
+  bumps.
+
+Expected per-cell runtime (ubuntu py3.12): ~3m47s → ~2m20s cold,
+~1m30s warm reruns. py3.14 (the previously-slow cell) should land
+closer to 3-4 min.
+
+### Post-release announcement polish
+
+- **`thread-multi.png` middle column**: swapped Phi-3.5-mini (a second
+  local model) for Claude Haiku 4.5 so each column represents a
+  different enforcement tier — Qwen (local logit-mask), GPT-4o-mini
+  (API schema-layer), Claude Haiku (API provider-native). The
+  "three mechanisms, one contract" point lands in one glance.
+
 ## [0.1.0] — 2026-04-24
 
 ### Tier expansion + calibration + flagship artifacts

@@ -1199,35 +1199,38 @@ _MULTI_PROMPT = (
     "Write a 2-sentence summary of the attention mechanism and BERT, citing every claim."
 )
 
+# Each column picks a model from a different enforcement tier so the
+# visual lands on "three mechanisms, one contract" rather than on
+# "three different local models".
 _MULTI_OUTPUTS = [
     {
         "model": "Qwen 2.5 0.5B",
-        "subtitle": "local · HF + XGrammar",
+        "subtitle": "local · logit-mask (XGrammar)",
         "accent": _BLUE,
         "text": (
-            "Self-attention computes weighted relationships across all "
-            "positions in a sequence [1]. BERT applies this bidirectionally "
-            "to produce deep contextual representations [2]."
-        ),
-    },
-    {
-        "model": "Phi-3.5 mini (3.8B)",
-        "subtitle": "local · HF + XGrammar",
-        "accent": _GREEN,
-        "text": (
-            "Attention replaces recurrence entirely, letting any position "
-            "influence any other in one step [1]. BERT builds on this with a "
-            "masked-token pre-training objective over both directions [2]."
+            "Self-attention weighs relationships between all token positions "
+            "in parallel [1]. BERT applies this bidirectionally to build "
+            "deep contextual embeddings [2]."
         ),
     },
     {
         "model": "GPT-4o-mini",
-        "subtitle": "API · OpenAI strict JSON",
+        "subtitle": "API · schema-layer (strict JSON)",
         "accent": "#d98e20",
         "text": (
             "The Transformer's self-attention dispenses with recurrence and "
             "convolutions, using attention alone [1]. BERT extends this with "
             "bidirectional pre-training across layers [2]."
+        ),
+    },
+    {
+        "model": "Claude Haiku 4.5",
+        "subtitle": "API · provider-native (Citations)",
+        "accent": _GREEN,
+        "text": (
+            "Attention lets each token relate to every other token in one "
+            "step, removing recurrence entirely [1]. BERT pre-trains on "
+            "masked tokens using bidirectional context [2]."
         ),
     },
 ]
@@ -1248,7 +1251,8 @@ def _draw_multi(ax) -> None:
     ax.text(
         50,
         89,
-        "local grammar mask (left/middle) and API schema mask (right) collapse to the same contract.",
+        "one from each enforcement tier: logit-mask (local), schema-rejection (API), "
+        "provider-native (Anthropic). same contract falls out of all three.",
         ha="center",
         va="center",
         fontsize=10.5,

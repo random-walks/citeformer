@@ -5,4 +5,4 @@ The release workflow bumps this value; never hand-edit it outside a `/bump` slas
 or the `release-bump` skill ceremony.
 """
 
-__version__ = "0.0.1"
+__version__ = "0.1.0"

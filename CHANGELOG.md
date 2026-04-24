@@ -6,6 +6,8 @@ Versioning policy: **patch bumps are cheap**. See [docs/development/releasing.md
 
 ## [Unreleased]
 
+## [0.1.0] — 2026-04-24
+
 ### Tier expansion + calibration + flagship artifacts
 
 Three-axis expansion: the public API grows to cover more models, more

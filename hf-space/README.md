@@ -27,17 +27,26 @@ Opens a Gradio UI on `http://localhost:7860`.
 
 ## Deploying to HF Spaces
 
-1. Create a Space at https://huggingface.co/new-space.
-2. Pick **Gradio SDK**, **CPU basic** hardware (the demo runs on CPU).
-3. Clone the Space repo, drop in `app.py` + `requirements.txt` + this README, push:
+One-time setup:
 
-   ```bash
-   git clone https://huggingface.co/spaces/<your-user>/citeformer-demo
-   cd citeformer-demo
-   cp ../citeformer/hf-space/{app.py,requirements.txt,README.md} .
-   git add -A && git commit -m "init citeformer demo"
-   git push
-   ```
+```bash
+pip install huggingface_hub
+huggingface-cli login   # paste a write-scoped token from https://huggingface.co/settings/tokens
+```
+
+Create the Space in the web UI at <https://huggingface.co/new-space>
+with **Gradio SDK**, **CPU basic** hardware.
+
+Then from this directory:
+
+```bash
+./deploy.sh <hf-username>/<space-name>
+# e.g.  ./deploy.sh random-walks/citeformer-demo
+```
+
+`deploy.sh` clones the Space, syncs `app.py` + `requirements.txt` + this
+README, and pushes a commit tagged with the source citeformer SHA.
+Re-run any time to redeploy — it's idempotent.
 
 The Space takes ~2 min to warm up (Qwen 2.5 0.5B download + XGrammar compiler init), then stays warm. Total memory footprint: ~2 GB.
 

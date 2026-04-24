@@ -1,4 +1,4 @@
-.PHONY: help dev test test-unit test-integration coverage lint format docs docs-build release-check clean
+.PHONY: help dev test test-unit test-integration coverage lint format docs docs-build release-check clean hf-space
 
 help:
 	@echo "citeformer developer commands:"
@@ -13,6 +13,7 @@ help:
 	@echo "  make docs             Build + serve docs with live reload (http://127.0.0.1:5190)"
 	@echo "  make docs-build       Build docs once (for CI)"
 	@echo "  make release-check    Dry-run build + version print"
+	@echo "  make hf-space SPACE=user/name  Sync hf-space/ to a HuggingFace Space"
 	@echo "  make clean            Remove build artifacts and caches"
 
 dev:
@@ -55,6 +56,14 @@ docs-build:
 release-check:
 	uv build
 	uv run python -c "import citeformer; print('citeformer', citeformer.__version__)"
+
+hf-space:
+	@if [ -z "$(SPACE)" ]; then \
+	    echo "usage: make hf-space SPACE=<hf-user>/<space-name>"; \
+	    echo "(one-time prereq: 'pip install huggingface_hub && huggingface-cli login')"; \
+	    exit 2; \
+	fi
+	./hf-space/deploy.sh "$(SPACE)"
 
 clean:
 	rm -rf dist/ build/ .pytest_cache/ .mypy_cache/ .ruff_cache/ htmlcov/ .coverage

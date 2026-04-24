@@ -138,16 +138,27 @@ class Source(BaseModel):
 
     @classmethod
     def from_pdf(cls, path: str | Any, **kwargs: Any) -> Self:
-        """Build a `Source` from a local PDF via pypdf.
+        """Build a `Source` from a local PDF.
 
         Args:
             path: Filesystem path to the PDF.
-            **kwargs: Reserved for future fetcher options (none currently).
+            **kwargs: Forwarded to `citeformer.metadata.extract_pdf`. The
+                important ones:
+
+                - ``extractor`` (``"pypdf"`` | ``"grobid"``, default
+                  ``"pypdf"``). ``"grobid"`` requires ``pip install
+                  citeformer[grobid]`` + a running GROBID server
+                  (typical dev setup: ``docker run -p 8070:8070
+                  grobid/grobid:0.8.0``).
+                - ``grobid_url`` (default ``http://localhost:8070``) when
+                  using the GROBID extractor.
 
         Returns:
-            A `Source` with best-effort CSL metadata (``title``, ``author``,
-            ``issued`` when the PDF info dict has them) and the concatenated
-            page text as `content`.
+            A `Source` with best-effort CSL metadata. pypdf pulls
+            ``title``/``author``/``issued`` from the PDF info dict when
+            set; GROBID additionally returns clean author lists
+            (family/given), an ``abstract`` field, and section-level
+            body text.
         """
         from citeformer.metadata import extract_pdf
 

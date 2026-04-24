@@ -147,6 +147,7 @@ Build `Source` objects from real-world inputs:
 Source.from_doi("10.1038/s41586-023-06221-2")      # Crossref → CSL-JSON
 Source.from_arxiv("2305.14627")                     # arXiv API → CSL-JSON + abstract
 Source.from_pdf("paper.pdf")                        # pypdf → title + body text
+Source.from_pdf("paper.pdf", extractor="grobid")    # GROBID → author/abstract/section text
 Source.from_url("https://example.com/article")      # readability-lxml + OpenGraph
 
 # Bulk-load a library; each returns list[Source].

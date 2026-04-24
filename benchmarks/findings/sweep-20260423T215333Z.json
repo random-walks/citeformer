@@ -1,0 +1,97 @@
+{
+  "aggregates": {
+    "Qwen/Qwen2.5-0.5B-Instruct": {
+      "baseline_cites": {
+        "max": 3.0,
+        "mean": 1.5,
+        "min": 0.0,
+        "n": 2,
+        "std": 2.1213203435596424
+      },
+      "baseline_fab_rate": {
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "n": 2,
+        "std": 0.0
+      },
+      "baseline_support_rate": {
+        "max": 1.0,
+        "mean": 0.8333333333333333,
+        "min": 0.6666666666666666,
+        "n": 2,
+        "std": 0.23570226039551587
+      },
+      "constrained_cites": {
+        "max": 47.0,
+        "mean": 40.5,
+        "min": 34.0,
+        "n": 2,
+        "std": 9.192388155425117
+      },
+      "constrained_fab_rate": {
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "n": 2,
+        "std": 0.0
+      },
+      "constrained_support_rate": {
+        "max": 0.9361702127659575,
+        "mean": 0.909261576971214,
+        "min": 0.8823529411764706,
+        "n": 2,
+        "std": 0.03805455768588432
+      },
+      "elapsed_sec": {
+        "max": 45.44068108301144,
+        "mean": 35.65182568700402,
+        "min": 25.8629702909966,
+        "n": 2,
+        "std": 13.843532061142747
+      }
+    }
+  },
+  "config": {
+    "device": "cpu",
+    "max_new_tokens": 180,
+    "models": [
+      "Qwen/Qwen2.5-0.5B-Instruct"
+    ],
+    "nli_model": null,
+    "policy": "required",
+    "premise": "fulltext",
+    "seeds": [
+      0,
+      1
+    ],
+    "threshold": 0.5
+  },
+  "generated_at": "2026-04-23T21:53:33.006461+00:00",
+  "rows": [
+    {
+      "baseline_cites": 0,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 1.0,
+      "constrained_cites": 47,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.9361702127659575,
+      "elapsed_sec": 45.44068108301144,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "policy": "required",
+      "seed": 0
+    },
+    {
+      "baseline_cites": 3,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.6666666666666666,
+      "constrained_cites": 34,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.8823529411764706,
+      "elapsed_sec": 25.8629702909966,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "policy": "required",
+      "seed": 1
+    }
+  ]
+}

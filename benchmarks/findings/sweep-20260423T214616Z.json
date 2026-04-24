@@ -1,0 +1,96 @@
+{
+  "aggregates": {
+    "microsoft/Phi-3.5-mini-instruct": {
+      "baseline_cites": {
+        "max": 4.0,
+        "mean": 4.0,
+        "min": 4.0,
+        "n": 2,
+        "std": 0.0
+      },
+      "baseline_fab_rate": {
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "n": 2,
+        "std": 0.0
+      },
+      "baseline_support_rate": {
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "n": 2,
+        "std": 0.0
+      },
+      "constrained_cites": {
+        "max": 41.0,
+        "mean": 28.5,
+        "min": 16.0,
+        "n": 2,
+        "std": 17.67766952966369
+      },
+      "constrained_fab_rate": {
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "n": 2,
+        "std": 0.0
+      },
+      "constrained_support_rate": {
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "n": 2,
+        "std": 0.0
+      },
+      "elapsed_sec": {
+        "max": 216.6326691249851,
+        "mean": 174.77065527098603,
+        "min": 132.90864141698694,
+        "n": 2,
+        "std": 59.20182774057591
+      }
+    }
+  },
+  "config": {
+    "device": "cpu",
+    "max_new_tokens": 180,
+    "models": [
+      "microsoft/Phi-3.5-mini-instruct"
+    ],
+    "nli_model": "cross-encoder/nli-deberta-v3-base",
+    "policy": "required",
+    "seeds": [
+      0,
+      1
+    ],
+    "threshold": 0.5
+  },
+  "generated_at": "2026-04-23T21:46:16.908304+00:00",
+  "rows": [
+    {
+      "baseline_cites": 4,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 41,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 216.6326691249851,
+      "model": "microsoft/Phi-3.5-mini-instruct",
+      "policy": "required",
+      "seed": 0
+    },
+    {
+      "baseline_cites": 4,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 16,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 132.90864141698694,
+      "model": "microsoft/Phi-3.5-mini-instruct",
+      "policy": "required",
+      "seed": 1
+    }
+  ]
+}

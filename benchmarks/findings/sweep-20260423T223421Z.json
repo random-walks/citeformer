@@ -1,0 +1,136 @@
+{
+  "aggregates": {
+    "Qwen/Qwen2.5-0.5B-Instruct": {
+      "baseline_cites": {
+        "max": 6.0,
+        "mean": 1.8,
+        "min": 0.0,
+        "n": 5,
+        "std": 2.6832815729997477
+      },
+      "baseline_fab_rate": {
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "n": 5,
+        "std": 0.0
+      },
+      "baseline_support_rate": {
+        "max": 1.0,
+        "mean": 0.8,
+        "min": 0.3333333333333333,
+        "n": 5,
+        "std": 0.29814239699997197
+      },
+      "constrained_cites": {
+        "max": 47.0,
+        "mean": 24.6,
+        "min": 5.0,
+        "n": 5,
+        "std": 17.271363582531635
+      },
+      "constrained_fab_rate": {
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "n": 5,
+        "std": 0.0
+      },
+      "constrained_support_rate": {
+        "max": 0.9361702127659575,
+        "mean": 0.4659268530107078,
+        "min": 0.1111111111111111,
+        "n": 5,
+        "std": 0.4067763197701727
+      },
+      "elapsed_sec": {
+        "max": 34.64310879202094,
+        "mean": 29.096172366605607,
+        "min": 26.107077250024304,
+        "n": 5,
+        "std": 3.692928139606636
+      }
+    }
+  },
+  "config": {
+    "device": "cpu",
+    "max_new_tokens": 180,
+    "models": [
+      "Qwen/Qwen2.5-0.5B-Instruct"
+    ],
+    "nli_model": null,
+    "policy": "required",
+    "premise": "fulltext",
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "threshold": 0.5
+  },
+  "generated_at": "2026-04-23T22:34:21.937117+00:00",
+  "rows": [
+    {
+      "baseline_cites": 0,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 1.0,
+      "constrained_cites": 47,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.9361702127659575,
+      "elapsed_sec": 34.64310879202094,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "policy": "required",
+      "seed": 0
+    },
+    {
+      "baseline_cites": 3,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.6666666666666666,
+      "constrained_cites": 34,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.8823529411764706,
+      "elapsed_sec": 26.107077250024304,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "policy": "required",
+      "seed": 1
+    },
+    {
+      "baseline_cites": 0,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 1.0,
+      "constrained_cites": 5,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.2,
+      "elapsed_sec": 27.11432670801878,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "policy": "required",
+      "seed": 2
+    },
+    {
+      "baseline_cites": 0,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 1.0,
+      "constrained_cites": 27,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.1111111111111111,
+      "elapsed_sec": 31.127019290986937,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "policy": "required",
+      "seed": 3
+    },
+    {
+      "baseline_cites": 6,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.3333333333333333,
+      "constrained_cites": 10,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.2,
+      "elapsed_sec": 26.48932979197707,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "policy": "required",
+      "seed": 4
+    }
+  ]
+}

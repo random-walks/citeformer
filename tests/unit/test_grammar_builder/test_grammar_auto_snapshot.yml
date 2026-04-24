@@ -1,0 +1,18 @@
+cite_ids:
+- 1
+- 2
+- 3
+gbnf: 'root ::= (text | cite-group)+
+
+  text ::= [^[]+
+
+  cite-group ::= cite-id (ws cite-id)*
+
+  ws ::= " "
+
+  cite-id ::= "[" ("1" | "2" | "3") "]"
+
+  '
+marker_style: bracket
+policy: auto
+root_rule: root

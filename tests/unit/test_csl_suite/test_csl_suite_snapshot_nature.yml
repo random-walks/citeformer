@@ -1,0 +1,171 @@
+- bib: 1. Poe, E. A. The Raven and Other Poems (Wiley and Putnam, 1845).
+  case_id: classic_book_single_author
+  inline: '1'
+- bib: 1. Smith, A. & Jones, B. Constrained Decoding for RAG. Journal of Applied AI
+    12, 45–62 (2023).
+  case_id: article_two_authors_doi
+  inline: '1'
+- bib: 1. Chen, W. Short Note on Type Systems. SIGPLAN Notices 59, 7 (2024).
+  case_id: article_single_page
+  inline: '1'
+- bib: 1. Vaswani, A. et al. Attention Is All You Need. Advances in Neural Information
+    Processing Systems 30 (2017).
+  case_id: article_many_authors_et_al
+  inline: '1'
+- bib: 1. Melville, H. Loomings. In Moby-Dick or The Whale (eds Tanner, T.) 1–6 (Harper
+    & Brothers, 1851).
+  case_id: book_chapter_with_editor
+  inline: '1'
+- bib: 1. Austen, J. A Critical Edition of Early Novels. (PhD dissertation, University
+    of Oxford, 1813).
+  case_id: phd_thesis
+  inline: '1'
+- bib: '1. Devlin, J., Chang, M.-W., Lee, K. & Toutanova, K. BERT: Pre-training of
+    Deep Bidirectional Transformers for Language Understanding. NAACL-HLT, 4171–4186
+    (2019).'
+  case_id: conference_paper
+  inline: '1'
+- bib: 1. OpenAI. GPT-4 Technical Report (OpenAI, 2023).
+  case_id: technical_report
+  inline: '1'
+- bib: 1. Claude Documentation. Anthropic (2025). https://docs.anthropic.com/claude
+  case_id: webpage_with_accessed
+  inline: '1'
+- bib: 1. Strunk, W. & White, E. B. The Elements of Style (Macmillan, 2000).
+  case_id: book_with_edition
+  inline: '1'
+- bib: 1. Turing, A. M. Computing Machinery and Intelligence. Mind 59, 433–460 (1950).
+  case_id: journal_with_issn
+  inline: '1'
+- bib: 1. Knuth, D. E. The Art of Computer Programming (Addison-Wesley, 1998).
+  case_id: multi_volume_series
+  inline: '1'
+- bib: 1. van der Maaten, L. & Hinton, G. Visualizing Data using t-SNE. Journal of
+    Machine Learning Research 9, 2579–2605 (2008).
+  case_id: author_with_particle_van_der
+  inline: '1'
+- bib: 1. de la Torre, F. A Least-Squares Framework for Component Analysis. IEEE Transactions
+    on PAMI 34, 1041–1055 (2012).
+  case_id: author_with_particle_de_la
+  inline: '1'
+- bib: 1. von Neumann, J. First Draft of a Report on the EDVAC (University of Pennsylvania,
+    1945).
+  case_id: author_with_particle_von
+  inline: '1'
+- bib: 1. World Wide Web Consortium. Web Content Accessibility Guidelines (WCAG) 2.2
+    (W3C, 2023).
+  case_id: literal_organization_author
+  inline: '1'
+- bib: 1. Plato. The Republic (Penguin Classics, -380).
+  case_id: single_word_family_name
+  inline: '1'
+- bib: 1. A Treatise on Diverse Topics (Smith and Co., 1850).
+  case_id: missing_author
+  inline: '1'
+- bib: '1. Doe, J. Draft: Notes on Reproducibility. Preprint.'
+  case_id: missing_year
+  inline: '1'
+- bib: 1. Okafor, N. Fall 2024 Roundup. Annals of Statistics 52, 1100–1125 (2024).
+  case_id: date_with_month
+  inline: '1'
+- bib: 1. Patel, P. What We Learned Shipping v1.0. Engineering Blog (2026).
+  case_id: date_with_month_and_day
+  inline: '1'
+- bib: 1. Ramirez, I. An Exceedingly Verbose and Deliberately Over-specified Title
+    Intended to Stress-test the Formatter's Line-wrap and Punctuation Behaviour Across
+    All Bundled Styles. Journal of Unusually Long Titles 1, 1–2 (2022).
+  case_id: very_long_title
+  inline: '1'
+- bib: '1. Sutton, R. S. & Barto, A. G. Reinforcement Learning: An Introduction (MIT
+    Press, 2018).'
+  case_id: title_with_colon_subtitle
+  inline: '1'
+- bib: '1. Bender, E. M., Gebru, T., McMillan-Major, A. & Shmitchell, S. On the Dangers
+    of Stochastic Parrots: Can Language Models Be Too Big? FAccT ''21, 610–623 (2021).'
+  case_id: title_with_question_mark
+  inline: '1'
+- bib: 1. Brown, T. B. Language Models are Few-Shot Learners (GPT-3). NeurIPS 33 (2020).
+  case_id: title_with_parentheses
+  inline: '1'
+- bib: 1. Ødegård, Á. Unicode Handling in Scientific Software. Software Engineering
+    Research 5, 12–28 (2015).
+  case_id: unicode_scandinavian_surname
+  inline: '1'
+- bib: 1. 王伟 & 田中花子. Cross-lingual Representation Learning. Journal of Multilingual
+    NLP 3, 100–120 (2024).
+  case_id: cjk_literal_author
+  inline: '1'
+- bib: 1. Johnson, K. The Rhetoric of "Truth" in Late Modern Fiction (Harvard University
+    Press, 2019).
+  case_id: title_with_italics_quotes
+  inline: '1'
+- bib: 1. O'Brien, L. AI Tools Reshape Newsroom Practices. The New York Times (2025).
+  case_id: newspaper_article
+  inline: '1'
+- bib: 1. Nguyen, T. Inside the Quiet Revolution of Structured Decoding. Wired, 48–55
+    (2024).
+  case_id: magazine_article
+  inline: '1'
+- bib: 1. Ubik, B. citeformer. (2026).
+  case_id: software_with_version
+  inline: '1'
+- bib: '1. Deng, J., Dong, W. & Socher, R. ImageNet: A Large-Scale Hierarchical Image
+    Database. (2009).'
+  case_id: dataset_with_doi
+  inline: '1'
+- bib: 1. Edison, T. A Method and Apparatus for Electric Illumination. (1880).
+  case_id: patent_item
+  inline: '1'
+- bib: '1. Ordnance Survey. OS Landranger Map 89: West Cumbria. (2020).'
+  case_id: map_item
+  inline: '1'
+- bib: 1. NASA Voyager Imaging Team. Saturn from Voyager 2. (1981).
+  case_id: figure_item
+  inline: '1'
+- bib: 1. King, M. L. I Have a Dream. (1963).
+  case_id: speech_item
+  inline: '1'
+- bib: 1. Feynman, R. P. The Pleasure of Finding Things Out. BBC Horizon (1981).
+  case_id: interview_item
+  inline: '1'
+- bib: 1. Consumer Privacy Act of 2025. (2025).
+  case_id: legislation_item
+  inline: '1'
+- bib: 1. Algorithmic Accountability Bill. (2024).
+  case_id: bill_item
+  inline: '1'
+- bib: 1. Garcia, M. E. Review of 'Thinking, Fast and Slow'. The New York Review of
+    Books (2012).
+  case_id: review_item
+  inline: '1'
+- bib: 1. Hassan, Y. A Lively Polemic. London Review of Books (2013).
+  case_id: review_book_item
+  inline: '1'
+- bib: '1. Shapiro, A. All Things Considered: AI in Schools. NPR (2024).'
+  case_id: broadcast_item
+  inline: '1'
+- bib: 1. van Beethoven, L. Symphony No. 9 in D minor, Op. 125. (1826).
+  case_id: musical_score_item
+  inline: '1'
+- bib: '1. 2001: A Space Odyssey. (1968).'
+  case_id: motion_picture_item
+  inline: '1'
+- bib: 1. Smith, J. Email to the author. (2025).
+  case_id: personal_communication
+  inline: '1'
+- bib: 1. Serendipity. Oxford English Dictionary (2023).
+  case_id: entry_dictionary
+  inline: '1'
+- bib: 1. Russell, S. Artificial intelligence. Encyclopaedia Britannica (2024).
+  case_id: entry_encyclopedia
+  inline: '1'
+- bib: '1. Emerson, R. W. Notebook C: Unpublished Reflections. (1838).'
+  case_id: manuscript_item
+  inline: '1'
+- bib: 1. Watson, M.-J. Kinetic Analysis in Early Cinema. Film Studies Quarterly 15,
+    33–44 (2020).
+  case_id: hyphenated_given_name
+  inline: '1'
+- bib: 1. Sun Tzu. The Art of War (Public Domain, -500).
+  case_id: bc_year_date
+  inline: '1'

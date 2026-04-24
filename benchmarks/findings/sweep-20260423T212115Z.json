@@ -1,0 +1,197 @@
+{
+  "aggregates": {
+    "HuggingFaceTB/SmolLM-360M-Instruct": {
+      "baseline_cites": {
+        "max": 7.0,
+        "mean": 4.333333333333333,
+        "min": 0.0,
+        "n": 3,
+        "std": 3.7859388972001824
+      },
+      "baseline_fab_rate": {
+        "max": 0.14285714285714285,
+        "mean": 0.047619047619047616,
+        "min": 0.0,
+        "n": 3,
+        "std": 0.08247860988423225
+      },
+      "baseline_support_rate": {
+        "max": 1.0,
+        "mean": 0.3333333333333333,
+        "min": 0.0,
+        "n": 3,
+        "std": 0.5773502691896257
+      },
+      "constrained_cites": {
+        "max": 54.0,
+        "mean": 43.666666666666664,
+        "min": 32.0,
+        "n": 3,
+        "std": 11.060440015358038
+      },
+      "constrained_fab_rate": {
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "n": 3,
+        "std": 0.0
+      },
+      "constrained_support_rate": {
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "n": 3,
+        "std": 0.0
+      },
+      "elapsed_sec": {
+        "max": 20.46534008299932,
+        "mean": 18.76074233299975,
+        "min": 17.700934749969747,
+        "n": 3,
+        "std": 1.4907380658204397
+      }
+    },
+    "Qwen/Qwen2.5-0.5B-Instruct": {
+      "baseline_cites": {
+        "max": 3.0,
+        "mean": 1.0,
+        "min": 0.0,
+        "n": 3,
+        "std": 1.7320508075688772
+      },
+      "baseline_fab_rate": {
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "n": 3,
+        "std": 0.0
+      },
+      "baseline_support_rate": {
+        "max": 1.0,
+        "mean": 0.6666666666666666,
+        "min": 0.0,
+        "n": 3,
+        "std": 0.5773502691896257
+      },
+      "constrained_cites": {
+        "max": 47.0,
+        "mean": 28.666666666666668,
+        "min": 5.0,
+        "n": 3,
+        "std": 21.501937897160186
+      },
+      "constrained_fab_rate": {
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "n": 3,
+        "std": 0.0
+      },
+      "constrained_support_rate": {
+        "max": 0.029411764705882353,
+        "mean": 0.00980392156862745,
+        "min": 0.0,
+        "n": 3,
+        "std": 0.01698089027028311
+      },
+      "elapsed_sec": {
+        "max": 30.510679541970603,
+        "mean": 26.17928065297504,
+        "min": 23.89821979199769,
+        "n": 3,
+        "std": 3.752874965690458
+      }
+    }
+  },
+  "config": {
+    "device": "cpu",
+    "max_new_tokens": 180,
+    "models": [
+      "Qwen/Qwen2.5-0.5B-Instruct",
+      "HuggingFaceTB/SmolLM-360M-Instruct"
+    ],
+    "nli_model": null,
+    "policy": "required",
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "threshold": 0.5
+  },
+  "generated_at": "2026-04-23T21:21:15.259280+00:00",
+  "rows": [
+    {
+      "baseline_cites": 0,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 1.0,
+      "constrained_cites": 47,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 30.510679541970603,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "policy": "required",
+      "seed": 0
+    },
+    {
+      "baseline_cites": 3,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 34,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.029411764705882353,
+      "elapsed_sec": 23.89821979199769,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "policy": "required",
+      "seed": 1
+    },
+    {
+      "baseline_cites": 0,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 1.0,
+      "constrained_cites": 5,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 24.128942624956835,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "policy": "required",
+      "seed": 2
+    },
+    {
+      "baseline_cites": 0,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 1.0,
+      "constrained_cites": 45,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 17.700934749969747,
+      "model": "HuggingFaceTB/SmolLM-360M-Instruct",
+      "policy": "required",
+      "seed": 0
+    },
+    {
+      "baseline_cites": 6,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 54,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 20.46534008299932,
+      "model": "HuggingFaceTB/SmolLM-360M-Instruct",
+      "policy": "required",
+      "seed": 1
+    },
+    {
+      "baseline_cites": 7,
+      "baseline_fab_rate": 0.14285714285714285,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 32,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 18.115952166030183,
+      "model": "HuggingFaceTB/SmolLM-360M-Instruct",
+      "policy": "required",
+      "seed": 2
+    }
+  ]
+}

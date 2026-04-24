@@ -1,0 +1,22 @@
+cite_ids:
+- 1
+- 2
+- 3
+gbnf: 'root ::= sentence (ws sentence)*
+
+  sentence ::= content cite-group sent-end
+
+  content ::= [^[.!?]{1, 240}
+
+  sent-end ::= "." | "!" | "?"
+
+  cite-group ::= cite-id (ws cite-id)*
+
+  ws ::= " "
+
+  cite-id ::= "[" ("1" | "2" | "3") "]"
+
+  '
+marker_style: bracket
+policy: required
+root_rule: root

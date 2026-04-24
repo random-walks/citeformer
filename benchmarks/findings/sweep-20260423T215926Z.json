@@ -1,0 +1,173 @@
+{
+  "aggregates": {
+    "HuggingFaceTB/SmolLM-360M-Instruct": {
+      "baseline_cites": {
+        "max": 6.0,
+        "mean": 3.0,
+        "min": 0.0,
+        "n": 2,
+        "std": 4.242640687119285
+      },
+      "baseline_fab_rate": {
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "n": 2,
+        "std": 0.0
+      },
+      "baseline_support_rate": {
+        "max": 1.0,
+        "mean": 0.5,
+        "min": 0.0,
+        "n": 2,
+        "std": 0.7071067811865476
+      },
+      "constrained_cites": {
+        "max": 54.0,
+        "mean": 49.5,
+        "min": 45.0,
+        "n": 2,
+        "std": 6.363961030678928
+      },
+      "constrained_fab_rate": {
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "n": 2,
+        "std": 0.0
+      },
+      "constrained_support_rate": {
+        "max": 0.9444444444444444,
+        "mean": 0.55,
+        "min": 0.15555555555555556,
+        "n": 2,
+        "std": 0.5578286829360541
+      },
+      "elapsed_sec": {
+        "max": 23.408193000010215,
+        "mean": 23.36809516651556,
+        "min": 23.327997333020903,
+        "n": 2,
+        "std": 0.05670689994992037
+      }
+    },
+    "microsoft/Phi-3.5-mini-instruct": {
+      "baseline_cites": {
+        "max": 4.0,
+        "mean": 4.0,
+        "min": 4.0,
+        "n": 2,
+        "std": 0.0
+      },
+      "baseline_fab_rate": {
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "n": 2,
+        "std": 0.0
+      },
+      "baseline_support_rate": {
+        "max": 0.75,
+        "mean": 0.625,
+        "min": 0.5,
+        "n": 2,
+        "std": 0.1767766952966369
+      },
+      "constrained_cites": {
+        "max": 41.0,
+        "mean": 28.5,
+        "min": 16.0,
+        "n": 2,
+        "std": 17.67766952966369
+      },
+      "constrained_fab_rate": {
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "n": 2,
+        "std": 0.0
+      },
+      "constrained_support_rate": {
+        "max": 0.3170731707317073,
+        "mean": 0.3147865853658537,
+        "min": 0.3125,
+        "n": 2,
+        "std": 0.0032337200359140923
+      },
+      "elapsed_sec": {
+        "max": 143.64212258398766,
+        "mean": 134.4654497919837,
+        "min": 125.28877699997975,
+        "n": 2,
+        "std": 12.97777511991217
+      }
+    }
+  },
+  "config": {
+    "device": "cpu",
+    "max_new_tokens": 180,
+    "models": [
+      "HuggingFaceTB/SmolLM-360M-Instruct",
+      "microsoft/Phi-3.5-mini-instruct"
+    ],
+    "nli_model": null,
+    "policy": "required",
+    "premise": "fulltext",
+    "seeds": [
+      0,
+      1
+    ],
+    "threshold": 0.5
+  },
+  "generated_at": "2026-04-23T21:59:26.972644+00:00",
+  "rows": [
+    {
+      "baseline_cites": 0,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 1.0,
+      "constrained_cites": 45,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.15555555555555556,
+      "elapsed_sec": 23.327997333020903,
+      "model": "HuggingFaceTB/SmolLM-360M-Instruct",
+      "policy": "required",
+      "seed": 0
+    },
+    {
+      "baseline_cites": 6,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 54,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.9444444444444444,
+      "elapsed_sec": 23.408193000010215,
+      "model": "HuggingFaceTB/SmolLM-360M-Instruct",
+      "policy": "required",
+      "seed": 1
+    },
+    {
+      "baseline_cites": 4,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.5,
+      "constrained_cites": 41,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.3170731707317073,
+      "elapsed_sec": 125.28877699997975,
+      "model": "microsoft/Phi-3.5-mini-instruct",
+      "policy": "required",
+      "seed": 0
+    },
+    {
+      "baseline_cites": 4,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.75,
+      "constrained_cites": 16,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.3125,
+      "elapsed_sec": 143.64212258398766,
+      "model": "microsoft/Phi-3.5-mini-instruct",
+      "policy": "required",
+      "seed": 1
+    }
+  ]
+}

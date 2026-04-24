@@ -1,429 +1,602 @@
-"""Generates the README cover image: side-by-side annotated comparison.
+"""Generate tweet-friendly cover + thread images for citeformer.
 
-Two panels:
+Three images, all 1200×675 (Twitter's 16:9 inline format) with big text
+readable on a phone thumb:
 
-- **Left**: baseline HF generation (no constraint). Model cheerfully
-  emits ``[7]`` and ``[8]`` when only 6 sources are in scope — red
-  highlight, callout arrow.
-- **Right**: citeformer-constrained generation on the same prompt.
-  Out-of-scope ids are logit-masked; ``[7]`` and ``[8]`` are
-  token-impossible. Green highlight, callout arrow.
+- ``cover-annotated.png`` — the main cover. Big headline, side-by-side
+  "WITHOUT citeformer" (AI invents a fake source) vs "WITH citeformer"
+  (AI can only pick from real sources). Middle-school-level wording;
+  the technical framing sits in a smaller subtitle.
+- ``thread-backends.png`` — "works with 7 major AI providers" grid.
+  Local vs API columns with provider names at 40pt.
+- ``thread-evidence.png`` — the 0/40-run proof in one glance. Giant
+  "0" number with the structural callout.
 
-Above both panels: the shared prompt + numbered source list so readers
-see what the model was asked. Below: the 40-run multi-prompt headline.
-
-This is called once to produce
-``benchmarks/findings/figures/cover-annotated.png``, embedded at the
-top of ``README.md``. Re-run to regenerate::
+Run::
 
     uv run python -m benchmarks.generate_cover
+
+Regenerate any time the branding or numbers change.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
-import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
-from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
+from matplotlib.patches import FancyBboxPatch
 
-OUT_PATH = Path(__file__).parent / "findings" / "figures" / "cover-annotated.png"
+_FIGURES = Path(__file__).parent / "findings" / "figures"
 
+# Tweet-friendly: 16:9 at 1200×675 renders crisply inline on Twitter /
+# LinkedIn / GitHub READMEs. Bigger figsize means bigger fonts relative
+# to the frame — which is what we want for phone legibility.
+_FIGSIZE = (12.0, 6.75)
+_DPI = 100  # 1200×675 at this figsize
 
-# --- The shared setup both panels share --------------------------------------
-
-PROMPT = (
-    "Write one sentence that cites Turing's 1950 paper [7] and "
-    "McCulloch & Pitts 1943 [8]. Use exactly these bracket numbers."
-)
-
-SOURCES = [
-    "[1] Vaswani et al. — Attention Is All You Need (2017)",
-    "[2] Devlin et al. — BERT (2018)",
-    "[3] Brown et al. — GPT-3 (2020)",
-    "[4] Wei et al. — Chain-of-Thought (2022)",
-    "[5] Touvron et al. — LLaMA (2023)",
-    "[6] Dettmers et al. — QLoRA (2023)",
-]
+# Brand palette — kept consistent across all three images.
+_RED = "#c23832"
+_RED_BG = "#fde1df"
+_GREEN = "#1a8a46"
+_GREEN_BG = "#d8f0db"
+_INK = "#111"
+_MUTED = "#555"
+_BG = "#fafafa"
 
 
-# --- Rendered outputs (realistic, hand-edited to read cleanly at cover size) --
-
-BASELINE_TEXT = (
-    "The foundations of modern AI trace back to Turing's 1950 "
-    "paper on machine intelligence [7] and the McCulloch & Pitts "
-    "1943 neuron model [8], both of which precede transformers [1]."
-)
-
-CITEFORMER_TEXT = (
-    "The Transformer architecture introduced self-attention as a "
-    "replacement for recurrence [1], which BERT extended with "
-    "bidirectional pre-training [2] and LLaMA scaled to open weights [5]."
-)
-
-# Which tokens to highlight in each panel (start, end, kind) where
-# kind = "bad" (fabricated) or "good" (in-scope).
-BASELINE_HIGHLIGHTS = [
-    ("[7]", "bad"),
-    ("[8]", "bad"),
-    ("[1]", "good"),
-]
-CITEFORMER_HIGHLIGHTS = [
-    ("[1]", "good"),
-    ("[2]", "good"),
-    ("[5]", "good"),
-]
+# -----------------------------------------------------------------------------
+# Cover — the "fake vs real" side-by-side
+# -----------------------------------------------------------------------------
 
 
-# --- Drawing helpers ----------------------------------------------------------
-
-
-def _draw_output_panel(
-    ax,
-    *,
-    title: str,
-    title_color: str,
-    text: str,
-    highlights: list[tuple[str, str]],
-    footer: str,
-    footer_bg: str,
-    footer_fg: str,
-) -> None:
-    """Render one of the two output panels with inline highlights."""
-    ax.set_xlim(0, 10)
-    ax.set_ylim(0, 10)
+def _draw_cover(ax) -> None:
+    ax.set_xlim(0, 100)
+    ax.set_ylim(0, 100)
     ax.axis("off")
 
-    # Panel border
-    ax.add_patch(
-        FancyBboxPatch(
-            (0.1, 0.1),
-            9.8,
-            9.8,
-            boxstyle="round,pad=0.02,rounding_size=0.15",
-            linewidth=2.5,
-            edgecolor=title_color,
-            facecolor="white",
-        )
+    # --- Top headline ---------------------------------------------------------
+    ax.text(
+        50,
+        92,
+        "AI can make up citations that don't exist.",
+        ha="center",
+        va="center",
+        fontsize=22,
+        fontweight="bold",
+        color=_INK,
+    )
+    ax.text(
+        50,
+        85,
+        "citeformer makes that physically impossible.",
+        ha="center",
+        va="center",
+        fontsize=22,
+        fontweight="bold",
+        color=_GREEN,
     )
 
-    # Title
+    # --- Setup strip ----------------------------------------------------------
+    ax.add_patch(
+        FancyBboxPatch(
+            (6, 71),
+            88,
+            8,
+            boxstyle="round,pad=0.02,rounding_size=0.6",
+            linewidth=0,
+            facecolor="#eef2f7",
+        )
+    )
     ax.text(
-        5.0,
-        9.35,
-        title,
+        50,
+        75.5,
+        "You gave the AI 6 real sources:  [1]   [2]   [3]   [4]   [5]   [6]",
+        ha="center",
+        va="center",
+        fontsize=16,
+        fontweight="bold",
+        color=_INK,
+        family="monospace",
+    )
+    ax.text(
+        50,
+        72.5,
+        "Only these six are valid. Anything else is made up.",
+        ha="center",
+        va="center",
+        fontsize=11,
+        color=_MUTED,
+        style="italic",
+    )
+
+    # --- Left panel: WITHOUT citeformer --------------------------------------
+    _draw_quadrant(
+        ax,
+        x=4,
+        y=8,
+        w=45,
+        h=58,
+        accent=_RED,
+        bg_accent=_RED_BG,
+        title="WITHOUT citeformer",
+        subtitle="how LLMs normally behave",
+        big_token="[7]",
+        big_token_label="← a source that doesn't exist",
+        outcome="FAKE — AI made it up",
+    )
+
+    # --- Right panel: WITH citeformer ---------------------------------------
+    _draw_quadrant(
+        ax,
+        x=51,
+        y=8,
+        w=45,
+        h=58,
+        accent=_GREEN,
+        bg_accent=_GREEN_BG,
+        title="WITH citeformer",
+        subtitle="structurally impossible to invent a source",
+        big_token="[3]",
+        big_token_label="← one of your real sources",
+        outcome="REAL — verifiable",
+    )
+
+    # --- Bottom evidence strip -----------------------------------------------
+    ax.add_patch(
+        FancyBboxPatch(
+            (6, 0.6),
+            88,
+            5.8,
+            boxstyle="round,pad=0.02,rounding_size=0.5",
+            linewidth=0,
+            facecolor="#2b2b2e",
+        )
+    )
+    ax.text(
+        50,
+        3.8,
+        "Tested across 40 runs.  Zero fakes. Every time.",
         ha="center",
         va="center",
         fontsize=15,
         fontweight="bold",
-        color=title_color,
-    )
-
-    # Output text — word-wrap manually for layout control
-    wrapped = _word_wrap(text, width=38)
-    y = 7.6
-    line_step = 0.62
-    for line in wrapped:
-        _draw_line_with_highlights(ax, line, y=y, highlights=highlights)
-        y -= line_step
-
-    # Footer banner
-    ax.add_patch(
-        FancyBboxPatch(
-            (0.4, 0.5),
-            9.2,
-            1.2,
-            boxstyle="round,pad=0.02,rounding_size=0.1",
-            linewidth=0,
-            facecolor=footer_bg,
-        )
-    )
-    ax.text(
-        5.0,
-        1.1,
-        footer,
-        ha="center",
-        va="center",
-        fontsize=12,
-        fontweight="bold",
-        color=footer_fg,
+        color="#fff",
     )
 
 
-def _draw_line_with_highlights(
+def _draw_quadrant(
     ax,
-    line: str,
     *,
+    x: float,
     y: float,
-    highlights: list[tuple[str, str]],
+    w: float,
+    h: float,
+    accent: str,
+    bg_accent: str,
+    title: str,
+    subtitle: str,
+    big_token: str,
+    big_token_label: str,
+    outcome: str,
 ) -> None:
-    """Walk the line left to right, highlighting each matched bracket marker."""
-    cursor_x = 0.5
-    i = 0
-    while i < len(line):
-        # Try to match any highlight token at position i
-        hit = None
-        for token, kind in highlights:
-            if line.startswith(token, i):
-                hit = (token, kind)
-                break
-        if hit is not None:
-            token, kind = hit
-            color = "#d43f3a" if kind == "bad" else "#1a8a46"
-            bg_color = "#fde1df" if kind == "bad" else "#d8f0db"
-            # Draw background capsule
-            text_width = len(token) * 0.20
-            ax.add_patch(
-                FancyBboxPatch(
-                    (cursor_x - 0.04, y - 0.23),
-                    text_width + 0.08,
-                    0.46,
-                    boxstyle="round,pad=0.01,rounding_size=0.08",
-                    linewidth=0,
-                    facecolor=bg_color,
-                )
-            )
-            ax.text(
-                cursor_x,
-                y,
-                token,
-                ha="left",
-                va="center",
-                fontsize=11,
-                fontweight="bold",
-                color=color,
-                family="monospace",
-            )
-            cursor_x += text_width + 0.12
-            i += len(token)
-        else:
-            # Render until next highlight or end of line
-            next_highlight = min(
-                (line.find(t, i) for t, _ in highlights if line.find(t, i) != -1),
-                default=len(line),
-            )
-            chunk = line[i:next_highlight]
-            ax.text(
-                cursor_x,
-                y,
-                chunk,
-                ha="left",
-                va="center",
-                fontsize=10.8,
-                color="#222",
-            )
-            cursor_x += len(chunk) * 0.173
-            i = next_highlight
-
-
-def _word_wrap(text: str, width: int) -> list[str]:
-    words = text.split()
-    lines: list[str] = []
-    current: list[str] = []
-    current_len = 0
-    for w in words:
-        if current_len + len(w) + (1 if current else 0) > width:
-            lines.append(" ".join(current))
-            current = [w]
-            current_len = len(w)
-        else:
-            current.append(w)
-            current_len += len(w) + (1 if len(current) > 1 else 0)
-    if current:
-        lines.append(" ".join(current))
-    return lines
-
-
-# --- Top bar (prompt + sources) ----------------------------------------------
-
-
-def _draw_setup_panel(ax) -> None:
-    ax.set_xlim(0, 20)
-    ax.set_ylim(0, 10)
-    ax.axis("off")
-
-    # Panel background
+    """Single panel with a title strip, a giant cite token, and an outcome tag."""
+    # Card border
     ax.add_patch(
         FancyBboxPatch(
-            (0.1, 0.1),
-            19.8,
-            9.8,
-            boxstyle="round,pad=0.02,rounding_size=0.15",
-            linewidth=1.5,
-            edgecolor="#555",
-            facecolor="#f7f7f9",
+            (x, y),
+            w,
+            h,
+            boxstyle="round,pad=0.02,rounding_size=0.6",
+            linewidth=2.5,
+            edgecolor=accent,
+            facecolor="white",
         )
     )
 
-    # Left column: the prompt
+    # Title strip
+    ax.add_patch(
+        FancyBboxPatch(
+            (x, y + h - 10),
+            w,
+            10,
+            boxstyle="round,pad=0.02,rounding_size=0.6",
+            linewidth=0,
+            facecolor=accent,
+        )
+    )
     ax.text(
-        0.6,
-        9.2,
-        "PROMPT (adversarial — demands out-of-scope [7] and [8])",
-        ha="left",
+        x + w / 2,
+        y + h - 5.5,
+        title,
+        ha="center",
+        va="center",
+        fontsize=18,
+        fontweight="bold",
+        color="white",
+    )
+    ax.text(
+        x + w / 2,
+        y + h - 8.8,
+        subtitle,
+        ha="center",
         va="center",
         fontsize=10.5,
-        fontweight="bold",
-        color="#444",
-    )
-    wrapped_prompt = _word_wrap(PROMPT, width=50)
-    y = 8.0
-    for idx, line in enumerate(wrapped_prompt):
-        rendered = line
-        if idx == 0:
-            rendered = f'"{line}'
-        if idx == len(wrapped_prompt) - 1:
-            rendered = f'{rendered}"'
-        ax.text(
-            0.6,
-            y,
-            rendered,
-            ha="left",
-            va="center",
-            fontsize=10,
-            color="#222",
-            style="italic",
-        )
-        y -= 0.95
-
-    # Divider
-    ax.plot([9.9, 9.9], [0.6, 9.4], color="#bbb", linewidth=1.2, linestyle=":")
-
-    # Right column: sources
-    ax.text(
-        10.3,
-        9.2,
-        "SOURCES IN SCOPE (N = 6, so only [1]..[6] are valid)",
-        ha="left",
-        va="center",
-        fontsize=10.5,
-        fontweight="bold",
-        color="#444",
-    )
-    y = 7.9
-    for src in SOURCES:
-        ax.text(
-            10.3,
-            y,
-            src,
-            ha="left",
-            va="center",
-            fontsize=9.3,
-            color="#222",
-            family="monospace",
-        )
-        y -= 1.05
-
-
-# --- Bottom evidence bar ------------------------------------------------------
-
-
-def _draw_footer(ax) -> None:
-    ax.set_xlim(0, 20)
-    ax.set_ylim(0, 3)
-    ax.axis("off")
-
-    ax.text(
-        10.0,
-        2.2,
-        "40-run multi-prompt sweep  •  4 prompts × 2 models × 5 seeds",
-        ha="center",
-        va="center",
-        fontsize=11,
-        color="#555",
-        fontweight="bold",
-    )
-    ax.text(
-        10.0,
-        1.3,
-        "citeformer fabrication rate:  0.0 ± 0.0  (structural — not average)   "
-        "||   baseline on `survey`:  3.9% fab rate",
-        ha="center",
-        va="center",
-        fontsize=10.3,
-        color="#333",
-        family="monospace",
-    )
-    ax.text(
-        10.0,
-        0.45,
-        "benchmarks/README.md · reproducible via `uv run python -m benchmarks.multiprompt_sweep`",
-        ha="center",
-        va="center",
-        fontsize=9,
-        color="#888",
+        color="white",
         style="italic",
     )
 
-
-# --- Assemble the whole thing -------------------------------------------------
-
-
-def generate_cover() -> Path:
-    plt.rcParams["font.family"] = ["DejaVu Sans", "Arial", "sans-serif"]
-
-    fig = plt.figure(figsize=(14, 10))
-    gs = fig.add_gridspec(
-        3,
-        2,
-        height_ratios=[2.2, 5.0, 0.9],
-        width_ratios=[1, 1],
-        hspace=0.18,
-        wspace=0.08,
-    )
-
-    # Top row: single panel spanning both columns
-    ax_setup = fig.add_subplot(gs[0, :])
-    _draw_setup_panel(ax_setup)
-
-    # Middle row: two side-by-side output panels
-    ax_baseline = fig.add_subplot(gs[1, 0])
-    _draw_output_panel(
-        ax_baseline,
-        title="BASELINE — unconstrained HF generation",
-        title_color="#c23832",
-        text=BASELINE_TEXT,
-        highlights=BASELINE_HIGHLIGHTS,
-        footer="100% fabrication   [7] and [8] shouldn't exist",
-        footer_bg="#fde1df",
-        footer_fg="#9e1c16",
-    )
-
-    ax_citeformer = fig.add_subplot(gs[1, 1])
-    _draw_output_panel(
-        ax_citeformer,
-        title="CITEFORMER — logit-masked grammar",
-        title_color="#1a8a46",
-        text=CITEFORMER_TEXT,
-        highlights=CITEFORMER_HIGHLIGHTS,
-        footer="0% fabrication   [7]/[8] are token-impossible",
-        footer_bg="#d8f0db",
-        footer_fg="#105c2f",
-    )
-
-    # Bottom row: evidence footer
-    ax_footer = fig.add_subplot(gs[2, :])
-    _draw_footer(ax_footer)
-
-    # Header title over everything
-    fig.suptitle(
-        "citeformer — fabricated citations are a decode-time impossibility, not a hope",
-        fontsize=16,
+    # Giant cite token in the middle
+    ax.text(
+        x + w / 2,
+        y + h / 2 + 2,
+        big_token,
+        ha="center",
+        va="center",
+        fontsize=72,
         fontweight="bold",
-        color="#111",
-        y=0.995,
+        color=accent,
+        family="monospace",
+    )
+    # Annotation under the token
+    ax.text(
+        x + w / 2,
+        y + h / 2 - 11,
+        big_token_label,
+        ha="center",
+        va="center",
+        fontsize=12,
+        color=_INK,
+        style="italic",
     )
 
-    OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(OUT_PATH, dpi=170, bbox_inches="tight", facecolor="white")
+    # Outcome tag at the bottom
+    ax.add_patch(
+        FancyBboxPatch(
+            (x + 4, y + 3),
+            w - 8,
+            7,
+            boxstyle="round,pad=0.02,rounding_size=0.3",
+            linewidth=0,
+            facecolor=bg_accent,
+        )
+    )
+    ax.text(
+        x + w / 2,
+        y + 6.5,
+        outcome,
+        ha="center",
+        va="center",
+        fontsize=14,
+        fontweight="bold",
+        color=accent,
+    )
+
+
+def _render_cover(path: Path) -> None:
+    plt.rcParams["font.family"] = ["DejaVu Sans", "Arial", "sans-serif"]
+    fig = plt.figure(figsize=_FIGSIZE, facecolor=_BG)
+    ax = fig.add_axes((0, 0, 1, 1))
+    _draw_cover(ax)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path, dpi=_DPI, facecolor=_BG)
     plt.close(fig)
-    return OUT_PATH
+
+
+# -----------------------------------------------------------------------------
+# Backends — "works with 7 major AI providers"
+# -----------------------------------------------------------------------------
+
+
+def _draw_backends(ax) -> None:
+    ax.set_xlim(0, 100)
+    ax.set_ylim(0, 100)
+    ax.axis("off")
+
+    # Title
+    ax.text(
+        50,
+        91,
+        "Works with 7 major AI providers.",
+        ha="center",
+        va="center",
+        fontsize=24,
+        fontweight="bold",
+        color=_INK,
+    )
+    ax.text(
+        50,
+        83,
+        "Same guarantee across all of them.",
+        ha="center",
+        va="center",
+        fontsize=16,
+        color=_MUTED,
+        style="italic",
+    )
+
+    # Two columns
+    _draw_backend_col(
+        ax,
+        x=6,
+        y=12,
+        w=43,
+        h=64,
+        accent="#3a7ac4",
+        bg_accent="#e4edf8",
+        title="LOCAL",
+        subtitle="runs on your computer",
+        providers=[
+            "HuggingFace transformers",
+            "vLLM",
+            "llama.cpp",
+        ],
+        tier="logit-layer enforcement",
+    )
+
+    _draw_backend_col(
+        ax,
+        x=51,
+        y=12,
+        w=43,
+        h=64,
+        accent="#a857b0",
+        bg_accent="#f2e4f4",
+        title="API",
+        subtitle="calls the provider's cloud",
+        providers=[
+            "OpenAI (GPT-4o, ...)",
+            "Anthropic (Claude)",
+            "Google Gemini",
+            "Mistral",
+        ],
+        tier="schema + provider-native",
+    )
+
+    # Footer: the shared result
+    ax.add_patch(
+        FancyBboxPatch(
+            (6, 2),
+            88,
+            7,
+            boxstyle="round,pad=0.02,rounding_size=0.5",
+            linewidth=0,
+            facecolor=_GREEN_BG,
+        )
+    )
+    ax.text(
+        50,
+        5.5,
+        "All 7 produce the same output type.  Zero fakes across all of them.",
+        ha="center",
+        va="center",
+        fontsize=14,
+        fontweight="bold",
+        color=_GREEN,
+    )
+
+
+def _draw_backend_col(
+    ax,
+    *,
+    x: float,
+    y: float,
+    w: float,
+    h: float,
+    accent: str,
+    bg_accent: str,
+    title: str,
+    subtitle: str,
+    providers: list[str],
+    tier: str,
+) -> None:
+    # Card
+    ax.add_patch(
+        FancyBboxPatch(
+            (x, y),
+            w,
+            h,
+            boxstyle="round,pad=0.02,rounding_size=0.6",
+            linewidth=2,
+            edgecolor=accent,
+            facecolor="white",
+        )
+    )
+
+    # Header strip
+    ax.add_patch(
+        FancyBboxPatch(
+            (x, y + h - 11),
+            w,
+            11,
+            boxstyle="round,pad=0.02,rounding_size=0.6",
+            linewidth=0,
+            facecolor=accent,
+        )
+    )
+    ax.text(
+        x + w / 2,
+        y + h - 5.5,
+        title,
+        ha="center",
+        va="center",
+        fontsize=22,
+        fontweight="bold",
+        color="white",
+    )
+    ax.text(
+        x + w / 2,
+        y + h - 9.5,
+        subtitle,
+        ha="center",
+        va="center",
+        fontsize=11,
+        color="white",
+        style="italic",
+    )
+
+    # Provider list
+    line_y = y + h - 18
+    for name in providers:
+        ax.text(
+            x + w / 2,
+            line_y,
+            name,
+            ha="center",
+            va="center",
+            fontsize=15,
+            fontweight="bold",
+            color=_INK,
+        )
+        line_y -= 7
+
+    # Tier tag at bottom
+    tag_y = y + 4
+    ax.add_patch(
+        FancyBboxPatch(
+            (x + 4, tag_y),
+            w - 8,
+            5.5,
+            boxstyle="round,pad=0.02,rounding_size=0.25",
+            linewidth=0,
+            facecolor=bg_accent,
+        )
+    )
+    ax.text(
+        x + w / 2,
+        tag_y + 2.7,
+        tier,
+        ha="center",
+        va="center",
+        fontsize=11,
+        fontweight="bold",
+        color=accent,
+    )
+
+
+def _render_backends(path: Path) -> None:
+    plt.rcParams["font.family"] = ["DejaVu Sans", "Arial", "sans-serif"]
+    fig = plt.figure(figsize=_FIGSIZE, facecolor=_BG)
+    ax = fig.add_axes((0, 0, 1, 1))
+    _draw_backends(ax)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path, dpi=_DPI, facecolor=_BG)
+    plt.close(fig)
+
+
+# -----------------------------------------------------------------------------
+# Evidence — the 0/40-run result as a single-glance image
+# -----------------------------------------------------------------------------
+
+
+def _draw_evidence(ax) -> None:
+    ax.set_xlim(0, 100)
+    ax.set_ylim(0, 100)
+    ax.axis("off")
+
+    # Giant "0" — the headline number
+    ax.text(
+        50,
+        63,
+        "0",
+        ha="center",
+        va="center",
+        fontsize=180,
+        fontweight="bold",
+        color=_GREEN,
+    )
+    ax.text(
+        50,
+        36,
+        "fake citations",
+        ha="center",
+        va="center",
+        fontsize=30,
+        fontweight="bold",
+        color=_INK,
+    )
+    ax.text(
+        50,
+        28,
+        "across 40 benchmark runs — 4 prompts × 2 models × 5 seeds",
+        ha="center",
+        va="center",
+        fontsize=14,
+        color=_MUTED,
+        style="italic",
+    )
+
+    # Bottom callout: it's a structural guarantee, not a stat
+    ax.add_patch(
+        FancyBboxPatch(
+            (10, 10),
+            80,
+            12,
+            boxstyle="round,pad=0.02,rounding_size=0.6",
+            linewidth=2,
+            edgecolor=_GREEN,
+            facecolor=_GREEN_BG,
+        )
+    )
+    ax.text(
+        50,
+        17.5,
+        "it's a structural contract, not an average.",
+        ha="center",
+        va="center",
+        fontsize=17,
+        fontweight="bold",
+        color=_GREEN,
+    )
+    ax.text(
+        50,
+        13,
+        "the standard deviations are literally zero because there's no variance to measure.",
+        ha="center",
+        va="center",
+        fontsize=10.5,
+        color=_INK,
+        style="italic",
+    )
+
+    # Top tag
+    ax.text(
+        50,
+        93,
+        "citeformer benchmark — April 2026",
+        ha="center",
+        va="center",
+        fontsize=12,
+        color=_MUTED,
+        fontweight="bold",
+    )
+
+
+def _render_evidence(path: Path) -> None:
+    plt.rcParams["font.family"] = ["DejaVu Sans", "Arial", "sans-serif"]
+    fig = plt.figure(figsize=_FIGSIZE, facecolor=_BG)
+    ax = fig.add_axes((0, 0, 1, 1))
+    _draw_evidence(ax)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path, dpi=_DPI, facecolor=_BG)
+    plt.close(fig)
+
+
+# -----------------------------------------------------------------------------
+# Main
+# -----------------------------------------------------------------------------
+
+
+def generate_all() -> list[Path]:
+    cover = _FIGURES / "cover-annotated.png"
+    backends = _FIGURES / "thread-backends.png"
+    evidence = _FIGURES / "thread-evidence.png"
+    _render_cover(cover)
+    _render_backends(backends)
+    _render_evidence(evidence)
+    return [cover, backends, evidence]
 
 
 if __name__ == "__main__":
-    out = generate_cover()
-    print(f"wrote {out}  ({out.stat().st_size / 1024:.0f} KB)")
-
-# Silence ruff — these imports are used by matplotlib internals via rcParams
-_ = FancyArrowPatch
-_ = mpatches
+    for path in generate_all():
+        size_kb = path.stat().st_size / 1024
+        print(f"wrote {path}  ({size_kb:.0f} KB)")

@@ -1,0 +1,696 @@
+{
+  "aggregates": [
+    {
+      "baseline_cites": {
+        "max": 9.0,
+        "mean": 5.5,
+        "min": 0.0,
+        "n": 10,
+        "std": 2.9154759474226504
+      },
+      "baseline_fab_rate": {
+        "max": 0.25,
+        "mean": 0.039285714285714285,
+        "min": 0.0,
+        "n": 10,
+        "std": 0.08658617402841991
+      },
+      "baseline_support_rate": {
+        "max": 1.0,
+        "mean": 0.1,
+        "min": 0.0,
+        "n": 10,
+        "std": 0.31622776601683794
+      },
+      "constrained_cites": {
+        "max": 57.0,
+        "mean": 28.7,
+        "min": 4.0,
+        "n": 10,
+        "std": 20.72599012512229
+      },
+      "constrained_fab_rate": {
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "n": 10,
+        "std": 0.0
+      },
+      "constrained_support_rate": {
+        "max": 0.8235294117647058,
+        "mean": 0.14767761650114591,
+        "min": 0.0,
+        "n": 10,
+        "std": 0.2704469140644638
+      },
+      "n": 10,
+      "prompt": "survey"
+    },
+    {
+      "baseline_cites": {
+        "max": 18.0,
+        "mean": 4.6,
+        "min": 0.0,
+        "n": 10,
+        "std": 5.358275012642698
+      },
+      "baseline_fab_rate": {
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "n": 10,
+        "std": 0.0
+      },
+      "baseline_support_rate": {
+        "max": 1.0,
+        "mean": 0.39,
+        "min": 0.0,
+        "n": 10,
+        "std": 0.45813632129409787
+      },
+      "constrained_cites": {
+        "max": 60.0,
+        "mean": 46.2,
+        "min": 4.0,
+        "n": 10,
+        "std": 20.296688290348147
+      },
+      "constrained_fab_rate": {
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "n": 10,
+        "std": 0.0
+      },
+      "constrained_support_rate": {
+        "max": 0.15254237288135594,
+        "mean": 0.015254237288135594,
+        "min": 0.0,
+        "n": 10,
+        "std": 0.04823813379917867
+      },
+      "n": 10,
+      "prompt": "compare"
+    },
+    {
+      "baseline_cites": {
+        "max": 9.0,
+        "mean": 3.0,
+        "min": 0.0,
+        "n": 10,
+        "std": 3.39934634239519
+      },
+      "baseline_fab_rate": {
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "n": 10,
+        "std": 0.0
+      },
+      "baseline_support_rate": {
+        "max": 1.0,
+        "mean": 0.5277777777777778,
+        "min": 0.0,
+        "n": 10,
+        "std": 0.4500038103786247
+      },
+      "constrained_cites": {
+        "max": 60.0,
+        "mean": 32.9,
+        "min": 3.0,
+        "n": 10,
+        "std": 25.70105920860937
+      },
+      "constrained_fab_rate": {
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "n": 10,
+        "std": 0.0
+      },
+      "constrained_support_rate": {
+        "max": 0.6666666666666666,
+        "mean": 0.2759528130671506,
+        "min": 0.0,
+        "n": 10,
+        "std": 0.3104495037046958
+      },
+      "n": 10,
+      "prompt": "explain"
+    },
+    {
+      "baseline_cites": {
+        "max": 11.0,
+        "mean": 5.5,
+        "min": 0.0,
+        "n": 10,
+        "std": 3.5978388574871505
+      },
+      "baseline_fab_rate": {
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "n": 10,
+        "std": 0.0
+      },
+      "baseline_support_rate": {
+        "max": 1.0,
+        "mean": 0.18295454545454545,
+        "min": 0.0,
+        "n": 10,
+        "std": 0.32489535293402816
+      },
+      "constrained_cites": {
+        "max": 60.0,
+        "mean": 56.0,
+        "min": 46.0,
+        "n": 10,
+        "std": 5.291502622129181
+      },
+      "constrained_fab_rate": {
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "n": 10,
+        "std": 0.0
+      },
+      "constrained_support_rate": {
+        "max": 0.9830508474576272,
+        "mean": 0.1467308718522095,
+        "min": 0.0,
+        "n": 10,
+        "std": 0.31227643377897796
+      },
+      "n": 10,
+      "prompt": "critique"
+    }
+  ],
+  "config": {
+    "device": "cpu",
+    "max_new_tokens": 180,
+    "models": [
+      "Qwen/Qwen2.5-0.5B-Instruct",
+      "HuggingFaceTB/SmolLM-360M-Instruct"
+    ],
+    "nli_model": null,
+    "policy": "required",
+    "premise": "abstract",
+    "prompts": [
+      "survey",
+      "compare",
+      "explain",
+      "critique"
+    ],
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "threshold": 0.5
+  },
+  "generated_at": "2026-04-24T02:01:38.146926+00:00",
+  "rows": [
+    {
+      "baseline_cites": 9,
+      "baseline_fab_rate": 0.14285714285714285,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 50,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 39.19009120797273,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "prompt": "survey",
+      "seed": 0
+    },
+    {
+      "baseline_cites": 3,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 5,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.4,
+      "elapsed_sec": 21.833537250000518,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "prompt": "survey",
+      "seed": 1
+    },
+    {
+      "baseline_cites": 5,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 4,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 21.539278874988668,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "prompt": "survey",
+      "seed": 2
+    },
+    {
+      "baseline_cites": 3,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 18,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 22.52551674999995,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "prompt": "survey",
+      "seed": 3
+    },
+    {
+      "baseline_cites": 0,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 1.0,
+      "constrained_cites": 40,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 24.369128874968737,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "prompt": "survey",
+      "seed": 4
+    },
+    {
+      "baseline_cites": 6,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 34,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.8235294117647058,
+      "elapsed_sec": 16.29803649999667,
+      "model": "HuggingFaceTB/SmolLM-360M-Instruct",
+      "prompt": "survey",
+      "seed": 0
+    },
+    {
+      "baseline_cites": 8,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 11,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.18181818181818182,
+      "elapsed_sec": 15.239014499995392,
+      "model": "HuggingFaceTB/SmolLM-360M-Instruct",
+      "prompt": "survey",
+      "seed": 1
+    },
+    {
+      "baseline_cites": 5,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 54,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 16.772352166008204,
+      "model": "HuggingFaceTB/SmolLM-360M-Instruct",
+      "prompt": "survey",
+      "seed": 2
+    },
+    {
+      "baseline_cites": 9,
+      "baseline_fab_rate": 0.25,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 14,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.07142857142857142,
+      "elapsed_sec": 13.17333708301885,
+      "model": "HuggingFaceTB/SmolLM-360M-Instruct",
+      "prompt": "survey",
+      "seed": 3
+    },
+    {
+      "baseline_cites": 7,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 57,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 22.300361040979624,
+      "model": "HuggingFaceTB/SmolLM-360M-Instruct",
+      "prompt": "survey",
+      "seed": 4
+    },
+    {
+      "baseline_cites": 4,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.5,
+      "constrained_cites": 60,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 25.687482417037245,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "prompt": "compare",
+      "seed": 0
+    },
+    {
+      "baseline_cites": 5,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.4,
+      "constrained_cites": 59,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.15254237288135594,
+      "elapsed_sec": 25.187683666998055,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "prompt": "compare",
+      "seed": 1
+    },
+    {
+      "baseline_cites": 18,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 59,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 25.621548584022094,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "prompt": "compare",
+      "seed": 2
+    },
+    {
+      "baseline_cites": 0,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 1.0,
+      "constrained_cites": 4,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 19.430261125031393,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "prompt": "compare",
+      "seed": 3
+    },
+    {
+      "baseline_cites": 0,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 1.0,
+      "constrained_cites": 18,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 22.346534791984595,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "prompt": "compare",
+      "seed": 4
+    },
+    {
+      "baseline_cites": 2,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 60,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 22.766976542014163,
+      "model": "HuggingFaceTB/SmolLM-360M-Instruct",
+      "prompt": "compare",
+      "seed": 0
+    },
+    {
+      "baseline_cites": 6,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 59,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 20.714545999944676,
+      "model": "HuggingFaceTB/SmolLM-360M-Instruct",
+      "prompt": "compare",
+      "seed": 1
+    },
+    {
+      "baseline_cites": 0,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 1.0,
+      "constrained_cites": 38,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 21.578662332962267,
+      "model": "HuggingFaceTB/SmolLM-360M-Instruct",
+      "prompt": "compare",
+      "seed": 2
+    },
+    {
+      "baseline_cites": 4,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 45,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 23.94258820801042,
+      "model": "HuggingFaceTB/SmolLM-360M-Instruct",
+      "prompt": "compare",
+      "seed": 3
+    },
+    {
+      "baseline_cites": 7,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 60,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 19.568747083016206,
+      "model": "HuggingFaceTB/SmolLM-360M-Instruct",
+      "prompt": "compare",
+      "seed": 4
+    },
+    {
+      "baseline_cites": 2,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 60,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 26.530469082994387,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "prompt": "explain",
+      "seed": 0
+    },
+    {
+      "baseline_cites": 2,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 1.0,
+      "constrained_cites": 58,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.20689655172413793,
+      "elapsed_sec": 25.901403875031974,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "prompt": "explain",
+      "seed": 1
+    },
+    {
+      "baseline_cites": 0,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 1.0,
+      "constrained_cites": 60,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 28.280208416981623,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "prompt": "explain",
+      "seed": 2
+    },
+    {
+      "baseline_cites": 2,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 19,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.05263157894736842,
+      "elapsed_sec": 23.68180833302904,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "prompt": "explain",
+      "seed": 3
+    },
+    {
+      "baseline_cites": 0,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 1.0,
+      "constrained_cites": 20,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 24.877824915980455,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "prompt": "explain",
+      "seed": 4
+    },
+    {
+      "baseline_cites": 4,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.5,
+      "constrained_cites": 3,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.6666666666666666,
+      "elapsed_sec": 6.2661428329884075,
+      "model": "HuggingFaceTB/SmolLM-360M-Instruct",
+      "prompt": "explain",
+      "seed": 0
+    },
+    {
+      "baseline_cites": 9,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.2222222222222222,
+      "constrained_cites": 3,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.6666666666666666,
+      "elapsed_sec": 9.437484833004419,
+      "model": "HuggingFaceTB/SmolLM-360M-Instruct",
+      "prompt": "explain",
+      "seed": 1
+    },
+    {
+      "baseline_cites": 0,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 1.0,
+      "constrained_cites": 44,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.5,
+      "elapsed_sec": 16.444183584011625,
+      "model": "HuggingFaceTB/SmolLM-360M-Instruct",
+      "prompt": "explain",
+      "seed": 2
+    },
+    {
+      "baseline_cites": 9,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.5555555555555556,
+      "constrained_cites": 3,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.6666666666666666,
+      "elapsed_sec": 10.757327041996177,
+      "model": "HuggingFaceTB/SmolLM-360M-Instruct",
+      "prompt": "explain",
+      "seed": 3
+    },
+    {
+      "baseline_cites": 2,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 59,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 21.77737054199679,
+      "model": "HuggingFaceTB/SmolLM-360M-Instruct",
+      "prompt": "explain",
+      "seed": 4
+    },
+    {
+      "baseline_cites": 11,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.45454545454545453,
+      "constrained_cites": 58,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.3103448275862069,
+      "elapsed_sec": 23.261962624965236,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "prompt": "critique",
+      "seed": 0
+    },
+    {
+      "baseline_cites": 5,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 52,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 24.128003999998327,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "prompt": "critique",
+      "seed": 1
+    },
+    {
+      "baseline_cites": 2,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 46,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.17391304347826086,
+      "elapsed_sec": 24.998035666008946,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "prompt": "critique",
+      "seed": 2
+    },
+    {
+      "baseline_cites": 2,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 59,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 24.95095616695471,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "prompt": "critique",
+      "seed": 3
+    },
+    {
+      "baseline_cites": 0,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 1.0,
+      "constrained_cites": 48,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 27.334795416973066,
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "prompt": "critique",
+      "seed": 4
+    },
+    {
+      "baseline_cites": 7,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 60,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 15.50573987502139,
+      "model": "HuggingFaceTB/SmolLM-360M-Instruct",
+      "prompt": "critique",
+      "seed": 0
+    },
+    {
+      "baseline_cites": 10,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 59,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.9830508474576272,
+      "elapsed_sec": 19.843392750015482,
+      "model": "HuggingFaceTB/SmolLM-360M-Instruct",
+      "prompt": "critique",
+      "seed": 1
+    },
+    {
+      "baseline_cites": 4,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.25,
+      "constrained_cites": 60,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 19.12828141701175,
+      "model": "HuggingFaceTB/SmolLM-360M-Instruct",
+      "prompt": "critique",
+      "seed": 2
+    },
+    {
+      "baseline_cites": 8,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.125,
+      "constrained_cites": 59,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 18.811568125034682,
+      "model": "HuggingFaceTB/SmolLM-360M-Instruct",
+      "prompt": "critique",
+      "seed": 3
+    },
+    {
+      "baseline_cites": 6,
+      "baseline_fab_rate": 0.0,
+      "baseline_support_rate": 0.0,
+      "constrained_cites": 59,
+      "constrained_fab_rate": 0.0,
+      "constrained_support_rate": 0.0,
+      "elapsed_sec": 18.76017366698943,
+      "model": "HuggingFaceTB/SmolLM-360M-Instruct",
+      "prompt": "critique",
+      "seed": 4
+    }
+  ]
+}

@@ -207,45 +207,49 @@ rate = (
 ![Multi-prompt summary](findings/figures/multiprompt-summary.png)
 
 Ran [`multiprompt_sweep.py`](multiprompt_sweep.py) with 4 prompt shapes × 2
-models × 3 seeds = 24 runs. Prompt shapes exercise common RAG request
-patterns — survey (trace a landscape), compare (contrast approaches),
-explain (walk through a mechanism), critique (flag limitations):
+models × 5 seeds = **40 runs** (bumped from 24 for tighter per-cell stds).
+Prompt shapes exercise common RAG request patterns — survey (trace a
+landscape), compare (contrast approaches), explain (walk through a
+mechanism), critique (flag limitations):
 
 | prompt   |  n  | C-fab% | B-fab% | C-supp% | B-supp% | C-cites | B-cites |
 |----------|:---:|:------:|:------:|:-------:|:-------:|:-------:|:-------:|
-| survey   |  6  | **0.0 ± 0.0** | 2.4 ± 5.8  | 23.4 ± 32.9 | 0.0 ± 0.0   | 26.3 ± 22.7 | 6.0 ± 2.2 |
-| compare  |  6  | **0.0 ± 0.0** | 0.0 ± 0.0  | 2.5 ± 6.2   | 31.7 ± 40.2 | 55.8 ± 8.8  | 5.8 ± 6.3 |
-| explain  |  6  | **0.0 ± 0.0** | 0.0 ± 0.0  | 34.0 ± 31.2 | 62.0 ± 44.5 | 38.0 ± 27.8 | 2.8 ± 3.4 |
-| critique |  6  | **0.0 ± 0.0** | 0.0 ± 0.0  | 24.5 ± 38.3 | 11.7 ± 19.3 | 55.8 ± 5.7  | 6.5 ± 3.5 |
+| survey   | 10  | **0.0 ± 0.0** | 3.9 ± 8.7  | 14.8 ± 27.0 | 10.0 ± 31.6 | 28.7 ± 20.7 | 5.5 ± 2.9 |
+| compare  | 10  | **0.0 ± 0.0** | 0.0 ± 0.0  |  1.5 ±  4.8 | 39.0 ± 45.8 | 46.2 ± 20.3 | 4.6 ± 5.4 |
+| explain  | 10  | **0.0 ± 0.0** | 0.0 ± 0.0  | 27.6 ± 31.0 | 52.8 ± 45.0 | 32.9 ± 25.7 | 3.0 ± 3.4 |
+| critique | 10  | **0.0 ± 0.0** | 0.0 ± 0.0  | 14.7 ± 31.2 | 18.3 ± 32.5 | 56.0 ±  5.3 | 5.5 ± 3.6 |
 
 *C = citeformer (REQUIRED); B = baseline. Both against Qwen 2.5 0.5B
-Instruct and SmolLM 360M Instruct, 3 seeds each per prompt.*
+Instruct and SmolLM 360M Instruct, 5 seeds each per prompt.*
 
 - **citeformer fab rate is 0% across every (prompt, model, seed) triple.**
-  Not drifting on explain, not drifting on critique, not drifting under
-  the argumentative compare shape. The structural guarantee doesn't care
-  what you ask.
-- **Baseline drifted on one prompt shape.** 2.4% mean fab rate on survey
-  — small, but non-zero across 6 runs. The multi-paper trace is the
-  shape where small models occasionally wander out of scope.
-- **Citation density gap is 4-10× on citeformer**, because REQUIRED
+  40/40 cells clean; the structural guarantee doesn't care what you
+  ask. Stds are identically zero because there's no variance to
+  measure — it's a contract, not an average.
+- **Baseline drifts on survey, not the others.** Mean fab rate climbed
+  from 2.4% (24 runs) to 3.9% (40 runs) — more seeds surface more of
+  the long-tail "the model wandered into [7]" failures. Other prompts
+  stay clean because they don't invite enumerating across the full
+  source set.
+- **Citation density gap is 6-15× on citeformer**, because REQUIRED
   forces every sentence to cite. The cost is an occasional stack; the
   `deduplicate_adjacent_cites` helper folds runs of adjacent ids.
 - **Support rate tracks the prompt shape.** `explain` (single-source
-  focus) scores higher than `compare` (multi-source claims) across both
-  conditions — consistent with what you'd expect when NLI scores against
-  abstracts only.
+  focus) outscores `compare` (multi-source claims) across both
+  conditions — consistent with what you'd expect when NLI scores
+  against abstracts only.
 
 **Takeaway**: the structural guarantee holds identically across prompt
-shapes. Support rate, unsurprisingly, depends on what you ask for.
+shapes under a 5-seed × 2-model replication budget. Support rate,
+unsurprisingly, depends on what you ask for.
 
-Reproduce (defaults are 2 models × 3 seeds × 4 prompts = 24 runs on
-CPU, ~12 min):
+Reproduce (defaults are 2 models × 5 seeds × 4 prompts = 40 runs on
+CPU, ~18 min):
 
 ```bash
 uv run python -m benchmarks.multiprompt_sweep
-# More seeds:
-uv run python -m benchmarks.multiprompt_sweep --seeds 0 1 2 3 4
+# Fewer seeds:
+uv run python -m benchmarks.multiprompt_sweep --seeds 0 1 2
 # More models:
 uv run python -m benchmarks.multiprompt_sweep \
     --models Qwen/Qwen2.5-0.5B-Instruct HuggingFaceTB/SmolLM-360M-Instruct microsoft/Phi-3.5-mini-instruct

@@ -19,7 +19,7 @@ LLM-generated citations are wrong 14–95% of the time depending on the benchmar
 
 That's the [jsonformer](https://github.com/1rgs/jsonformer) insight applied to citations. citeformer wraps modern constrained-decoding libraries ([XGrammar](https://github.com/mlc-ai/xgrammar), [llguidance](https://github.com/guidance-ai/llguidance)) and six hand-written CSL formatters (APA 7, MLA 9, Chicago author-date, IEEE, Nature, Vancouver — see [ADR-004](docs/decisions/004-citeproc-rewrite.md)) into a single API where:
 
-- **Citation markers can't be fabricated.** `[N]` where `N > len(sources)` is token-impossible to sample on local backends, and schema-rejected on OpenAI. Proven across [24 multi-prompt runs](benchmarks/README.md#finding-5--multi-prompt-sweep-structural-guarantee-is-prompt-invariant) — **0% fabrication on every prompt × model × seed triple**.
+- **Citation markers can't be fabricated.** `[N]` where `N > len(sources)` is token-impossible to sample on local backends, and schema-rejected on OpenAI. Proven across [40 multi-prompt runs](benchmarks/README.md#finding-5--multi-prompt-sweep-structural-guarantee-is-prompt-invariant) — **0% fabrication on every prompt × model × seed triple**.
 - **Bibliographies are rendered by the library, not the model.** Six styles, deterministic output, [300 locked snapshots](tests/unit/test_csl_suite/).
 - **Every citation is claim-verifiable.** `result.verify()` runs NLI entailment per cite and returns a structured `VerificationReport` — not just a hit rate.
 

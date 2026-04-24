@@ -418,20 +418,21 @@ def _draw_cover(ax) -> None:
     ax.text(
         50,
         8.2,
-        "0 / 40 fabrications across the multi-prompt benchmark.",
+        "Not prompted, not retried, not checked after.  Prevented at the decode step.",
         ha="center",
         va="center",
-        fontsize=14,
+        fontsize=13,
         fontweight="bold",
         color="white",
     )
     ax.text(
         50,
         4.3,
-        "structural — not statistical. std is zero because there's no variance to measure.",
+        "the grammar mask sets P([7]) = 0 at every token step · "
+        "the sampler literally never sees it as an option",
         ha="center",
         va="center",
-        fontsize=10.5,
+        fontsize=10,
         color="#ccc",
         style="italic",
     )

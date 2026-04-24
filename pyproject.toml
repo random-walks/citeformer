@@ -53,7 +53,7 @@ dependencies = [
 # P2+: grammar-level logit enforcement for HF transformers.
 hf = [
     "transformers>=4.46",
-    "torch>=2.4",
+    "torch>=2.8",
     "accelerate>=1.0",
     "xgrammar>=0.1.30",
     "llguidance>=0.5",
@@ -64,13 +64,19 @@ hf = [
 vllm = ["vllm>=0.7"]
 llamacpp = ["llama-cpp-python>=0.3"]
 # P6: NLI-based verification.
-verify = ["transformers>=4.46", "torch>=2.4", "sentence-transformers>=3"]
+verify = ["transformers>=4.46", "torch>=2.8", "sentence-transformers>=3"]
 # P7: API-provider backends — schema-level enforcement tier. Citeformer's
 # local-only bulletproof claim is unchanged; these are honest second-tier
 # integrations where the constraint lives in the provider's JSON-schema
 # validator rather than in logit masking.
 openai = ["openai>=1.40"]
 anthropic = ["anthropic>=0.40"]
+gemini = ["google-genai>=0.7"]
+mistral = ["mistralai>=2.0"]
+# Optional richer PDF extractor — GROBID is an external Java service the
+# user stands up separately (Docker one-liner in the docs). Installing the
+# extra pulls in the Python client only; the server is the user's concern.
+grobid = ["grobid-client-python>=0.0.9"]
 
 docs = [
     "sphinx>=7",
@@ -89,7 +95,7 @@ examples = [
     "jupyter>=1",
     "matplotlib>=3.8",
 ]
-all = ["citeformer[hf,llamacpp,verify,openai,anthropic]"]
+all = ["citeformer[hf,llamacpp,verify,openai,anthropic,gemini,mistral]"]
 # Intentionally lightweight during P0 — just docs + tooling, no ML deps yet.
 # Grows to include `all` in P2 once src/ actually imports transformers / xgrammar.
 dev = [
@@ -186,11 +192,17 @@ module = [
     "diskcache.*",
     "openai.*",
     "anthropic.*",
+    "google.*",
+    "google.genai.*",
+    "mistralai.*",
 ]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Add repo root so `benchmarks.*` (which isn't in src/ but is a legit
+# importable package for harness tests) resolves under pytest.
+pythonpath = ["."]
 # `-m "not integration and not gpu and not network"` keeps the default run fast
 # and hermetic. Run `pytest -m integration` (or `make test-integration`) to
 # exercise tests that load real models / hit live APIs.

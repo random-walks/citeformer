@@ -87,7 +87,8 @@ for cs in report.per_citation:
 - [Verification](verification.md) — how NLI-based verify() works and its limitations.
 - [Architecture](reference/architecture.md) — the six-phase design and layer order.
 - [Runnable examples](https://github.com/random-walks/citeformer/tree/main/examples) —
-  four scripts covering the quickstart, a full HF + verify() pipeline, standalone
-  rendering, and the metadata-fetch path. Each doubles as a living report.
+  nine scripts + a notebook covering the quickstart, full HF + verify() pipeline, standalone
+  rendering, the metadata-fetch path, streaming, LangChain / LlamaIndex integration,
+  BibTeX + Zotero ingest, and an end-to-end literature-review notebook. Each doubles as a living report.
 - [Benchmarks](https://github.com/random-walks/citeformer/tree/main/benchmarks) —
   the AI-papers RAG comparison with actual numbers from recent runs.

@@ -105,6 +105,19 @@ uv run jupyter notebook examples/08_literature_review.ipynb
 
 The notebook loads `Qwen/Qwen2.5-0.5B-Instruct` (CPU-friendly, ~500 MB).
 
+### 9. [`09_bibtex_source.py`](09_bibtex_source.py) — BibTeX + Zotero ingest (no network, no model)
+
+Demonstrates `Source.from_bibtex(path_or_str)` and
+`Source.from_zotero(path_or_list, filter_fn=…)`. Both adapters are
+zero-dep (pure Python), so they work on a fresh core install. The
+example covers the full conversion path: BibTeX entry → CSL-JSON →
+Source → rendered APA-7 reference. Zotero branch shows dedupe +
+null-field drop + filter-at-load-time.
+
+```bash
+uv run python examples/09_bibtex_source.py
+```
+
 ## Adding a new citation style
 
 Adding a seventh (or seventieth) citation style is handled by the

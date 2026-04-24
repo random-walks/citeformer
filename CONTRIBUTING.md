@@ -27,7 +27,7 @@ make docs             # live-reload Sphinx at http://127.0.0.1:5190
 - **Piggyback first.** Before writing new code, check the piggyback map in [`docs/reference/architecture.md`](docs/reference/architecture.md). The hard work — token masking, CSL rendering, PDF extraction, NLI — already lives in well-maintained deps. We compose; we don't reimplement.
 - **Three §10 contracts.** [Grammar shape](docs/reference/contracts.md#101--citation-marker-grammar), [CSL metadata](docs/reference/contracts.md#102--sourcemetadata-shape), [output schemas](docs/reference/contracts.md#103--output-schemas). Each has a ceremony (regenerate snapshots, bump `schema_version`, CHANGELOG note, PR template). Don't touch them silently.
 - **Layer discipline.** The six-layer dependency order in [`docs/reference/architecture.md`](docs/reference/architecture.md) is upper-imports-lower. `render/` must never import from `backends/`. PRs that invert the graph get rejected.
-- **The model never touches the reference list.** Reference rendering is deterministic via citeproc-py. If you find yourself prompting the model to emit a reference list, stop.
+- **The model never touches the reference list.** Reference rendering is deterministic via the six hand-written formatters in [`src/citeformer/render/formatters/`](src/citeformer/render/formatters/) (see [ADR-004](docs/decisions/004-citeproc-rewrite.md) for the citeproc-py rewrite history). If you find yourself prompting the model to emit a reference list, stop.
 
 ## Commit style
 
@@ -57,8 +57,8 @@ Open a GitHub issue with:
 - Minimal reproducer (Python script ≤ 20 lines if possible)
 - Expected vs. actual behavior
 
-For security issues, please email instead of opening a public issue.
+For security issues, follow the disclosure process in [SECURITY.md](SECURITY.md) — don't open a public issue.
 
 ## Code of conduct
 
-Be kind. Assume good faith. If someone's being uncivil, ping a maintainer; we'll handle it.
+This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md). Be kind. Assume good faith. If someone's being uncivil, email <blaise@ubik.studio>; we'll handle it.

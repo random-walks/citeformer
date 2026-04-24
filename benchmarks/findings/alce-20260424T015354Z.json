@@ -1,0 +1,63 @@
+{
+  "metrics": {
+    "n": 3,
+    "citation_recall": 0.7222222222222222,
+    "citation_precision": 0.0,
+    "fabrication_rate": 0.0,
+    "mean_sentences_per_answer": 2.0
+  },
+  "per_example": [
+    {
+      "question": "When was the Transformer architecture introduced and what does it dispense with?",
+      "text": " The Transformer architecture, also known as the self-attention mechanism, was introduced in 2017 by\u4e24\u4f4dGoogle\u7814\u7a76\u4eba\u5458\uff0cHugging Face\u7684\u8054\u5408\u521b\u59cb\u4ebaEliot Smith\u548cLiu Cao\u3002\u8fd9\u4e2a\u67b6\u6784\u65e8\u5728\u89e3\u51b3\u4f20\u7edf\u7684\u591a\u5934\u6ce8\u610f\u529b\u673a\u5236\u5728\u5904\u7406\u957f\u5e8f\u5217\u6570\u636e\u65f6\u51fa\u73b0\u7684\u95ee\u9898\u3002\n\n\u4f20\u7edf\u7684\u591a\u5934\u6ce8\u610f\u529b\u673a\u5236\u9700\u8981\u4e24\u4e2a\u72ec\u7acb\u7684\u6ce8\u610f\u529b\u6a21\u5757\uff08\u4e00\u4e2a\u7528\u4e8e\u8f93\u5165\uff0c\u53e6\u4e00\u4e2a\u7528\u4e8e\u8f93\u51fa\uff09\uff0c\u8fd9\u6837\u6bcf\u4e2a\u65b9\u5411\u90fd\u5fc5\u987b\u5305\u542b\u8db3\u591f\u7684\u5206[1] [2] [3] [1] [2] [3] [1] [2] ",
+      "n_sentences": 1,
+      "cite_ids_emitted": [
+        1,
+        2,
+        3,
+        1,
+        2,
+        3,
+        1,
+        2
+      ],
+      "citation_recall": 1.0,
+      "citation_precision": 0.0,
+      "fabrication_rate": 0.0
+    },
+    {
+      "question": "What does chain-of-thought prompting elicit in large language models?",
+      "text": " Chain-of-thought prompting is a technique used by large language models (LLMs) to generate more coherent and logical responses when given incomplete or ambiguous prompts that contain multiple steps or conditions to satisfy simultaneously, [1] [2] [3]. It is also known as \"chain of thought\" or \"thought chains\" prompting, which involves the LLM generating multiple possible answers based on the input prompt and using logical reasoning to select the most appropriate one for the given context[3]. This process requires the model to think through each step or condition separately before making a decision about the overall response",
+      "n_sentences": 3,
+      "cite_ids_emitted": [
+        1,
+        2,
+        3,
+        3
+      ],
+      "citation_recall": 0.6666666666666666,
+      "citation_precision": 0.0,
+      "fabrication_rate": 0.0
+    },
+    {
+      "question": "What memory reduction does QLoRA enable for finetuning 65B models?",
+      "text": " In my case, I have a model with 32M parameters and want to fine-tune it using the latest version of QLoRA (170B) which has a parameter count of 94M (about 15% lower than 32M), while still having an accuracy around 98% on validation data, I[1] [2]. I am wondering if this is due to reduced memory or because of some other factor like optimization techniques or hardware limitations in my machine, any insights would be appreciated\n\nTo reduce the memory footprint of your model",
+      "n_sentences": 2,
+      "cite_ids_emitted": [
+        1,
+        2
+      ],
+      "citation_recall": 0.5,
+      "citation_precision": 0.0,
+      "fabrication_rate": 0.0
+    }
+  ],
+  "elapsed_sec": 21.995548874954693,
+  "config": {
+    "model": "Qwen/Qwen2.5-0.5B-Instruct",
+    "threshold": 0.5,
+    "policy": "REQUIRED",
+    "data": "toy_subset",
+    "n_examples": 3
+  }
+}

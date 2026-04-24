@@ -49,7 +49,10 @@ DEFAULT_MODELS = (
     "Qwen/Qwen2.5-0.5B-Instruct",
     "HuggingFaceTB/SmolLM-360M-Instruct",
 )
-DEFAULT_SEEDS = (0, 1, 2)
+# Expanded from 3 to 5 seeds — tighter per-cell stds without materially
+# slowing the sweep (4 prompts × 2 models × 5 seeds = 40 runs ≈ 3-5 min
+# on CPU). Override via --seeds at invocation for longer/shorter runs.
+DEFAULT_SEEDS = (0, 1, 2, 3, 4)
 
 
 @dataclass(frozen=True)

@@ -4,7 +4,7 @@ One-screen brief for Claude Code working in this repo. Canonical wider guide is 
 
 ## What this is
 
-`citeformer` is a Python OSS library: a bulletproof way to generate verifiably cited text from language models. Citation markers are *structurally impossible to fabricate* at the logit level when using a grammar-level constrained-decoding backend (HF + XGrammar/llguidance, vLLM, llama.cpp). Reference lists are rendered deterministically by six hand-written CSL formatters (APA 7, MLA 9, Chicago author-date, IEEE, Nature, Vancouver — see [ADR-004](docs/decisions/004-citeproc-rewrite.md)). The model never touches the bibliography. The library's point is **composition** — we piggyback on XGrammar, llguidance, transformers, vLLM, llama.cpp, lark, httpx, diskcache, grobid, readability, and DeBERTa-v3-MNLI. Full piggyback map + architecture in [`docs/reference/architecture.md`](docs/reference/architecture.md); **read it before writing grammar / rendering / decoding / verification code**.
+`citeformer` is a Python OSS library: a bulletproof way to generate verifiably cited text from language models. Citation markers are *structurally impossible to fabricate* at the logit level when using a grammar-level constrained-decoding backend (HF + XGrammar/llguidance, vLLM, llama.cpp) and schema-rejected on the API backends (OpenAI, Gemini, Mistral) + provider-native on Anthropic. Reference lists are rendered deterministically by six hand-written CSL formatters (APA 7, MLA 9, Chicago author-date, IEEE, Nature, Vancouver — see [ADR-004](docs/decisions/004-citeproc-rewrite.md)). The model never touches the bibliography. The library's point is **composition** — we piggyback on XGrammar, llguidance, transformers, vLLM, llama.cpp, lark, httpx, diskcache, grobid, readability, and DeBERTa-v3-MNLI. Full piggyback map + architecture in [`docs/reference/architecture.md`](docs/reference/architecture.md); **read it before writing grammar / rendering / decoding / verification code**.
 
 ## Invariants — DO NOT CHANGE SILENTLY
 
@@ -65,23 +65,22 @@ make release-check    # preflight for tag push
 
 ## Phase status
 
-v0.1 is feature-complete on the `feat/p0-scaffolding` branch; we're in a
-tighten-and-polish pass before cutting the tag. Phase breakdown in
+v0.1.0 shipped to PyPI on 2026-04-24. Current branch is
+`feat/post-release-expansion` — patch-level additions (Gemini + Mistral
+backends, ALCE harness, GROBID extractor, PREPRINT). Phase breakdown in
 [`docs/reference/architecture.md`](docs/reference/architecture.md).
 
-- **P0** — scaffolding. ✅
-- **P1** — core types + contracts locked. ✅
-- **P2** — HF backend with grammar-level enforcement (flagship). ✅
-- **P3** — deterministic CSL rendering (home-grown; ADR-004). ✅
-- **P4** — metadata adapters (DOI, arXiv, PDF, URL, BibTeX, Zotero). ✅
-- **P5** — vLLM + llama.cpp backends. ✅
-- **P6** — NLI verification + AI-papers benchmark. ✅
+- **P0–P6** — scaffolding through NLI verification. ✅
 - **Polish** — REQUIRED progression fix (ADR-009), CLI, examples as
   living reports. ✅
-- **Expansion** — marker shapes (ADR-011), OpenAI + Anthropic API
-  backends (schema-tier + native), threshold calibration, multi-prompt
-  benchmark, literature-review notebook, HF Space demo. ✅
-- **P7** — v0.1 PyPI release. *← next*
+- **Expansion** — marker shapes (ADR-011), seven backends (HF / vLLM /
+  llama.cpp / OpenAI / Anthropic / Gemini / Mistral), six metadata
+  adapters (DOI / arXiv / PDF via pypdf or GROBID / URL / BibTeX /
+  Zotero), threshold calibration, multi-prompt + ALCE benchmarks,
+  literature-review notebook, HF Space demo. ✅
+- **P7** — v0.1.0 PyPI release. ✅
+- **Next** — v0.2 scope TBD. Candidate: full-ALCE reproducibility,
+  streaming refinements, per-chunk NLI during generation.
 
 ## Versioning policy
 

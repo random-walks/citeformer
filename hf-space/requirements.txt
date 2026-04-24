@@ -1,2 +1,2 @@
 gradio>=4
-citeformer[hf]>=0.0.1
+citeformer[hf]>=0.1.0

@@ -229,6 +229,11 @@ The [`examples/`](examples/) directory contains eight runnable scripts, each a l
 | 6 | [`06_langchain_rag.py`](examples/06_langchain_rag.py) | LangChain `Document` → `Source` → citeformer |
 | 7 | [`07_llamaindex_rag.py`](examples/07_llamaindex_rag.py) | LlamaIndex `NodeWithScore` → `Source` |
 | 8 | [`08_literature_review.ipynb`](examples/08_literature_review.ipynb) | Full academic workflow notebook (arXiv → review → verify → APA-7) |
+| 9 | [`09_bibtex_source.py`](examples/09_bibtex_source.py) | BibTeX + Zotero ingest → APA-7 render (no network, no model) |
+
+## Paper-shaped write-up
+
+A longer design + evaluation document is in [`PREPRINT.md`](PREPRINT.md). Eight sections covering motivation, related work, design, structural-guarantee evaluation (40-run sweep), NLI calibration findings (bimodal large vs under-confident base), known limitations, and roadmap.
 
 ## Is this for you?
 

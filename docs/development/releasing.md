@@ -28,3 +28,23 @@ Before pushing the tag:
 - [ ] `/contract-check` clean if any §10 files were touched
 - [ ] `src/citeformer/_version.py` matches the tag
 - [ ] Any new deps reflected in the right `pyproject.toml` extra
+
+## ReadTheDocs — one-time import
+
+The `.readthedocs.yaml` in the repo root is wired up; what's left is the
+one-time import on readthedocs.org.
+
+1. Sign in at <https://app.readthedocs.org/> with the GitHub account that
+   owns [`random-walks/citeformer`](https://github.com/random-walks/citeformer).
+2. **Import a project → import manually** (or use the GitHub integration
+   if `random-walks` is connected).
+   - Repository URL: `https://github.com/random-walks/citeformer`
+   - Default branch: `main`
+   - Documentation type: Sphinx
+3. After the first build succeeds, enable the **Automation rule** that
+   activates new tags (so `v0.1.1`, `v0.1.2`, … appear under the version
+   picker without manual intervention).
+4. Confirm the URL resolves: <https://citeformer.readthedocs.io/en/latest/>.
+
+Once live, the RTD badge in the README (which currently points at an
+unimported slug) will start rendering the real build status.

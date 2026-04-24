@@ -1,7 +1,7 @@
 # citeformer
 
 [![PyPI](https://img.shields.io/pypi/v/citeformer?color=blue)](https://pypi.org/project/citeformer/)
-[![Docs](https://img.shields.io/badge/docs-readthedocs-blue)](https://citeformer.readthedocs.io)
+[![Docs](https://readthedocs.org/projects/citeformer/badge/?version=latest)](https://citeformer.readthedocs.io/en/latest/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 [![Python](https://img.shields.io/pypi/pyversions/citeformer)](https://pypi.org/project/citeformer/)
 [![CI](https://github.com/random-walks/citeformer/actions/workflows/ci.yml/badge.svg)](https://github.com/random-walks/citeformer/actions/workflows/ci.yml)

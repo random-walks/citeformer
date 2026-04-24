@@ -102,6 +102,29 @@ Five backends, two enforcement tiers, one `Backend` ABC:
 
 All five produce the same `GenerationResult`, so verify / render / streaming work identically across tiers. Full tier discussion: [architecture.md](docs/reference/architecture.md#tiered-enforcement--local-vs-api).
 
+### API backends (quickstart)
+
+Both API backends are live-tested against production endpoints — see [`tests/integration/test_api_backends_live.py`](tests/integration/test_api_backends_live.py).
+
+```python
+from citeformer import Citeformer, Policy, Source
+from citeformer.backends.openai import OpenAIBackend       # pip install citeformer[openai]
+# from citeformer.backends.anthropic import AnthropicBackend  # pip install citeformer[anthropic]
+
+sources = [Source(metadata={"id": "poe", "type": "book", "title": "The Raven",
+                            "author": [{"family": "Poe"}],
+                            "issued": {"date-parts": [[1845]]}},
+                  content="Once upon a midnight dreary...")]
+
+# OpenAI uses strict JSON-schema mode (gpt-4o-2024-08-06+ only).
+# Reads OPENAI_API_KEY from env; pass `client=...` or `api_key=...` to override.
+cf = Citeformer(backend=OpenAIBackend(model="gpt-4o-mini"),
+                style="apa-7", citation_policy=Policy.REQUIRED)
+result = cf.generate(prompt="Describe the opening in one sentence.", sources=sources)
+```
+
+Honest about tiers: **logit-layer** (local) backends make out-of-scope citations *token-impossible to sample*. **Schema-layer** (OpenAI) rejects non-conforming payloads server-side — fabrication is structurally impossible in the returned payload. **Provider-native** (Anthropic) trusts the provider's own Citations system. All three collapse to the same `GenerationResult` for downstream verify / render.
+
 ## Citation policies
 
 `Policy` controls where citations are grammatically required:

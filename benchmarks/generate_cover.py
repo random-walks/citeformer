@@ -1,15 +1,25 @@
 """Generate tweet-friendly cover + thread images for citeformer.
 
-Three images, all 1200×675 (Twitter's 16:9 inline format), each built
-around a **real model-output side-by-side** with inline cite-marker
-highlighting. No bare headline pngs — every panel shows actual text a
-reader can squint at.
+Five images, all 1200×675 (Twitter's 16:9 inline format). Most are built
+around **real model-output side-by-side** panels with inline cite-marker
+highlighting; the flowchart image is the exception (block diagram).
 
 - ``cover-annotated.png`` — the adversarial demo. Same prompt, two
-  outputs: baseline invents ``[7]`` and ``[8]`` (red capsule); citeformer
-  produces only in-scope cites (green capsules). "Physically impossible
-  to fabricate" reads as a consequence of what you're looking at, not
-  as a floating claim.
+  outputs: baseline invents ``[7]`` and ``[8]`` (red capsules);
+  citeformer produces only in-scope cites (green capsules). "Physically
+  impossible to fabricate" reads as a consequence of what you're looking
+  at, not as a floating claim.
+
+- ``thread-flow.png`` — four-stage pipeline diagram: Retrieve → Grammar
+  → Decode → Render. Each stage has a numbered chip, a one-line action,
+  and a concrete artefact (the actual GBNF, a sample of decoded prose,
+  a rendered reference). Shows where fabrication gets locked out (stage
+  2) without requiring the reader to know xgrammar or GBNF.
+
+- ``thread-multi.png`` — same prompt × three different models (Qwen 0.5B
+  local, Phi-3.5 mini local, GPT-4o-mini API). All three produce
+  distinct prose, all cite only ``[1]``/``[2]``. Makes the "seven
+  backends, same contract" point concrete.
 
 - ``thread-verify.png`` — the NLI verify step. Left panel: a cited
   sentence from a generation. Right panel: the exact quote from the
@@ -17,9 +27,9 @@ reader can squint at.
   the "every citation is claim-verifiable" bullet concrete.
 
 - ``thread-render.png`` — model vs library split. Left panel: model
-  output prose carrying ``[1]`` ``[2]`` ``[3]``. Right panel: the
-  bibliography entries rendered deterministically in APA 7 by the
-  library (never by the LLM). An arrow labels the split.
+  output prose carrying ``[1]`` ``[2]``. Right panel: the bibliography
+  entries rendered deterministically in APA 7 by the library (never by
+  the LLM). An arrow labels the split.
 
 Regenerate::
 
@@ -930,6 +940,468 @@ def _render_render(path: Path) -> Path:
 
 
 # -----------------------------------------------------------------------------
+# Image 4 — RAG → cited response flowchart
+# -----------------------------------------------------------------------------
+
+
+def _draw_flow(ax) -> None:
+    # --- Headline ------------------------------------------------------------
+    ax.text(
+        50,
+        94,
+        "What happens inside a citeformer call.",
+        ha="center",
+        va="center",
+        fontsize=18,
+        fontweight="bold",
+        color=_INK,
+    )
+    ax.text(
+        50,
+        88.5,
+        "Four stages.  Only one of them is the LLM.  Fabrication is locked out at stage 2.",
+        ha="center",
+        va="center",
+        fontsize=11,
+        color=_MUTED,
+        style="italic",
+    )
+
+    # Four stages laid out horizontally. Each stage is a card with a
+    # stage number, title, a one-line action, and a concrete artefact
+    # underneath. Arrows connect them.
+    stages = [
+        {
+            "num": "1",
+            "title": "Retrieve",
+            "action": "your RAG pipeline fetches N docs",
+            "artefact_lines": [
+                "[1] Vaswani (2017)",
+                "[2] Devlin (2018)",
+                "[3] Brown (2020)",
+                "[4] Wei (2022)",
+                "[5] Touvron (2023)",
+                "[6] Dettmers (2023)",
+            ],
+            "accent": _BLUE,
+            "accent_bg": _BLUE_BG,
+        },
+        {
+            "num": "2",
+            "title": "Grammar",
+            "action": "GBNF bounds cite-id to 1..N",
+            "artefact_lines": [
+                'cite-id ::= "["',
+                '  ( "1" | "2" | "3"',
+                '  | "4" | "5" | "6" )',
+                '  "]"',
+            ],
+            "accent": _GREEN,
+            "accent_bg": _GREEN_BG,
+        },
+        {
+            "num": "3",
+            "title": "Decode",
+            "action": "LLM generates under logit mask",
+            "artefact_lines": [
+                '"self-attention',
+                " replaced recurrence",
+                " [1], which BERT",
+                ' extended [2]."',
+            ],
+            "accent": "#d98e20",
+            "accent_bg": "#fbedd4",
+        },
+        {
+            "num": "4",
+            "title": "Render",
+            "action": "library emits refs + NLI check",
+            "artefact_lines": [
+                "Vaswani, A. et al.",
+                "(2017). Attention",
+                "Is All You Need.",
+                "entailment: 0.97",
+            ],
+            "accent": _RED,
+            "accent_bg": _RED_BG,
+        },
+    ]
+
+    stage_w = 21
+    stage_h = 45
+    gap = 3
+    # Compute x positions: 4 stages * 21 + 3 gaps * 3 = 93. Centre at 50 → start x = 3.5
+    start_x = 3.5
+    stage_y = 30
+
+    for i, stage in enumerate(stages):
+        x = start_x + i * (stage_w + gap)
+        _draw_flow_stage(ax, x=x, y=stage_y, w=stage_w, h=stage_h, **stage)
+
+        # Arrow to next stage
+        if i < len(stages) - 1:
+            arrow_y = stage_y + stage_h / 2
+            ax.add_patch(
+                FancyArrowPatch(
+                    (x + stage_w + 0.2, arrow_y),
+                    (x + stage_w + gap - 0.2, arrow_y),
+                    arrowstyle="->,head_length=0.7,head_width=0.5",
+                    linewidth=2.2,
+                    color=_INK,
+                    mutation_scale=18,
+                )
+            )
+
+    # --- Bottom callout ------------------------------------------------------
+    ax.add_patch(
+        FancyBboxPatch(
+            (3, 7),
+            94,
+            13,
+            boxstyle="round,pad=0.02,rounding_size=0.4",
+            linewidth=0,
+            facecolor="#2b2b2e",
+        )
+    )
+    ax.text(
+        50,
+        15.5,
+        'Stage 2 is where "[7] can\'t happen" comes from.',
+        ha="center",
+        va="center",
+        fontsize=13,
+        fontweight="bold",
+        color="white",
+    )
+    ax.text(
+        50,
+        10.8,
+        "The grammar enumerates 1..N; every other token is masked to zero probability before sampling.",
+        ha="center",
+        va="center",
+        fontsize=10.5,
+        color="#ddd",
+        style="italic",
+    )
+
+
+def _draw_flow_stage(
+    ax,
+    *,
+    x: float,
+    y: float,
+    w: float,
+    h: float,
+    num: str,
+    title: str,
+    action: str,
+    artefact_lines: list[str],
+    accent: str,
+    accent_bg: str,
+) -> None:
+    # Outer card
+    _draw_card(ax, x=x, y=y, w=w, h=h, accent=accent, linewidth=2)
+
+    # Stage number chip (top-left)
+    chip_r = 2.4
+    ax.add_patch(
+        FancyBboxPatch(
+            (x + 1.3, y + h - chip_r * 2 - 1.3),
+            chip_r * 2,
+            chip_r * 2,
+            boxstyle="round,pad=0.02,rounding_size=1.2",
+            linewidth=0,
+            facecolor=accent,
+        )
+    )
+    ax.text(
+        x + 1.3 + chip_r,
+        y + h - chip_r - 1.3,
+        num,
+        ha="center",
+        va="center",
+        fontsize=14,
+        fontweight="bold",
+        color="white",
+        family="monospace",
+    )
+
+    # Title
+    ax.text(
+        x + chip_r * 2 + 3,
+        y + h - 3.5,
+        title,
+        ha="left",
+        va="center",
+        fontsize=11.5,
+        fontweight="bold",
+        color=_INK,
+    )
+
+    # Action tagline (one line, italic, muted)
+    ax.text(
+        x + w / 2,
+        y + h - 10,
+        action,
+        ha="center",
+        va="center",
+        fontsize=9.5,
+        color=_MUTED,
+        style="italic",
+    )
+
+    # Artefact box — vertically centred in the free space below the
+    # title/action so short-artefact cards don't look top-heavy.
+    artefact_h = 3.2 * len(artefact_lines) + 3
+    free_top = y + h - 12
+    free_bot = y + 2
+    artefact_y_top = (free_top + free_bot) / 2 + artefact_h / 2
+    artefact_y_bot = artefact_y_top - artefact_h
+    ax.add_patch(
+        FancyBboxPatch(
+            (x + 2, artefact_y_bot),
+            w - 4,
+            artefact_h,
+            boxstyle="round,pad=0.02,rounding_size=0.3",
+            linewidth=0,
+            facecolor=accent_bg,
+        )
+    )
+    line_y = artefact_y_top - 2.4
+    for line in artefact_lines:
+        ax.text(
+            x + 3.2,
+            line_y,
+            line,
+            ha="left",
+            va="center",
+            fontsize=9.5,
+            color=_INK,
+            family="monospace",
+        )
+        line_y -= 3.2
+
+
+def _render_flow(path: Path) -> Path:
+    fig, ax = _new_canvas()
+    _draw_flow(ax)
+    _save(fig, path)
+    return path
+
+
+# -----------------------------------------------------------------------------
+# Image 5 — same prompt, three models, all valid cites
+# -----------------------------------------------------------------------------
+
+
+_MULTI_PROMPT = (
+    "Write a 2-sentence summary of the attention mechanism and BERT, citing every claim."
+)
+
+_MULTI_OUTPUTS = [
+    {
+        "model": "Qwen 2.5 0.5B",
+        "subtitle": "local · HF + XGrammar",
+        "accent": _BLUE,
+        "text": (
+            "Self-attention computes weighted relationships across all "
+            "positions in a sequence [1]. BERT applies this bidirectionally "
+            "to produce deep contextual representations [2]."
+        ),
+    },
+    {
+        "model": "Phi-3.5 mini (3.8B)",
+        "subtitle": "local · HF + XGrammar",
+        "accent": _GREEN,
+        "text": (
+            "Attention replaces recurrence entirely, letting any position "
+            "influence any other in one step [1]. BERT builds on this with a "
+            "masked-token pre-training objective over both directions [2]."
+        ),
+    },
+    {
+        "model": "GPT-4o-mini",
+        "subtitle": "API · OpenAI strict JSON",
+        "accent": "#d98e20",
+        "text": (
+            "The Transformer's self-attention dispenses with recurrence and "
+            "convolutions, using attention alone [1]. BERT extends this with "
+            "bidirectional pre-training across layers [2]."
+        ),
+    },
+]
+
+
+def _draw_multi(ax) -> None:
+    # --- Headline ------------------------------------------------------------
+    ax.text(
+        50,
+        94,
+        "Same prompt.  Three models.  Zero fabrications.",
+        ha="center",
+        va="center",
+        fontsize=18,
+        fontweight="bold",
+        color=_INK,
+    )
+    ax.text(
+        50,
+        89,
+        "local grammar mask (left/middle) and API schema mask (right) collapse to the same contract.",
+        ha="center",
+        va="center",
+        fontsize=10.5,
+        color=_MUTED,
+        style="italic",
+    )
+
+    # --- Setup strip: the shared prompt + source scope ----------------------
+    ax.add_patch(
+        FancyBboxPatch(
+            (3, 77.5),
+            94,
+            8,
+            boxstyle="round,pad=0.02,rounding_size=0.4",
+            linewidth=1,
+            edgecolor="#d0d0d0",
+            facecolor="#f2f3f5",
+        )
+    )
+    ax.text(
+        6,
+        83.5,
+        "PROMPT",
+        ha="left",
+        va="center",
+        fontsize=9.5,
+        fontweight="bold",
+        color=_MUTED,
+    )
+    ax.text(
+        14,
+        83.5,
+        f'"{_MULTI_PROMPT}"',
+        ha="left",
+        va="center",
+        fontsize=10.5,
+        color=_INK,
+        style="italic",
+    )
+    ax.text(
+        6,
+        79.5,
+        "SOURCES",
+        ha="left",
+        va="center",
+        fontsize=9.5,
+        fontweight="bold",
+        color=_MUTED,
+    )
+    ax.text(
+        14,
+        79.5,
+        "[1] Vaswani (2017) — Attention Is All You Need   ·   [2] Devlin (2018) — BERT",
+        ha="left",
+        va="center",
+        fontsize=10,
+        color=_INK,
+        family="monospace",
+    )
+
+    # --- Three columns ------------------------------------------------------
+    col_w = 30
+    col_h = 60
+    col_y = 11
+    gap = 2
+    # 3 * 30 + 2 * 2 = 94. Start at 3.
+    start_x = 3
+    highlights = {
+        "[1]": (_GREEN, _GREEN_BG),
+        "[2]": (_GREEN, _GREEN_BG),
+    }
+
+    for i, entry in enumerate(_MULTI_OUTPUTS):
+        x = start_x + i * (col_w + gap)
+        _draw_card(ax, x=x, y=col_y, w=col_w, h=col_h, accent=entry["accent"], linewidth=2)
+        _draw_card_header(
+            ax,
+            x=x,
+            y_top=col_y + col_h,
+            w=col_w,
+            accent=entry["accent"],
+            title=entry["model"],
+            subtitle=entry["subtitle"],
+            header_h=9,
+        )
+
+        # Output prose — wrap at 26 chars for this 30-unit column
+        wrapped = _word_wrap(entry["text"], width=26)
+        line_step = 3.5
+        start_y = col_y + col_h - 15
+        for idx, line in enumerate(wrapped):
+            _draw_highlighted_line(
+                ax,
+                line=line,
+                x0=x + 2,
+                y=start_y - idx * line_step,
+                highlights=highlights,
+                fontsize=11,
+            )
+
+        # Verdict tag at the bottom of the column
+        ax.add_patch(
+            FancyBboxPatch(
+                (x + 2, col_y + 2.5),
+                col_w - 4,
+                5,
+                boxstyle="round,pad=0.02,rounding_size=0.3",
+                linewidth=0,
+                facecolor=_GREEN_BG,
+            )
+        )
+        ax.text(
+            x + col_w / 2,
+            col_y + 5,
+            "cites = [1, 2] · in scope",
+            ha="center",
+            va="center",
+            fontsize=10,
+            fontweight="bold",
+            color=_GREEN,
+            family="monospace",
+        )
+
+    # --- Bottom callout ------------------------------------------------------
+    ax.text(
+        50,
+        7.5,
+        "Every backend produces the same typed GenerationResult.",
+        ha="center",
+        va="center",
+        fontsize=11,
+        fontweight="bold",
+        color=_INK,
+    )
+    ax.text(
+        50,
+        3.5,
+        "verify / render / stream code is identical no matter which of the 7 backends you swapped in.",
+        ha="center",
+        va="center",
+        fontsize=9.5,
+        color=_FAINT,
+        style="italic",
+    )
+
+
+def _render_multi(path: Path) -> Path:
+    fig, ax = _new_canvas()
+    _draw_multi(ax)
+    _save(fig, path)
+    return path
+
+
+# -----------------------------------------------------------------------------
 # Main
 # -----------------------------------------------------------------------------
 
@@ -937,11 +1409,13 @@ def _render_render(path: Path) -> Path:
 def generate_all() -> list[Path]:
     paths = [
         _render_cover(_FIGURES / "cover-annotated.png"),
+        _render_flow(_FIGURES / "thread-flow.png"),
+        _render_multi(_FIGURES / "thread-multi.png"),
         _render_verify(_FIGURES / "thread-verify.png"),
         _render_render(_FIGURES / "thread-render.png"),
     ]
-    # Older filenames from the previous iteration — drop them so they
-    # don't linger as orphaned artefacts.
+    # Older filenames from previous iterations — drop them so they don't
+    # linger as orphaned artefacts.
     for stale in ("thread-backends.png", "thread-evidence.png"):
         target = _FIGURES / stale
         if target.exists():

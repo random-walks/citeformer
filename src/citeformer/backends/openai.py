@@ -205,9 +205,7 @@ class OpenAIBackend(Backend):
             "below by its 1-indexed position."
         )
         if policy is Policy.REQUIRED:
-            parts.append(
-                "Every segment MUST cite at least one source (required policy)."
-            )
+            parts.append("Every segment MUST cite at least one source (required policy).")
         elif policy is Policy.QUOTES_ONLY:
             parts.append(
                 "Segments containing direct quotations MUST cite their source; "

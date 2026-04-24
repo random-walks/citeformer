@@ -51,8 +51,7 @@ def load_fixtures(path: Path = FIXTURE_PATH) -> list[dict[str, Any]]:
     """Load the pre-fetched AI-paper fixtures, failing loudly if absent."""
     if not path.exists():
         raise SystemExit(
-            f"Fixtures missing at {path!s}. "
-            "Run first: `uv run python -m benchmarks.fetch_fixtures`"
+            f"Fixtures missing at {path!s}. Run first: `uv run python -m benchmarks.fetch_fixtures`"
         )
     return list(json.loads(path.read_text()))
 

@@ -425,8 +425,12 @@ def _plot_premise_comparison(sweep: dict[str, Any], output_path: Path) -> None:
 
     models = list(paired.keys())
     short_names = [m.split("/")[-1] for m in models]
-    abstract_supp = [paired[m]["abstract"]["constrained_support_rate"]["mean"] * 100 for m in models]
-    fulltext_supp = [paired[m]["fulltext"]["constrained_support_rate"]["mean"] * 100 for m in models]
+    abstract_supp = [
+        paired[m]["abstract"]["constrained_support_rate"]["mean"] * 100 for m in models
+    ]
+    fulltext_supp = [
+        paired[m]["fulltext"]["constrained_support_rate"]["mean"] * 100 for m in models
+    ]
     abstract_std = [paired[m]["abstract"]["constrained_support_rate"]["std"] * 100 for m in models]
     fulltext_std = [paired[m]["fulltext"]["constrained_support_rate"]["std"] * 100 for m in models]
 

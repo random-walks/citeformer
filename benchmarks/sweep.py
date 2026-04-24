@@ -103,10 +103,7 @@ def _default_prompt(sources: list[Any]) -> str:
             "sources in every sentence."
         ),
         sources=sources,
-        system=(
-            "You are writing a brief, citation-dense technical survey. "
-            "CITE EVERY CLAIM."
-        ),
+        system=("You are writing a brief, citation-dense technical survey. CITE EVERY CLAIM."),
         example=(
             "The Transformer architecture introduced self-attention [1]. "
             "BERT extended this with bidirectional pre-training [2]."
@@ -208,15 +205,11 @@ def _aggregate_by_model(
             "constrained_cites": Aggregate.from_values(
                 [float(r.constrained_cites) for r in records]
             ),
-            "baseline_cites": Aggregate.from_values(
-                [float(r.baseline_cites) for r in records]
-            ),
+            "baseline_cites": Aggregate.from_values([float(r.baseline_cites) for r in records]),
             "constrained_fab_rate": Aggregate.from_values(
                 [r.constrained_fab_rate for r in records]
             ),
-            "baseline_fab_rate": Aggregate.from_values(
-                [r.baseline_fab_rate for r in records]
-            ),
+            "baseline_fab_rate": Aggregate.from_values([r.baseline_fab_rate for r in records]),
             "elapsed_sec": Aggregate.from_values([r.elapsed_sec for r in records]),
         }
     return out
@@ -312,7 +305,9 @@ def main() -> None:
     prompt = _default_prompt(sources)
     policy = Policy(args.policy)
 
-    print(f"[sweep] NLI warmup (loaded once, reused across {len(args.models) * len(args.seeds)} runs)…")
+    print(
+        f"[sweep] NLI warmup (loaded once, reused across {len(args.models) * len(args.seeds)} runs)…"
+    )
     from citeformer.verify import NLIModel
 
     nli_kwargs: dict[str, Any] = {}
@@ -322,9 +317,7 @@ def main() -> None:
 
     total = len(args.models) * len(args.seeds)
     rows: list[RunRecord] = []
-    for i, (model, seed) in enumerate(
-        [(m, s) for m in args.models for s in args.seeds], start=1
-    ):
+    for i, (model, seed) in enumerate([(m, s) for m in args.models for s in args.seeds], start=1):
         print(f"[sweep] {i}/{total}: model={model!r} seed={seed}")
         row = _one_run(
             model,

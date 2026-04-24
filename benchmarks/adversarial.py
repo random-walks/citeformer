@@ -166,10 +166,7 @@ def main() -> None:
 
     prompt = _adversarial_prompt(sources)
     policy = Policy(args.policy)
-    print(
-        f"[1/2] Running constrained (policy={policy.value}) + baseline on "
-        f"device={args.device} …"
-    )
+    print(f"[1/2] Running constrained (policy={policy.value}) + baseline on device={args.device} …")
     constrained_text, baseline_text = run_constrained_and_baseline(
         sources,
         prompt,

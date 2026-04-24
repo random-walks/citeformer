@@ -70,10 +70,7 @@ PROMPT_SHAPES: list[PromptShape] = [
             "provided sources. Write four citation-dense sentences in chronological "
             "order, citing at least one source per sentence."
         ),
-        system=(
-            "You are writing a brief, citation-dense technical survey. "
-            "Cite every claim."
-        ),
+        system=("You are writing a brief, citation-dense technical survey. Cite every claim."),
         example=(
             "The Transformer architecture introduced self-attention [1]. "
             "BERT extended this with bidirectional pre-training [2]."
@@ -87,8 +84,7 @@ PROMPT_SHAPES: list[PromptShape] = [
             "reference."
         ),
         system=(
-            "You compare and contrast approaches tightly. Every claim needs a "
-            "source citation."
+            "You compare and contrast approaches tightly. Every claim needs a source citation."
         ),
         example=(
             "Source [1] focuses on attention without recurrence, while [2] "
@@ -103,8 +99,7 @@ PROMPT_SHAPES: list[PromptShape] = [
             "in every sentence."
         ),
         system=(
-            "You explain mechanisms mechanically. Every sentence cites the "
-            "source being explained."
+            "You explain mechanisms mechanically. Every sentence cites the source being explained."
         ),
         example=(
             "The mechanism attends over token embeddings [1]. It does so "
@@ -405,9 +400,7 @@ def main() -> None:
     parser.add_argument("--threshold", type=float, default=0.5)
     parser.add_argument("--nli-model", default=None)
     parser.add_argument("--device", default="cpu")
-    parser.add_argument(
-        "--policy", choices=["required", "auto", "quotes_only"], default="required"
-    )
+    parser.add_argument("--policy", choices=["required", "auto", "quotes_only"], default="required")
     parser.add_argument(
         "--premise",
         choices=["abstract", "fulltext"],
@@ -452,10 +445,7 @@ def main() -> None:
         for model in args.models:
             for seed in args.seeds:
                 i += 1
-                print(
-                    f"[multiprompt] {i}/{total}: prompt={shape.name} "
-                    f"model={model!r} seed={seed}"
-                )
+                print(f"[multiprompt] {i}/{total}: prompt={shape.name} model={model!r} seed={seed}")
                 row = _run_one(
                     shape=shape,
                     model=model,

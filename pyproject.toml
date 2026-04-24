@@ -184,6 +184,8 @@ module = [
     "llama_cpp.*",
     "sentence_transformers.*",
     "diskcache.*",
+    "openai.*",
+    "anthropic.*",
 ]
 ignore_missing_imports = true
 

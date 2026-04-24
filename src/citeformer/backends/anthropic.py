@@ -176,8 +176,7 @@ def _build_system_prompt(policy: Policy, extra: str | None) -> str:
         )
     elif policy is Policy.QUOTES_ONLY:
         parts.append(
-            "Cite any direct quotation from the provided documents. "
-            "Paraphrases may be uncited."
+            "Cite any direct quotation from the provided documents. Paraphrases may be uncited."
         )
     else:
         parts.append(
@@ -206,10 +205,14 @@ def _flatten_blocks(content: Any, *, marker_style: MarkerStyle) -> str:
         )
         if block_type != "text":
             continue
-        text = str(getattr(block, "text", None) or (block.get("text") if isinstance(block, dict) else ""))
-        citations = getattr(block, "citations", None) or (
-            block.get("citations") if isinstance(block, dict) else None
-        ) or []
+        text = str(
+            getattr(block, "text", None) or (block.get("text") if isinstance(block, dict) else "")
+        )
+        citations = (
+            getattr(block, "citations", None)
+            or (block.get("citations") if isinstance(block, dict) else None)
+            or []
+        )
         seen: set[int] = set()
         marker_suffix: list[str] = []
         for cite in citations:

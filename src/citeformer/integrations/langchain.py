@@ -88,7 +88,8 @@ def default_metadata_converter(metadata: dict[str, Any]) -> dict[str, Any]:
     extras = {
         k: v
         for k, v in metadata.items()
-        if k not in {"title", "source", "file_name", "url", "id", "author", "authors", "year", "date"}
+        if k
+        not in {"title", "source", "file_name", "url", "id", "author", "authors", "year", "date"}
     }
     if extras:
         csl["_langchain_metadata"] = extras
@@ -143,9 +144,7 @@ def sources_from_documents(
     position, which matches how LangChain retrievers return their
     relevance-ordered results.
     """
-    return [
-        source_from_document(doc, metadata_converter=metadata_converter) for doc in documents
-    ]
+    return [source_from_document(doc, metadata_converter=metadata_converter) for doc in documents]
 
 
 def _normalize_authors(raw: list[Any]) -> list[dict[str, str]]:

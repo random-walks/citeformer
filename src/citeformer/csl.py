@@ -209,9 +209,7 @@ def validate_csl_json(
     if "id" not in item:
         errors.append("CSL-JSON item missing required field 'id'")
     elif not isinstance(item["id"], (str, int)):
-        errors.append(
-            f"'id' must be a string or int, got {type(item['id']).__name__}"
-        )
+        errors.append(f"'id' must be a string or int, got {type(item['id']).__name__}")
     if "type" not in item:
         errors.append("CSL-JSON item missing required field 'type'")
     elif not isinstance(item["type"], str):
@@ -252,31 +250,24 @@ def validate_csl_json(
         raw = item[field_name]
         if not isinstance(raw, list):
             errors.append(
-                f"field {field_name!r} must be a list of name dicts, "
-                f"got {type(raw).__name__}"
+                f"field {field_name!r} must be a list of name dicts, got {type(raw).__name__}"
             )
             continue
         for i, entry in enumerate(raw):
             if not isinstance(entry, dict):
-                errors.append(
-                    f"{field_name}[{i}] must be a dict, got {type(entry).__name__}"
-                )
+                errors.append(f"{field_name}[{i}] must be a dict, got {type(entry).__name__}")
                 continue
             # Each entry needs family+given, literal, or both.
             if "family" not in entry and "literal" not in entry:
                 warnings.append(
-                    f"{field_name}[{i}] has neither 'family' nor 'literal'; "
-                    "rendering may skip it"
+                    f"{field_name}[{i}] has neither 'family' nor 'literal'; rendering may skip it"
                 )
 
     # Issued date shape.
     issued = item.get("issued")
     if issued is not None:
         if not isinstance(issued, dict):
-            errors.append(
-                f"'issued' must be a dict with 'date-parts', "
-                f"got {type(issued).__name__}"
-            )
+            errors.append(f"'issued' must be a dict with 'date-parts', got {type(issued).__name__}")
         elif "date-parts" not in issued:
             warnings.append("'issued' has no 'date-parts'; year will be empty")
         elif not isinstance(issued["date-parts"], list):
@@ -290,8 +281,7 @@ def validate_csl_json(
     report = ValidationReport(errors=errors, warnings=warnings)
     if raise_on_error and errors:
         raise CSLValidationError(
-            f"CSL-JSON validation failed with {len(errors)} error(s): "
-            + "; ".join(errors)
+            f"CSL-JSON validation failed with {len(errors)} error(s): " + "; ".join(errors)
         )
     return report
 
@@ -308,9 +298,7 @@ def validate_source_metadata(
     mention ``Source.metadata`` instead of raw CSL-JSON — matters for
     users reading the exception in the context of their pipeline.
     """
-    return validate_csl_json(
-        metadata, raise_on_error=raise_on_error, strict_types=strict_types
-    )
+    return validate_csl_json(metadata, raise_on_error=raise_on_error, strict_types=strict_types)
 
 
 __all__ = [

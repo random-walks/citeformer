@@ -56,16 +56,24 @@ _FUZZ_SETTINGS = settings(
 def csl_name(draw: st.DrawFn) -> dict:
     """A CSL-JSON author record. Either `family/given` or `literal`."""
     if draw(st.booleans()):
-        family = draw(st.text(alphabet=st.characters(whitelist_categories=("L",)), min_size=1, max_size=15))
+        family = draw(
+            st.text(alphabet=st.characters(whitelist_categories=("L",)), min_size=1, max_size=15)
+        )
         entry: dict = {"family": family}
         if draw(st.booleans()):
             entry["given"] = draw(
-                st.text(alphabet=st.characters(whitelist_categories=("L",)), min_size=1, max_size=15)
+                st.text(
+                    alphabet=st.characters(whitelist_categories=("L",)), min_size=1, max_size=15
+                )
             )
         return entry
     return {
         "literal": draw(
-            st.text(alphabet=st.characters(whitelist_categories=("L", "N", "Zs")), min_size=1, max_size=30)
+            st.text(
+                alphabet=st.characters(whitelist_categories=("L", "N", "Zs")),
+                min_size=1,
+                max_size=30,
+            )
         )
     }
 
@@ -87,10 +95,20 @@ def csl_item(draw: st.DrawFn) -> dict:
     """Generate a CSL-JSON item across the canonical types we format."""
     item_type = draw(
         st.sampled_from(
-            ["book", "article-journal", "chapter", "thesis", "webpage", "paper-conference", "report"]
+            [
+                "book",
+                "article-journal",
+                "chapter",
+                "thesis",
+                "webpage",
+                "paper-conference",
+                "report",
+            ]
         )
     )
-    ident = draw(st.text(alphabet=st.characters(whitelist_categories=("L", "N")), min_size=1, max_size=20))
+    ident = draw(
+        st.text(alphabet=st.characters(whitelist_categories=("L", "N")), min_size=1, max_size=20)
+    )
     title = draw(st.text(min_size=1, max_size=80).filter(lambda s: s.strip()))
     item: dict = {"id": ident, "type": item_type, "title": title}
     if draw(st.booleans()):
@@ -161,9 +179,7 @@ def test_grammar_cite_ids_match_n_sources(n: int, policy: Policy, mc: int | None
 
 @_FUZZ_SETTINGS
 @given(n=_N_SOURCES_ST, policy=_POLICY_ST, mc=_MAX_CONTENT_ST)
-def test_grammar_has_cite_group_and_cite_id_rules(
-    n: int, policy: Policy, mc: int | None
-) -> None:
+def test_grammar_has_cite_group_and_cite_id_rules(n: int, policy: Policy, mc: int | None) -> None:
     """Every emitted grammar must reference a cite-group / cite-id terminal."""
     g = build_grammar(n_sources=n, policy=policy, max_content_chars=mc)
     assert "cite-group" in g.gbnf
@@ -228,9 +244,7 @@ def test_formatter_outputs_never_have_trailing_or_leading_whitespace(
     """Rendered bibliography entries should be left/right trimmed."""
     source = Source(metadata=item, content="")
     ref = render_single_reference(source, style_name=style, number=1)
-    assert ref.rendered == ref.rendered.strip(), (
-        f"{style} leaked whitespace: {ref.rendered!r}"
-    )
+    assert ref.rendered == ref.rendered.strip(), f"{style} leaked whitespace: {ref.rendered!r}"
 
 
 @_FUZZ_SETTINGS
@@ -239,9 +253,7 @@ def test_formatter_outputs_never_contain_double_spaces(item: dict, style: str) -
     """Bibliography entries should not contain `  ` (double-space regression)."""
     source = Source(metadata=item, content="")
     ref = render_single_reference(source, style_name=style, number=1)
-    assert "  " not in ref.rendered, (
-        f"{style} emitted double-space: {ref.rendered!r}"
-    )
+    assert "  " not in ref.rendered, f"{style} emitted double-space: {ref.rendered!r}"
 
 
 @_FUZZ_SETTINGS
@@ -262,9 +274,7 @@ def test_formatter_output_is_nonempty(item: dict, style: str) -> None:
     """Every render — even on minimal input — must produce at least one character."""
     source = Source(metadata=item, content="")
     ref = render_single_reference(source, style_name=style, number=1)
-    assert ref.rendered.strip(), (
-        f"{style} produced empty output for item {item!r}"
-    )
+    assert ref.rendered.strip(), f"{style} produced empty output for item {item!r}"
 
 
 @_FUZZ_SETTINGS
@@ -274,16 +284,12 @@ def test_formatter_output_is_nonempty(item: dict, style: str) -> None:
         [s for s in available_formatters() if style_citation_format(s) == "author-date"]
     ),
 )
-def test_author_date_styles_contain_year_when_issued_present(
-    item: dict, style: str
-) -> None:
+def test_author_date_styles_contain_year_when_issued_present(item: dict, style: str) -> None:
     """APA-7 / Chicago author-date must render the year when issued is set."""
     source = Source(metadata=item, content="")
     ref = render_single_reference(source, style_name=style, number=1)
     year = str(item["issued"]["date-parts"][0][0])
-    assert year in ref.rendered, (
-        f"{style} dropped year {year} for item {item!r}: {ref.rendered!r}"
-    )
+    assert year in ref.rendered, f"{style} dropped year {year} for item {item!r}: {ref.rendered!r}"
 
 
 # --- Prompt helper ------------------------------------------------------------
@@ -320,16 +326,12 @@ def test_build_rag_prompt_query_appears_verbatim(sources: list[Source], query: s
     sources=st.lists(source_strategy(), min_size=2, max_size=8),
     query=st.text(min_size=1, max_size=80).filter(lambda s: s.strip()),
 )
-def test_build_rag_prompt_orders_sources_by_position(
-    sources: list[Source], query: str
-) -> None:
+def test_build_rag_prompt_orders_sources_by_position(sources: list[Source], query: str) -> None:
     """The N source markers appear in ascending order inside the prompt."""
     out = build_rag_prompt(query=query, sources=sources)
     positions = [out.find(f"[{i}]") for i in range(1, len(sources) + 1)]
     assert all(p > 0 for p in positions), f"missing marker, positions={positions}"
-    assert positions == sorted(positions), (
-        f"source markers out of order: {positions}"
-    )
+    assert positions == sorted(positions), f"source markers out of order: {positions}"
 
 
 # --- Marker parsing round-trip ------------------------------------------------
@@ -373,9 +375,7 @@ def test_generation_result_is_frozen(text: str, cite_ids: list[int]) -> None:
     """GenerationResult fields must not be mutable after construction."""
     from pydantic import ValidationError
 
-    citations = [
-        Citation(span=(i, i + 3), source_id=src) for i, src in enumerate(cite_ids)
-    ]
+    citations = [Citation(span=(i, i + 3), source_id=src) for i, src in enumerate(cite_ids)]
     result = GenerationResult(text=text, citations=citations, references=[], sources=[])
     with pytest.raises(ValidationError):
         result.text = "mutated"  # type: ignore[misc]
@@ -490,9 +490,7 @@ def test_validate_csl_json_missing_type_is_error(item: dict) -> None:
         alphabet=st.characters(whitelist_categories=("L",)), min_size=3, max_size=15
     ).filter(lambda s: s not in {"id", "type", "title", "author", "issued"}),
 )
-def test_validate_csl_json_unknown_field_is_warning_not_error(
-    item: dict, bogus_key: str
-) -> None:
+def test_validate_csl_json_unknown_field_is_warning_not_error(item: dict, bogus_key: str) -> None:
     """Unknown top-level fields are warnings (not errors) by design."""
     extended = {**item, bogus_key: "anything"}
     report = validate_csl_json(extended)
@@ -500,9 +498,7 @@ def test_validate_csl_json_unknown_field_is_warning_not_error(
     # name happens to be a known field, which is filtered above). Errors
     # arise only if the generated item is otherwise malformed — which our
     # strategy doesn't do.
-    assert not report.errors, (
-        f"unexpected errors for extended item {extended!r}: {report.errors}"
-    )
+    assert not report.errors, f"unexpected errors for extended item {extended!r}: {report.errors}"
 
 
 @_FUZZ_SETTINGS

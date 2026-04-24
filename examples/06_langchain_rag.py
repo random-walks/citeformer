@@ -31,8 +31,7 @@ def main() -> None:
         from langchain_core.documents import Document  # type: ignore[import-not-found]
     except ImportError:
         sys.exit(
-            "This example requires langchain-core. Install with:\n"
-            "  uv pip install langchain-core"
+            "This example requires langchain-core. Install with:\n  uv pip install langchain-core"
         )
 
     from citeformer import Citeformer, Policy, build_rag_prompt

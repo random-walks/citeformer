@@ -53,8 +53,7 @@ def test_langchain_sources_from_docs_preserves_order() -> None:
     from citeformer.integrations.langchain import sources_from_documents
 
     docs = [
-        lc_docs.Document(page_content=f"body {i}", metadata={"title": f"T{i}"})
-        for i in range(4)
+        lc_docs.Document(page_content=f"body {i}", metadata={"title": f"T{i}"}) for i in range(4)
     ]
     sources = sources_from_documents(docs)
     assert [s.content for s in sources] == [f"body {i}" for i in range(4)]

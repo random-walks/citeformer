@@ -49,8 +49,13 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: Pin Python
         run: uv python install ${{ matrix.python }}
-      - name: Install dev deps
-        run: uv sync --extra dev --python ${{ matrix.python }}
+      - name: Install dev + backend extras
+        # `all` is the cross-platform kitchen sink (hf + llamacpp + verify +
+        # openai + anthropic). The unit suite imports xgrammar (via [hf]),
+        # transformers (via [verify] / [hf]), openai, and anthropic at test-
+        # module scope, so the test job needs every extra that doesn't gate
+        # on a GPU / Linux-only wheel (vLLM stays opt-in).
+        run: uv sync --extra dev --extra all --python ${{ matrix.python }}
 
       - name: pytest
         run: uv run pytest --cov=citeformer --cov-report=xml --cov-report=term

@@ -32,8 +32,10 @@ from citeformer.render.formatters import available_formatters
 def _preview(source: Source, title_guess: str) -> None:
     print("=" * 78)
     print(f"From: {title_guess}")
-    print(f"  Resolved id: {source.metadata.get('id', '?')}  "
-          f"  type: {source.metadata.get('type', '?')}")
+    print(
+        f"  Resolved id: {source.metadata.get('id', '?')}  "
+        f"  type: {source.metadata.get('type', '?')}"
+    )
     print("=" * 78)
     for style in available_formatters():
         ref = render_single_reference(source, style_name=style, number=1)

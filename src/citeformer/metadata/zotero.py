@@ -72,10 +72,7 @@ def _read_raw(source: str | Path | Iterable[dict[str, Any]]) -> list[dict[str, A
         text = path.read_text(encoding="utf-8") if path.is_file() else str(source)
         data = json.loads(text)
         if not isinstance(data, list):
-            raise ValueError(
-                "Zotero CSL-JSON must be a top-level list; "
-                f"got {type(data).__name__}"
-            )
+            raise ValueError(f"Zotero CSL-JSON must be a top-level list; got {type(data).__name__}")
         return data
     return list(source)
 

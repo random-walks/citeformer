@@ -59,9 +59,7 @@ def test_openai_schema_additional_properties_is_false() -> None:
     """Strict mode requires additionalProperties: false at every level."""
     schema = _build_citation_schema(n_sources=2, policy=Policy.AUTO)
     assert schema["additionalProperties"] is False
-    assert (
-        schema["properties"]["segments"]["items"]["additionalProperties"] is False
-    )
+    assert schema["properties"]["segments"]["items"]["additionalProperties"] is False
 
 
 # ----- OpenAI output flattening ---------------------------------------------
@@ -123,14 +121,10 @@ class _FakeOpenAI:
         def _create(**kwargs: Any) -> Any:
             self.last_payload = kwargs
             return SimpleNamespace(
-                choices=[
-                    SimpleNamespace(message=SimpleNamespace(content=response_content))
-                ]
+                choices=[SimpleNamespace(message=SimpleNamespace(content=response_content))]
             )
 
-        self.chat = SimpleNamespace(
-            completions=SimpleNamespace(create=_create)
-        )
+        self.chat = SimpleNamespace(completions=SimpleNamespace(create=_create))
 
 
 def test_openai_backend_end_to_end_maps_segments_to_markers(
@@ -146,18 +140,16 @@ def test_openai_backend_end_to_end_maps_segments_to_markers(
     )
     fake = _FakeOpenAI(fake_payload)
     backend = OpenAIBackend(model="gpt-4o-mini", client=fake)
-    text = backend.generate(
-        prompt="Describe the sources.", sources=sources, policy=Policy.AUTO
-    )
+    text = backend.generate(prompt="Describe the sources.", sources=sources, policy=Policy.AUTO)
     assert "[1]" in text
     assert "[2]" in text
     # Grammar-equivalent enforcement: schema's enum matches the sources.
     payload = fake.last_payload
     assert payload is not None
     schema = payload["response_format"]["json_schema"]["schema"]
-    assert schema["properties"]["segments"]["items"]["properties"]["citations"][
-        "items"
-    ]["enum"] == [1, 2, 3]
+    assert schema["properties"]["segments"]["items"]["properties"]["citations"]["items"][
+        "enum"
+    ] == [1, 2, 3]
 
 
 def test_openai_backend_sends_strict_true(sources: list[Source]) -> None:
@@ -202,9 +194,7 @@ def test_openai_stream_yields_multiple_chunks(sources: list[Source]) -> None:
         )
     )
     backend = OpenAIBackend(model="gpt-4o-mini", client=fake)
-    chunks = list(
-        backend.stream(prompt="hi", sources=sources, policy=Policy.AUTO)
-    )
+    chunks = list(backend.stream(prompt="hi", sources=sources, policy=Policy.AUTO))
     assert len(chunks) >= 2
 
 
@@ -243,9 +233,7 @@ def test_anthropic_backend_maps_document_index_to_cite_id(
     ]
     fake = _FakeAnthropic(blocks)
     backend = AnthropicBackend(model="claude-sonnet-4-6", client=fake)
-    text = backend.generate(
-        prompt="Describe.", sources=sources, policy=Policy.AUTO
-    )
+    text = backend.generate(prompt="Describe.", sources=sources, policy=Policy.AUTO)
     assert "[1]" in text
     assert "[3]" in text
     # Sources must have been threaded through as documents with citations enabled.

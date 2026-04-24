@@ -46,9 +46,7 @@ def _build_pairs() -> list[tuple[str, str, bool]]:
         if entry["csl"].get("abstract")
     }
     missing = [
-        paper_label
-        for paper_label, _, _ in CALIBRATION_TRIPLES
-        if paper_label not in by_label
+        paper_label for paper_label, _, _ in CALIBRATION_TRIPLES if paper_label not in by_label
     ]
     if missing:
         raise RuntimeError(

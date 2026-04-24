@@ -173,9 +173,7 @@ def _run_adversarial(backend: Any, seed: int = 0) -> dict[str, Any]:
     )
 
     constrained_ids = sorted({c.source_id for c in constrained_result.citations})
-    baseline_ids = sorted(
-        {int(m.group(1)) for m in re.finditer(r"\[(\d+)\]", baseline_text)}
-    )
+    baseline_ids = sorted({int(m.group(1)) for m in re.finditer(r"\[(\d+)\]", baseline_text)})
     fabricated = [cid for cid in baseline_ids if cid < 1 or cid > len(sources)]
 
     def _fab_rate(ids: list[int]) -> float:

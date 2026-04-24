@@ -57,10 +57,7 @@ def _default_prompt(sources: list[Source]) -> str:
             "sources in every sentence."
         ),
         sources=sources,
-        system=(
-            "You are writing a brief, citation-dense technical survey. "
-            "CITE EVERY CLAIM."
-        ),
+        system=("You are writing a brief, citation-dense technical survey. CITE EVERY CLAIM."),
         example=(
             "The Transformer architecture introduced self-attention [1]. "
             "BERT extended this with bidirectional pre-training [2]."

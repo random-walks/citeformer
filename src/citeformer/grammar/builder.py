@@ -101,17 +101,11 @@ class Grammar:
 
 def _shared_tail() -> str:
     """`cite-group` + whitespace rules, identical across marker styles."""
-    return (
-        "cite-group ::= cite-id (ws cite-id)*\n"
-        'ws ::= " "\n'
-    )
+    return 'cite-group ::= cite-id (ws cite-id)*\nws ::= " "\n'
 
 
 def _auto_body(open_char: str) -> str:
-    return (
-        "root ::= (text | cite-group)+\n"
-        f"text ::= [^{open_char}]+\n"
-    )
+    return f"root ::= (text | cite-group)+\ntext ::= [^{open_char}]+\n"
 
 
 def _quotes_only_body(open_char: str) -> str:
@@ -135,9 +129,7 @@ def _required_body(open_char: str, max_content_chars: int | None) -> str:
         content_rule = f"content ::= [^{open_char}.!?]+"
     else:
         if max_content_chars < 1:
-            raise ValueError(
-                f"max_content_chars must be >= 1 or None, got {max_content_chars}"
-            )
+            raise ValueError(f"max_content_chars must be >= 1 or None, got {max_content_chars}")
         content_rule = f"content ::= [^{open_char}.!?]{{1, {max_content_chars}}}"
     return (
         "root ::= sentence (ws sentence)*\n"

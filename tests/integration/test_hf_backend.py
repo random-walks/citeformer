@@ -192,9 +192,7 @@ def test_hf_backend_stream_on_instruct_model_matches_generate() -> None:
     assert len(chunks) > 1, f"Expected multiple stream chunks, got {chunks!r}"
     streamed_result = stream.finalize()
 
-    direct_result = cf.generate(
-        prompt=prompt, sources=sources, max_new_tokens=30, temperature=0.0
-    )
+    direct_result = cf.generate(prompt=prompt, sources=sources, max_new_tokens=30, temperature=0.0)
     assert streamed_result.text == direct_result.text
     for cite in streamed_result.citations:
         assert 1 <= cite.source_id <= 3

@@ -53,9 +53,7 @@ def test_mock_backend_echoes_chosen_marker_style(
 
 
 @pytest.mark.parametrize("marker_style", list(MarkerStyle))
-def test_parse_recognises_chosen_marker(
-    sources: list[Source], marker_style: MarkerStyle
-) -> None:
+def test_parse_recognises_chosen_marker(sources: list[Source], marker_style: MarkerStyle) -> None:
     """A generation end-to-end produces ≥1 Citation regardless of marker shape."""
     cf = Citeformer(
         backend=MockBackend(),

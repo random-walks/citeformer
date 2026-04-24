@@ -13,10 +13,7 @@ from citeformer import deduplicate_adjacent_cites
 
 
 def test_dedupes_simple_stacking() -> None:
-    assert (
-        deduplicate_adjacent_cites("Foo [1] [2] [3] [1] [2] [3] [1].")
-        == "Foo [1] [2] [3]."
-    )
+    assert deduplicate_adjacent_cites("Foo [1] [2] [3] [1] [2] [3] [1].") == "Foo [1] [2] [3]."
 
 
 def test_single_cite_untouched() -> None:
@@ -38,10 +35,7 @@ def test_run_followed_by_non_cite_content() -> None:
 
 
 def test_preserves_order_of_first_appearance() -> None:
-    assert (
-        deduplicate_adjacent_cites("[3] [1] [2] [3] [1].")
-        == "[3] [1] [2]."
-    )
+    assert deduplicate_adjacent_cites("[3] [1] [2] [3] [1].") == "[3] [1] [2]."
 
 
 def test_respects_non_adjacent_cites_separated_by_content() -> None:
@@ -49,10 +43,7 @@ def test_respects_non_adjacent_cites_separated_by_content() -> None:
     intervening words should keep each cite isolated.
     """
     text = "Foo [1] and also Bar [2]. Baz [1] [2] [1]."
-    assert (
-        deduplicate_adjacent_cites(text)
-        == "Foo [1] and also Bar [2]. Baz [1] [2]."
-    )
+    assert deduplicate_adjacent_cites(text) == "Foo [1] and also Bar [2]. Baz [1] [2]."
 
 
 def test_empty_string_roundtrips() -> None:

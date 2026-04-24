@@ -20,6 +20,10 @@ Requires the ``mistral`` extra: ``pip install citeformer[mistral]``.
 Model requirements: the ``strict: true`` JSON-schema mode is supported
 on ``mistral-large-2411`` (Nov 2024) and every Mistral model released
 after, including ``mistral-small-latest`` and ``mistral-large-latest``.
+
+SDK version: pins ``mistralai>=2.0``. The 2.x line switched to a
+namespace-package layout (``from mistralai.client import Mistral``);
+1.x used a different entry-point name and isn't supported here.
 """
 
 from __future__ import annotations
@@ -76,13 +80,10 @@ class MistralBackend(Backend):
                 ``client`` is ``None``.
         """
         try:
-            try:
-                # mistralai 2.x is a namespace package — the concrete client
-                # lives under `mistralai.client`. Fall through to the 1.x
-                # flat layout if that's what the caller has installed.
-                from mistralai.client import Mistral
-            except ImportError:
-                from mistralai import Mistral  # type: ignore[attr-defined,no-redef]
+            # mistralai 2.x is a namespace package — the concrete client lives
+            # under `mistralai.client`. The `mistral` extra pins `>=2.0`, so
+            # this is the only supported shape.
+            from mistralai.client import Mistral
         except ImportError as e:
             raise ImportError(
                 "MistralBackend requires the `mistral` extra. "

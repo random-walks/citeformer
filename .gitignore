@@ -69,7 +69,6 @@ Pipfile.lock
 
 # uv
 .uv-cache/
-uv.lock
 
 # Environments
 .env

@@ -196,6 +196,9 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Add repo root so `benchmarks.*` (which isn't in src/ but is a legit
+# importable package for harness tests) resolves under pytest.
+pythonpath = ["."]
 # `-m "not integration and not gpu and not network"` keeps the default run fast
 # and hermetic. Run `pytest -m integration` (or `make test-integration`) to
 # exercise tests that load real models / hit live APIs.

@@ -288,11 +288,29 @@ calibration, (b) chunked scoring against full-text (see Finding 3), or
 (c) a structured self-consistency check — not a knob turn on the
 threshold.
 
+### Finding 4b — DeBERTa-v3-**base** is under-confident, not bimodal
+
+Ran the same 50-triple calibration against `cross-encoder/nli-deberta-v3-base` (~180 MB, ~5× smaller than the default large variant):
+
+| Threshold | Precision | Recall | F1 |
+|---|---:|---:|---:|
+| 0.05–0.20 | 1.000 | 0.462 | 0.632 |
+| 0.25–0.75 | 1.000 | 0.423 | 0.595 |
+| 0.95 | 1.000 | 0.308 | 0.471 |
+
+- **Perfect precision across every threshold.** Negatives are crushed near zero (max entailment score on a label=False pair: 0.004).
+- **But recall never clears 0.46**, even at the most permissive threshold. The median label=True pair scored *0.014* — below any useful bar.
+- **The failure mode is under-confidence, not mis-classification.** 14 of 26 true-entailment pairs got scored < 0.05 despite being plain paraphrases ("Transformers dispense with recurrence entirely" → score 0.011 against the Attention Is All You Need abstract).
+
+**Takeaway**: on the same labelled set, the large variant wins by 0.33 F1 (0.96 vs 0.63). If users pick base for the weight savings, they're trading ~half their recall. The library's default is the large variant for a reason — this finding quantifies the cost of the downgrade.
+
 Reproduce:
 
 ```bash
 uv run python -m benchmarks.threshold_calibration
-# optional: try a different NLI checkpoint
+# smaller variant (180 MB):
+uv run python -m benchmarks.threshold_calibration --model cross-encoder/nli-deberta-v3-base
+# any HF MNLI checkpoint works:
 uv run python -m benchmarks.threshold_calibration --model microsoft/deberta-large-mnli
 ```
 

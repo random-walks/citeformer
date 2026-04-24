@@ -1,0 +1,529 @@
+{
+  "model": "cross-encoder/nli-deberta-v3-base",
+  "chunked": false,
+  "n_pairs": 50,
+  "best": {
+    "threshold": 0.05,
+    "tp": 12,
+    "fp": 0,
+    "tn": 24,
+    "fn": 14,
+    "precision": 1.0,
+    "recall": 0.46153846153846156,
+    "f1": 0.631578947368421,
+    "accuracy": 0.72
+  },
+  "thresholds": [
+    {
+      "threshold": 0.05,
+      "tp": 12,
+      "fp": 0,
+      "tn": 24,
+      "fn": 14,
+      "precision": 1.0,
+      "recall": 0.46153846153846156,
+      "f1": 0.631578947368421,
+      "accuracy": 0.72
+    },
+    {
+      "threshold": 0.1,
+      "tp": 12,
+      "fp": 0,
+      "tn": 24,
+      "fn": 14,
+      "precision": 1.0,
+      "recall": 0.46153846153846156,
+      "f1": 0.631578947368421,
+      "accuracy": 0.72
+    },
+    {
+      "threshold": 0.15,
+      "tp": 12,
+      "fp": 0,
+      "tn": 24,
+      "fn": 14,
+      "precision": 1.0,
+      "recall": 0.46153846153846156,
+      "f1": 0.631578947368421,
+      "accuracy": 0.72
+    },
+    {
+      "threshold": 0.2,
+      "tp": 12,
+      "fp": 0,
+      "tn": 24,
+      "fn": 14,
+      "precision": 1.0,
+      "recall": 0.46153846153846156,
+      "f1": 0.631578947368421,
+      "accuracy": 0.72
+    },
+    {
+      "threshold": 0.25,
+      "tp": 11,
+      "fp": 0,
+      "tn": 24,
+      "fn": 15,
+      "precision": 1.0,
+      "recall": 0.4230769230769231,
+      "f1": 0.5945945945945945,
+      "accuracy": 0.7
+    },
+    {
+      "threshold": 0.3,
+      "tp": 11,
+      "fp": 0,
+      "tn": 24,
+      "fn": 15,
+      "precision": 1.0,
+      "recall": 0.4230769230769231,
+      "f1": 0.5945945945945945,
+      "accuracy": 0.7
+    },
+    {
+      "threshold": 0.35,
+      "tp": 11,
+      "fp": 0,
+      "tn": 24,
+      "fn": 15,
+      "precision": 1.0,
+      "recall": 0.4230769230769231,
+      "f1": 0.5945945945945945,
+      "accuracy": 0.7
+    },
+    {
+      "threshold": 0.4,
+      "tp": 11,
+      "fp": 0,
+      "tn": 24,
+      "fn": 15,
+      "precision": 1.0,
+      "recall": 0.4230769230769231,
+      "f1": 0.5945945945945945,
+      "accuracy": 0.7
+    },
+    {
+      "threshold": 0.45,
+      "tp": 11,
+      "fp": 0,
+      "tn": 24,
+      "fn": 15,
+      "precision": 1.0,
+      "recall": 0.4230769230769231,
+      "f1": 0.5945945945945945,
+      "accuracy": 0.7
+    },
+    {
+      "threshold": 0.5,
+      "tp": 11,
+      "fp": 0,
+      "tn": 24,
+      "fn": 15,
+      "precision": 1.0,
+      "recall": 0.4230769230769231,
+      "f1": 0.5945945945945945,
+      "accuracy": 0.7
+    },
+    {
+      "threshold": 0.55,
+      "tp": 11,
+      "fp": 0,
+      "tn": 24,
+      "fn": 15,
+      "precision": 1.0,
+      "recall": 0.4230769230769231,
+      "f1": 0.5945945945945945,
+      "accuracy": 0.7
+    },
+    {
+      "threshold": 0.6,
+      "tp": 11,
+      "fp": 0,
+      "tn": 24,
+      "fn": 15,
+      "precision": 1.0,
+      "recall": 0.4230769230769231,
+      "f1": 0.5945945945945945,
+      "accuracy": 0.7
+    },
+    {
+      "threshold": 0.65,
+      "tp": 11,
+      "fp": 0,
+      "tn": 24,
+      "fn": 15,
+      "precision": 1.0,
+      "recall": 0.4230769230769231,
+      "f1": 0.5945945945945945,
+      "accuracy": 0.7
+    },
+    {
+      "threshold": 0.7,
+      "tp": 11,
+      "fp": 0,
+      "tn": 24,
+      "fn": 15,
+      "precision": 1.0,
+      "recall": 0.4230769230769231,
+      "f1": 0.5945945945945945,
+      "accuracy": 0.7
+    },
+    {
+      "threshold": 0.75,
+      "tp": 11,
+      "fp": 0,
+      "tn": 24,
+      "fn": 15,
+      "precision": 1.0,
+      "recall": 0.4230769230769231,
+      "f1": 0.5945945945945945,
+      "accuracy": 0.7
+    },
+    {
+      "threshold": 0.8,
+      "tp": 10,
+      "fp": 0,
+      "tn": 24,
+      "fn": 16,
+      "precision": 1.0,
+      "recall": 0.38461538461538464,
+      "f1": 0.5555555555555556,
+      "accuracy": 0.68
+    },
+    {
+      "threshold": 0.85,
+      "tp": 10,
+      "fp": 0,
+      "tn": 24,
+      "fn": 16,
+      "precision": 1.0,
+      "recall": 0.38461538461538464,
+      "f1": 0.5555555555555556,
+      "accuracy": 0.68
+    },
+    {
+      "threshold": 0.9,
+      "tp": 9,
+      "fp": 0,
+      "tn": 24,
+      "fn": 17,
+      "precision": 1.0,
+      "recall": 0.34615384615384615,
+      "f1": 0.5142857142857142,
+      "accuracy": 0.66
+    },
+    {
+      "threshold": 0.95,
+      "tp": 8,
+      "fp": 0,
+      "tn": 24,
+      "fn": 18,
+      "precision": 1.0,
+      "recall": 0.3076923076923077,
+      "f1": 0.47058823529411764,
+      "accuracy": 0.64
+    }
+  ],
+  "raw_scores": [
+    {
+      "paper": "Attention Is All You Need (Vaswani et al., 2017)",
+      "hypothesis": "The Transformer relies solely on attention mechanisms, without recurrence or convolutions.",
+      "label": true,
+      "entailment": 0.9942737221717834
+    },
+    {
+      "paper": "Attention Is All You Need (Vaswani et al., 2017)",
+      "hypothesis": "The authors evaluate the model on WMT 2014 English-to-German translation.",
+      "label": true,
+      "entailment": 0.9972364902496338
+    },
+    {
+      "paper": "Attention Is All You Need (Vaswani et al., 2017)",
+      "hypothesis": "The Transformer is more parallelisable than existing sequence transduction architectures.",
+      "label": true,
+      "entailment": 0.993891716003418
+    },
+    {
+      "paper": "Attention Is All You Need (Vaswani et al., 2017)",
+      "hypothesis": "The paper argues that attention alone is insufficient and must be combined with convolutions.",
+      "label": false,
+      "entailment": 5.2186487664585e-06
+    },
+    {
+      "paper": "Attention Is All You Need (Vaswani et al., 2017)",
+      "hypothesis": "The authors train their model on medical question-answering data.",
+      "label": false,
+      "entailment": 6.330956239253283e-05
+    },
+    {
+      "paper": "Attention Is All You Need (Vaswani et al., 2017)",
+      "hypothesis": "The paper introduces a novel reinforcement learning algorithm for game playing.",
+      "label": false,
+      "entailment": 0.0007104940596036613
+    },
+    {
+      "paper": "BERT: Pre-training of Deep Bidirectional Transformers (Devlin et al., 2018)",
+      "hypothesis": "BERT pre-trains deep bidirectional representations from unlabeled text.",
+      "label": true,
+      "entailment": 0.8688474893569946
+    },
+    {
+      "paper": "BERT: Pre-training of Deep Bidirectional Transformers (Devlin et al., 2018)",
+      "hypothesis": "BERT can be fine-tuned for a variety of downstream tasks with minimal architecture changes.",
+      "label": true,
+      "entailment": 0.9584845900535583
+    },
+    {
+      "paper": "BERT: Pre-training of Deep Bidirectional Transformers (Devlin et al., 2018)",
+      "hypothesis": "The paper reports state-of-the-art results on GLUE and SQuAD benchmarks.",
+      "label": true,
+      "entailment": 0.0010783154284581542
+    },
+    {
+      "paper": "BERT: Pre-training of Deep Bidirectional Transformers (Devlin et al., 2018)",
+      "hypothesis": "BERT is a left-to-right language model and cannot condition on right context.",
+      "label": false,
+      "entailment": 2.7433634386397898e-05
+    },
+    {
+      "paper": "BERT: Pre-training of Deep Bidirectional Transformers (Devlin et al., 2018)",
+      "hypothesis": "The authors propose a new activation function called SELU.",
+      "label": false,
+      "entailment": 0.0002362116938456893
+    },
+    {
+      "paper": "BERT: Pre-training of Deep Bidirectional Transformers (Devlin et al., 2018)",
+      "hypothesis": "The paper focuses on improving image classification using convolutional filters.",
+      "label": false,
+      "entailment": 3.5749878861679463e-06
+    },
+    {
+      "paper": "Language Models are Few-Shot Learners / GPT-3 (Brown et al., 2020)",
+      "hypothesis": "Scaling language models substantially improves task-agnostic few-shot performance.",
+      "label": true,
+      "entailment": 0.0001023986260406673
+    },
+    {
+      "paper": "Language Models are Few-Shot Learners / GPT-3 (Brown et al., 2020)",
+      "hypothesis": "GPT-3 is a 175-billion-parameter autoregressive language model.",
+      "label": true,
+      "entailment": 7.659545372007415e-05
+    },
+    {
+      "paper": "Language Models are Few-Shot Learners / GPT-3 (Brown et al., 2020)",
+      "hypothesis": "The paper evaluates GPT-3 on a wide variety of NLP tasks in the few-shot setting.",
+      "label": true,
+      "entailment": 0.00018425335292704403
+    },
+    {
+      "paper": "Language Models are Few-Shot Learners / GPT-3 (Brown et al., 2020)",
+      "hypothesis": "GPT-3 is trained via reinforcement learning from human feedback.",
+      "label": false,
+      "entailment": 6.102395127527416e-05
+    },
+    {
+      "paper": "Language Models are Few-Shot Learners / GPT-3 (Brown et al., 2020)",
+      "hypothesis": "The authors fine-tune GPT-3 separately on every downstream task.",
+      "label": false,
+      "entailment": 5.935999797657132e-05
+    },
+    {
+      "paper": "Language Models are Few-Shot Learners / GPT-3 (Brown et al., 2020)",
+      "hypothesis": "The paper shows that smaller models outperform larger ones in few-shot learning.",
+      "label": false,
+      "entailment": 5.837194839841686e-05
+    },
+    {
+      "paper": "Chain-of-Thought Prompting (Wei et al., 2022)",
+      "hypothesis": "Chain-of-thought prompting elicits reasoning in large language models.",
+      "label": true,
+      "entailment": 0.9066014289855957
+    },
+    {
+      "paper": "Chain-of-Thought Prompting (Wei et al., 2022)",
+      "hypothesis": "The technique involves prompting with a series of intermediate reasoning steps.",
+      "label": true,
+      "entailment": 0.22271175682544708
+    },
+    {
+      "paper": "Chain-of-Thought Prompting (Wei et al., 2022)",
+      "hypothesis": "Chain-of-thought improves performance on arithmetic and commonsense reasoning tasks.",
+      "label": true,
+      "entailment": 0.014341075904667377
+    },
+    {
+      "paper": "Chain-of-Thought Prompting (Wei et al., 2022)",
+      "hypothesis": "The method requires fine-tuning the model on reasoning traces.",
+      "label": false,
+      "entailment": 0.0002448776795063168
+    },
+    {
+      "paper": "Chain-of-Thought Prompting (Wei et al., 2022)",
+      "hypothesis": "Chain-of-thought is primarily evaluated on image classification.",
+      "label": false,
+      "entailment": 7.285514129762305e-06
+    },
+    {
+      "paper": "Chain-of-Thought Prompting (Wei et al., 2022)",
+      "hypothesis": "The paper shows chain-of-thought hurts performance on large language models.",
+      "label": false,
+      "entailment": 3.037955366380629e-06
+    },
+    {
+      "paper": "LLaMA: Open and Efficient Foundation Language Models (Touvron et al., 2023)",
+      "hypothesis": "LLaMA is a collection of foundation language models ranging from 7B to 65B parameters.",
+      "label": true,
+      "entailment": 0.0010295371757820249
+    },
+    {
+      "paper": "LLaMA: Open and Efficient Foundation Language Models (Touvron et al., 2023)",
+      "hypothesis": "LLaMA is trained on publicly available datasets exclusively.",
+      "label": true,
+      "entailment": 0.0036268485710024834
+    },
+    {
+      "paper": "LLaMA: Open and Efficient Foundation Language Models (Touvron et al., 2023)",
+      "hypothesis": "The authors demonstrate competitive performance with state-of-the-art models using open data.",
+      "label": true,
+      "entailment": 0.9913256764411926
+    },
+    {
+      "paper": "LLaMA: Open and Efficient Foundation Language Models (Touvron et al., 2023)",
+      "hypothesis": "LLaMA is distributed only under a proprietary closed-source license.",
+      "label": false,
+      "entailment": 1.4236510651244316e-05
+    },
+    {
+      "paper": "LLaMA: Open and Efficient Foundation Language Models (Touvron et al., 2023)",
+      "hypothesis": "The paper focuses on text-to-image generation using diffusion models.",
+      "label": false,
+      "entailment": 5.7268600357929245e-05
+    },
+    {
+      "paper": "LLaMA: Open and Efficient Foundation Language Models (Touvron et al., 2023)",
+      "hypothesis": "LLaMA uses exclusively a mixture-of-experts architecture.",
+      "label": false,
+      "entailment": 0.00023492792388424277
+    },
+    {
+      "paper": "QLoRA: Efficient Finetuning of Quantized LLMs (Dettmers et al., 2023)",
+      "hypothesis": "QLoRA enables finetuning of quantised large language models with low memory usage.",
+      "label": true,
+      "entailment": 0.0002584590401966125
+    },
+    {
+      "paper": "QLoRA: Efficient Finetuning of Quantized LLMs (Dettmers et al., 2023)",
+      "hypothesis": "The method backpropagates gradients through a 4-bit quantised frozen base model into LoRA adapters.",
+      "label": true,
+      "entailment": 7.832072878954932e-05
+    },
+    {
+      "paper": "QLoRA: Efficient Finetuning of Quantized LLMs (Dettmers et al., 2023)",
+      "hypothesis": "The authors demonstrate finetuning a 65B model on a single GPU.",
+      "label": true,
+      "entailment": 0.0008000059751793742
+    },
+    {
+      "paper": "QLoRA: Efficient Finetuning of Quantized LLMs (Dettmers et al., 2023)",
+      "hypothesis": "QLoRA requires at least 8 GPUs to finetune any model.",
+      "label": false,
+      "entailment": 6.144316284917295e-05
+    },
+    {
+      "paper": "QLoRA: Efficient Finetuning of Quantized LLMs (Dettmers et al., 2023)",
+      "hypothesis": "The paper only evaluates 8-bit quantisation, not 4-bit.",
+      "label": false,
+      "entailment": 2.106263673340436e-05
+    },
+    {
+      "paper": "QLoRA: Efficient Finetuning of Quantized LLMs (Dettmers et al., 2023)",
+      "hypothesis": "The authors argue that LoRA adapters are ineffective for LLM finetuning.",
+      "label": false,
+      "entailment": 0.00011084971629315987
+    },
+    {
+      "paper": "Attention Is All You Need (Vaswani et al., 2017)",
+      "hypothesis": "The Transformer achieves a BLEU score above 40 on English-to-French translation.",
+      "label": true,
+      "entailment": 0.9956653714179993
+    },
+    {
+      "paper": "Attention Is All You Need (Vaswani et al., 2017)",
+      "hypothesis": "The model trains in under a day on eight GPUs.",
+      "label": false,
+      "entailment": 0.00011871383321704343
+    },
+    {
+      "paper": "Attention Is All You Need (Vaswani et al., 2017)",
+      "hypothesis": "The Transformer outperforms recurrent models on translation.",
+      "label": true,
+      "entailment": 0.989573061466217
+    },
+    {
+      "paper": "BERT: Pre-training of Deep Bidirectional Transformers (Devlin et al., 2018)",
+      "hypothesis": "BERT achieves above 90% accuracy on sentiment analysis.",
+      "label": false,
+      "entailment": 0.0002469539758749306
+    },
+    {
+      "paper": "BERT: Pre-training of Deep Bidirectional Transformers (Devlin et al., 2018)",
+      "hypothesis": "BERT can improve the state of the art on many language understanding tasks.",
+      "label": true,
+      "entailment": 0.9838152527809143
+    },
+    {
+      "paper": "Language Models are Few-Shot Learners / GPT-3 (Brown et al., 2020)",
+      "hypothesis": "The paper reports that GPT-3's performance grows with scale.",
+      "label": true,
+      "entailment": 9.3447306426242e-05
+    },
+    {
+      "paper": "Language Models are Few-Shot Learners / GPT-3 (Brown et al., 2020)",
+      "hypothesis": "GPT-3 has a 32K token context window.",
+      "label": false,
+      "entailment": 5.648567821481265e-05
+    },
+    {
+      "paper": "Language Models are Few-Shot Learners / GPT-3 (Brown et al., 2020)",
+      "hypothesis": "The model can perform translation, question-answering, and cloze tasks in a few-shot manner.",
+      "label": true,
+      "entailment": 9.874204260995612e-05
+    },
+    {
+      "paper": "Chain-of-Thought Prompting (Wei et al., 2022)",
+      "hypothesis": "Chain-of-thought prompting yields gains especially on math word problems.",
+      "label": true,
+      "entailment": 0.7600287795066833
+    },
+    {
+      "paper": "Chain-of-Thought Prompting (Wei et al., 2022)",
+      "hypothesis": "Chain-of-thought prompting improves reasoning only on models above 100B parameters.",
+      "label": false,
+      "entailment": 3.137570456601679e-05
+    },
+    {
+      "paper": "LLaMA: Open and Efficient Foundation Language Models (Touvron et al., 2023)",
+      "hypothesis": "LLaMA-13B outperforms GPT-3 on most benchmarks.",
+      "label": false,
+      "entailment": 0.004130948800593615
+    },
+    {
+      "paper": "LLaMA: Open and Efficient Foundation Language Models (Touvron et al., 2023)",
+      "hypothesis": "LLaMA models range in size roughly an order of magnitude.",
+      "label": true,
+      "entailment": 0.00033296801848337054
+    },
+    {
+      "paper": "QLoRA: Efficient Finetuning of Quantized LLMs (Dettmers et al., 2023)",
+      "hypothesis": "QLoRA reduces memory by using 4-bit NormalFloat quantisation.",
+      "label": true,
+      "entailment": 4.8666355723980814e-05
+    },
+    {
+      "paper": "QLoRA: Efficient Finetuning of Quantized LLMs (Dettmers et al., 2023)",
+      "hypothesis": "QLoRA reaches ChatGPT-level performance on the Vicuna benchmark.",
+      "label": false,
+      "entailment": 7.172694313339889e-05
+    }
+  ]
+}

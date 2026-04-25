@@ -6,8 +6,13 @@ output is one `CitationSupport` record per citation carrying the NLI
 entailment score and a ``supported`` boolean thresholded at the caller's
 preferred value.
 
-The premise is the **source content** (truncated on the NLI's 512-token
-budget); the hypothesis is the **sentence containing the citation**.
+The premise is normally the **source content** (truncated on the NLI's
+512-token budget); the hypothesis is the **sentence containing the
+citation**. When the backend has populated :attr:`Citation.cited_text`
+(Anthropic's Citations API does — see ADR-013), we use that span as the
+premise instead — sharper signal than the whole document, especially on
+long sources where the relevant assertion is buried past the 512-token
+horizon.
 """
 
 from __future__ import annotations
@@ -52,7 +57,13 @@ def score_entailment(
             # model returns "neutral" and `supported` is False.
             pairs.append(("", _claim_for(citation, sentence_spans)))
             continue
-        premise = sources[src_idx].content or ""
+        # Prefer the provider-supplied cited span (Anthropic's
+        # Citations API populates ``cited_text``) — it's the exact
+        # passage the model claimed to draw from, so it's a sharper
+        # NLI premise than the whole document. Falls back to full
+        # source content for backends that don't surface span-level
+        # attribution (everyone except Anthropic today).
+        premise = citation.cited_text or sources[src_idx].content or ""
         hypothesis = _claim_for(citation, sentence_spans)
         pairs.append((premise, hypothesis))
 

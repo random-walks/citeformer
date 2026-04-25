@@ -6,6 +6,60 @@ Versioning policy: **patch bumps are cheap**. See [docs/development/releasing.md
 
 ## [Unreleased]
 
+### Added — Fireworks + Together backends, verify() against cited_text
+
+**`FireworksBackend`** (extra `fireworks`, re-uses `openai>=1.40` SDK).
+The cleanest "true logit-tier on a hosted API" backend possible:
+Fireworks's [`response_format={"type": "grammar", "grammar": "<GBNF>"}`](https://docs.fireworks.ai/structured-responses/structured-output-grammar-based)
+mode accepts citeformer's existing `cite-id` GBNF rule **unchanged**, so
+the same grammar that masks logits inside `HFBackend` runs inside the
+Fireworks runtime. Subclasses `OpenAIBackend` and overrides only two
+hooks added in this release — `_build_response_format` (swap strict-JSON
+for grammar mode) and `_decode_response_text` (Fireworks returns plain
+text with markers, not segments JSON, so flattening is a no-op).
+Default model `accounts/fireworks/models/llama-v3p1-8b-instruct`. Env:
+`FIREWORKS_API_KEY`. 7 unit tests cover the GBNF construction
+(including marker-style propagation through the grammar), the
+passthrough decode, env-var pickup, and usage extraction.
+
+**`TogetherBackend`** (extra `together`, re-uses `openai>=1.40` SDK).
+Strict `json_schema` constrained decoding on Together's open-weight
+upstream models (Llama, Qwen, DeepSeek, …). OpenAI-wire-compatible —
+the schema construction, segment flattening, streaming, and
+`last_usage` extraction all inherited unchanged from `OpenAIBackend`.
+Default model `meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo`. Env:
+`TOGETHER_API_KEY`. 5 unit tests cover the strict-JSON shape, segment
+flattening, env-var pickup, and usage extraction.
+
+**`OpenAIBackend` refactor — extracted `_build_response_format` and
+`_decode_response_text` hooks.** Lets backends with non-OpenAI
+response shapes (today: Fireworks's grammar mode) reuse all the
+messaging assembly + streaming + usage code without touching
+`generate()` itself. Pure refactor — no behavioural change for
+`OpenAIBackend` / `MistralBackend` / `OpenRouterBackend` consumers.
+
+**`verify()` uses `cited_text` as NLI premise when populated** (uses the
+ADR-013 work). When a `Citation` carries `cited_text` (Anthropic
+Citations API path), `score_entailment` uses that span as the NLI
+premise instead of the full source content — sharper signal,
+especially on long documents where the relevant assertion is buried
+past DeBERTa's 512-token horizon. Falls back to the full source
+content when `cited_text` is `None` (every backend except Anthropic
+today). Mixed-citation results work too — each citation uses the
+sharpest premise available to *it*. 3 new unit tests cover the
+cited-text-as-premise path, the fallback path, and the per-citation
+mix.
+
+**Cross-backend conformance grid extended to 8 backends** (was 6) —
+Fireworks + Together added. Fireworks's fake client introspects the
+GBNF payload to emit text with matching delimiters, simulating
+provider-side grammar-constrained sampling; lets the marker-style
+propagation grid exercise Fireworks just like the others.
+
+**Env-connectivity test extended** (`tests/integration/test_env_connectivity.py`)
+with `test_connectivity_fireworks` and `test_connectivity_together`.
+Both skip cleanly when their `*_API_KEY` env var is absent.
+
 ### Added — OpenRouter backend, Anthropic revamp, token-usage on results
 
 **`OpenRouterBackend`** (extra `openrouter`, re-uses the `openai` SDK

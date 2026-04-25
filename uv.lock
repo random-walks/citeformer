@@ -912,6 +912,9 @@ examples = [
     { name = "transformers" },
     { name = "xgrammar" },
 ]
+fireworks = [
+    { name = "openai" },
+]
 gemini = [
     { name = "google-genai" },
 ]
@@ -935,6 +938,9 @@ openai = [
     { name = "openai" },
 ]
 openrouter = [
+    { name = "openai" },
+]
+together = [
     { name = "openai" },
 ]
 verify = [
@@ -980,8 +986,10 @@ requires-dist = [
     { name = "myst-parser", extras = ["linkify"], marker = "extra == 'dev'", specifier = ">=3" },
     { name = "myst-parser", extras = ["linkify"], marker = "extra == 'docs'", specifier = ">=3" },
     { name = "openai", marker = "extra == 'all'", specifier = ">=1.40" },
+    { name = "openai", marker = "extra == 'fireworks'", specifier = ">=1.40" },
     { name = "openai", marker = "extra == 'openai'", specifier = ">=1.40" },
     { name = "openai", marker = "extra == 'openrouter'", specifier = ">=1.40" },
+    { name = "openai", marker = "extra == 'together'", specifier = ">=1.40" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3" },
     { name = "pydantic", specifier = ">=2" },
     { name = "pypdf", specifier = ">=5" },
@@ -1023,7 +1031,7 @@ requires-dist = [
     { name = "xgrammar", marker = "extra == 'examples'", specifier = ">=0.1.30" },
     { name = "xgrammar", marker = "extra == 'hf'", specifier = ">=0.1.30" },
 ]
-provides-extras = ["all", "anthropic", "dev", "docs", "examples", "gemini", "grobid", "hf", "llamacpp", "mistral", "openai", "openrouter", "verify", "vllm"]
+provides-extras = ["all", "anthropic", "dev", "docs", "examples", "fireworks", "gemini", "grobid", "hf", "llamacpp", "mistral", "openai", "openrouter", "together", "verify", "vllm"]
 
 [[package]]
 name = "click"

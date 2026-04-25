@@ -197,3 +197,46 @@ def test_connectivity_mistral() -> None:
     )
     _structural_check(text, n_sources=1)
     _usage_check(backend)
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(
+    not os.environ.get("FIREWORKS_API_KEY"),
+    reason="FIREWORKS_API_KEY not set",
+)
+def test_connectivity_fireworks() -> None:
+    """The cleanest live check of the whole branch: Fireworks accepts
+    citeformer's GBNF *unchanged* and runs token-level constrained
+    sampling inside its runtime. The structural §10.1 invariant holds
+    against the same grammar that masks logits in HFBackend."""
+    from citeformer.backends.fireworks import FireworksBackend
+
+    backend = FireworksBackend(model="accounts/fireworks/models/llama-v3p1-8b-instruct")
+    text = backend.generate(
+        prompt=_PROBE_PROMPT,
+        sources=[_PROBE_SOURCE],
+        policy=Policy.REQUIRED,
+        max_tokens=80,
+        temperature=0.3,
+    )
+    _structural_check(text, n_sources=1)
+    _usage_check(backend)
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(
+    not os.environ.get("TOGETHER_API_KEY"),
+    reason="TOGETHER_API_KEY not set",
+)
+def test_connectivity_together() -> None:
+    from citeformer.backends.together import TogetherBackend
+
+    backend = TogetherBackend(model="meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo")
+    text = backend.generate(
+        prompt=_PROBE_PROMPT,
+        sources=[_PROBE_SOURCE],
+        policy=Policy.REQUIRED,
+        max_tokens=80,
+    )
+    _structural_check(text, n_sources=1)
+    _usage_check(backend)

@@ -30,6 +30,14 @@ runs", not "logit vs schema":
   Multi-provider routing on the OpenAI wire format with
   ``provider.require_parameters`` so requests refuse to land on
   upstreams that can't honour strict mode.
+- ``citeformer.backends.fireworks.FireworksBackend`` needs ``[fireworks]``.
+  **True logit-tier on a hosted API** — Fireworks's native GBNF grammar
+  mode accepts citeformer's ``cite-id`` rule unchanged, so the same
+  constraint that masks logits inside ``HFBackend`` runs inside the
+  Fireworks runtime.
+- ``citeformer.backends.together.TogetherBackend`` needs ``[together]``.
+  Strict ``json_schema`` constrained decoding on Together's
+  open-weight upstream models (Llama, Qwen, DeepSeek, …).
 
 Per-provider tier discussion lives in
 ``docs/reference/architecture.md``.

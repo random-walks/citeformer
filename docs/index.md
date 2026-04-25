@@ -5,10 +5,11 @@
 citeformer makes citation fabrication *structurally impossible* at the logit level when you use a grammar-level constrained-decoding backend. The model can only emit citation markers that refer to sources you've actually supplied. Reference lists are rendered deterministically by home-grown formatters (APA 7, MLA 9, Chicago author-date, IEEE, Nature, Vancouver) — the model never touches the bibliography.
 
 :::{important}
-citeformer is pre-1.0 and under active development. Eight backends ship today:
-three local (HF transformers, vLLM, llama.cpp) that mask in-process,
-five API (OpenAI, Anthropic, OpenRouter, Gemini, Mistral) that hand strict
-structured-output schemas to the provider — which now does real token-level
+citeformer is pre-1.0 and under active development. Ten backends ship today:
+three local (HF transformers, vLLM, llama.cpp) that mask in-process; **Fireworks**
+(native GBNF — citeformer's `cite-id` grammar drops in unchanged); and six
+strict-structured-output API backends (OpenAI, Anthropic, OpenRouter, Together,
+Gemini, Mistral) — strict structured outputs is now real token-level
 constrained sampling on every modern provider. See the
 [architecture doc](reference/architecture.md#tiered-enforcement--where-the-masking-runs)
 for the per-provider breakdown.
@@ -24,7 +25,7 @@ pip install citeformer
 pip install 'citeformer[hf]'
 
 # With an API backend.
-pip install 'citeformer[openai]'    # or: anthropic, openrouter, gemini, mistral
+pip install 'citeformer[openai]'    # or: anthropic, openrouter, fireworks, together, gemini, mistral
 
 # Everything cross-platform.
 pip install 'citeformer[all]'

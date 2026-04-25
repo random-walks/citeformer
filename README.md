@@ -20,7 +20,7 @@ Language models hallucinate citations. Ask GPT-4, Claude, or an open-source mode
 > If you've read the jsonformer source or thought about logit-layer structured output, skip to [Backends](#backends).
 
 - **Logit-masked GBNF.** The `cite-id` terminal is compiled per call to `"[" ("1" | "2" | ... | "N") "]"` and handed to [XGrammar](https://github.com/mlc-ai/xgrammar) (default) or [llguidance](https://github.com/guidance-ai/llguidance). Out-of-scope tokens get masked to zero probability before sampling — the sampler *never sees them*. This is structural, not rejection-sampled.
-- **Eight backends, two enforcement loci, one `GenerationResult`.** HF + vLLM + llama.cpp enforce in-process via XGrammar / llguidance / GBNF. OpenAI + Mistral + Gemini + OpenRouter enforce inside the provider runtime via strict structured outputs (which became real token-level constrained sampling in late 2025 — see [architecture.md](docs/reference/architecture.md#tiered-enforcement--where-the-masking-runs)). Anthropic is adapted from its native Citations API. All collapse to the same typed output for downstream verify / render / streaming.
+- **Ten backends, two enforcement loci, one `GenerationResult`.** HF + vLLM + llama.cpp enforce in-process via XGrammar / llguidance / GBNF. **Fireworks** drops citeformer's GBNF in *unchanged* via its native `type: grammar` mode — the same `cite-id` rule that masks logits in `HFBackend` runs inside the Fireworks runtime. OpenAI + Mistral + Gemini + OpenRouter + Together enforce inside the provider runtime via strict structured outputs (which became real token-level constrained sampling in late 2025 — see [architecture.md](docs/reference/architecture.md#tiered-enforcement--where-the-masking-runs)). Anthropic is adapted from its native Citations API. All collapse to the same typed output for downstream verify / render / streaming.
 - **The model never touches the bibliography.** Six hand-written CSL formatters (~1 kLOC, no citeproc-py dependency — see [ADR-004](docs/decisions/004-citeproc-rewrite.md)) render references deterministically. 300 locked snapshots pin the formatter outputs.
 - **Verify is real, not a hit rate.** `result.verify()` runs DeBERTa-v3-large-MNLI over every (source content, cited sentence) pair and returns a typed `VerificationReport` — with a coverage check for uncited-but-entailed sentences. Threshold calibration + the honest bimodal-score finding live in [benchmarks/README.md#finding-4](benchmarks/README.md#finding-4--nli-threshold-calibration-deberta-v3-large-is-bimodal).
 - **0.0 ± 0.0 fabrication across 40 runs.** 4 prompt shapes × 2 models × 5 seeds in [`benchmarks/multiprompt_sweep.py`](benchmarks/multiprompt_sweep.py). The stds are identically zero because there's no variance to measure — the guarantee is a contract, not a mean.
@@ -57,6 +57,8 @@ pip install 'citeformer[vllm]'           # vLLM guided-decoding (Linux/CUDA only
 pip install 'citeformer[openai]'         # Structured Outputs strict=true
 pip install 'citeformer[anthropic]'      # Citations API adapter (with prompt-caching on)
 pip install 'citeformer[openrouter]'     # Multi-provider routing (anthropic/.., openai/.., google/..)
+pip install 'citeformer[fireworks]'      # Native GBNF — drops citeformer's grammar in unchanged
+pip install 'citeformer[together]'       # Strict json_schema on open-weight upstreams
 pip install 'citeformer[gemini]'         # response_schema constrained generation
 pip install 'citeformer[mistral]'        # Strict JSON schema
 
@@ -111,16 +113,18 @@ print(f"{report.support_rate:.0%} of cites entailed by their source")
 
 ## Backends
 
-Eight backends, two enforcement loci ("where the masking runs"), one `Backend` ABC:
+Ten backends, two enforcement loci ("where the masking runs"), one `Backend` ABC:
 
 | Backend            | Extra        | Enforcement                                | Where it lives                  | Notes |
 |--------------------|--------------|--------------------------------------------|---------------------------------|-------|
 | `HFBackend`        | `hf`         | In-process (XGrammar)                      | `citeformer.backends.hf`        | Flagship. Grammar-level token masking. |
 | `LlamaCppBackend`  | `llamacpp`   | In-process (GBNF)                          | `citeformer.backends.llamacpp`  | Native GBNF via `llama-cpp-python`. CPU + Metal + CUDA. |
 | `VLLMBackend`      | `vllm`       | In-process (XGrammar/llguidance)           | `citeformer.backends.vllm`      | vLLM guided decoding. Linux/CUDA only. |
+| `FireworksBackend` | `fireworks`  | Provider-runtime (**native GBNF**)         | `citeformer.backends.fireworks` | Drops citeformer's `cite-id` grammar in unchanged via Fireworks's `response_format={"type":"grammar"}` mode. The cleanest "true logit-tier on a hosted API" backend. |
 | `OpenAIBackend`    | `openai`     | Provider-runtime (strict JSON)             | `citeformer.backends.openai`    | OpenAI Structured Outputs — live verified. |
-| `AnthropicBackend` | `anthropic`  | Provider-native (Citations API)            | `citeformer.backends.anthropic` | Live verified. Prompt-caching on by default; real `messages.stream()` streaming. |
-| `OpenRouterBackend`| `openrouter` | Provider-runtime (per-upstream)            | `citeformer.backends.openrouter`| Multi-provider routing on the OpenAI wire format. `provider.require_parameters: true` keeps strict mode end-to-end. Reports per-call USD cost. |
+| `AnthropicBackend` | `anthropic`  | Provider-native (Citations API)            | `citeformer.backends.anthropic` | Live verified. Prompt-caching on by default; real `messages.stream()` streaming; `cited_text` + `source_span` preserved on every Citation. |
+| `OpenRouterBackend`| `openrouter` | Provider-runtime (per-upstream)            | `citeformer.backends.openrouter`| Multi-provider routing on the OpenAI wire format. `provider.require_parameters: true` keeps strict mode end-to-end. Reports per-call cost in OR credits. |
+| `TogetherBackend`  | `together`   | Provider-runtime (strict `json_schema`)    | `citeformer.backends.together`  | Strict structured outputs on Together's open-weight upstreams (Llama / Qwen / DeepSeek). |
 | `GeminiBackend`    | `gemini`     | Provider-runtime (`response_schema`)       | `citeformer.backends.gemini`    | Gemini's OpenAPI-subset structured output. |
 | `MistralBackend`   | `mistral`    | Provider-runtime (strict JSON)             | `citeformer.backends.mistral`   | Mistral's `response_format` strict JSON schema. |
 | `MockBackend`      | (core)       | Scripted                                   | `citeformer.backends.mock`      | For tests. Honors policies + marker styles. |

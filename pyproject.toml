@@ -77,6 +77,13 @@ mistral = ["mistralai>=2.0"]
 # OpenRouter is OpenAI wire-compatible — re-uses the openai SDK and adds
 # multi-provider routing on top.
 openrouter = ["openai>=1.40"]
+# Fireworks is OpenAI wire-compatible AND exposes native GBNF grammar
+# mode — citeformer's `cite-id` rule is dropped in unchanged for true
+# logit-tier enforcement on a hosted API.
+fireworks = ["openai>=1.40"]
+# Together is OpenAI wire-compatible — runs strict json_schema constrained
+# decoding on open-weight upstream models (Llama, Qwen, DeepSeek, …).
+together = ["openai>=1.40"]
 # Optional richer PDF extractor — GROBID is an external Java service the
 # user stands up separately (Docker one-liner in the docs). Installing the
 # extra pulls in the Python client only; the server is the user's concern.
@@ -99,7 +106,7 @@ examples = [
     "jupyter>=1",
     "matplotlib>=3.8",
 ]
-all = ["citeformer[hf,llamacpp,verify,openai,anthropic,gemini,mistral,openrouter]"]
+all = ["citeformer[hf,llamacpp,verify,openai,anthropic,gemini,mistral,openrouter,fireworks,together]"]
 # Intentionally lightweight during P0 — just docs + tooling, no ML deps yet.
 # Grows to include `all` in P2 once src/ actually imports transformers / xgrammar.
 dev = [

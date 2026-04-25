@@ -137,7 +137,6 @@ class OpenAIBackend(Backend):
         max_tokens = int(options.get("max_tokens", _DEFAULT_MAX_TOKENS))
         temperature = float(options.get("temperature", _DEFAULT_TEMPERATURE))
         marker_style = options.get("marker_style", MarkerStyle.BRACKET)
-        schema = _build_citation_schema(n_sources=len(sources), policy=policy)
 
         messages = self._build_messages(
             prompt=prompt,
@@ -145,26 +144,63 @@ class OpenAIBackend(Backend):
             policy=policy,
             system_prompt=options.get("system_prompt"),
         )
+        response_format = self._build_response_format(
+            n_sources=len(sources),
+            policy=policy,
+            marker_style=marker_style,
+        )
 
         create_kwargs: dict[str, Any] = {
             "model": self.model,
             "messages": messages,
             "max_tokens": max_tokens,
             "temperature": temperature,
-            "response_format": {
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "CitedSegments",
-                    "strict": True,
-                    "schema": schema,
-                },
-            },
+            "response_format": response_format,
         }
         # Subclasses (OpenRouter) inject extra fields via _augment_create_kwargs.
         self._augment_create_kwargs(create_kwargs, options=options)
         completion: Any = self.client.chat.completions.create(**create_kwargs)
         self.last_usage = _extract_openai_usage(getattr(completion, "usage", None))
         raw = completion.choices[0].message.content
+        return self._decode_response_text(raw, marker_style=marker_style)
+
+    def _build_response_format(
+        self,
+        *,
+        n_sources: int,
+        policy: Policy,
+        marker_style: MarkerStyle,
+    ) -> dict[str, Any]:
+        """Construct the ``response_format`` payload for the completion call.
+
+        OpenAI's strict-mode JSON schema with enum-bounded citation ids is
+        the default. Fireworks overrides this to return a native GBNF
+        grammar instead (``{"type": "grammar", "grammar": ...}``) since
+        their runtime accepts a raw grammar string. ``marker_style`` is
+        ignored at this layer for OpenAI (the segments shape doesn't carry
+        marker delimiters; flattening picks them up separately) but is
+        threaded through so subclasses with grammar-shaped response
+        formats can inline the right delimiter terminals.
+        """
+        del marker_style  # OpenAI's segment flattener picks marker_style up separately
+        schema = _build_citation_schema(n_sources=n_sources, policy=policy)
+        return {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "CitedSegments",
+                "strict": True,
+                "schema": schema,
+            },
+        }
+
+    def _decode_response_text(self, raw: str, *, marker_style: MarkerStyle) -> str:
+        """Decode the model's response into citation-marker plain text.
+
+        OpenAI's strict-mode response is a JSON segments object; we flatten
+        it to text with inline markers. Fireworks (and any other backend
+        whose response_format yields plain text directly, like a grammar)
+        overrides this to a passthrough.
+        """
         return _flatten_segments(raw, marker_style=marker_style)
 
     def _augment_create_kwargs(

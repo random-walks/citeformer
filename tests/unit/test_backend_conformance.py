@@ -26,10 +26,12 @@ import pytest
 from citeformer import Citeformer, MarkerStyle, Policy, Source
 from citeformer.backends import Backend, MockBackend
 from citeformer.backends.anthropic import AnthropicBackend
+from citeformer.backends.fireworks import FireworksBackend
 from citeformer.backends.gemini import GeminiBackend
 from citeformer.backends.mistral import MistralBackend
 from citeformer.backends.openai import OpenAIBackend
 from citeformer.backends.openrouter import OpenRouterBackend
+from citeformer.backends.together import TogetherBackend
 
 # ---- Fake-client factories -------------------------------------------------
 
@@ -171,6 +173,49 @@ def _make_mistral(n_sources: int) -> Backend:
     )
 
 
+def _make_together(n_sources: int) -> Backend:
+    """Together is OpenAI-wire-compatible — same segments payload works."""
+    return TogetherBackend(
+        model="meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+        client=_fake_openai_client(
+            _segments_payload(n_sources),
+            usage=SimpleNamespace(prompt_tokens=42, completion_tokens=12),
+        ),
+    )
+
+
+def _make_fireworks(n_sources: int) -> Backend:
+    """Fireworks uses native GBNF — its response is plain text with markers,
+    not a segments JSON. The fake client *inspects the grammar payload* and
+    emits text with matching delimiters, simulating provider-side
+    grammar-constrained sampling. Lets the cross-backend conformance grid
+    exercise marker-style propagation just like the other backends."""
+
+    def _create(**kwargs: Any) -> Any:
+        grammar = (kwargs.get("response_format") or {}).get("grammar", "")
+        open_d, close_d = "[", "]"
+        if '"("' in grammar and '")"' in grammar:
+            open_d, close_d = "(", ")"
+        elif '"{"' in grammar and '"}"' in grammar:
+            open_d, close_d = "{", "}"
+        elif '"^"' in grammar:
+            open_d, close_d = "^", ""
+        text = " ".join(
+            f"Claim {i} {open_d}{i}{close_d}." for i in range(1, n_sources + 1)
+        )
+        return SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content=text))],
+            usage=SimpleNamespace(prompt_tokens=42, completion_tokens=12),
+        )
+
+    fake = SimpleNamespace()
+    fake.chat = SimpleNamespace(completions=SimpleNamespace(create=_create))
+    return FireworksBackend(
+        model="accounts/fireworks/models/llama-v3p1-8b-instruct",
+        client=fake,
+    )
+
+
 ALL_BACKENDS: list[tuple[str, BackendFactory]] = [
     ("mock", _make_mock),
     ("openai", _make_openai),
@@ -178,6 +223,8 @@ ALL_BACKENDS: list[tuple[str, BackendFactory]] = [
     ("anthropic", _make_anthropic),
     ("gemini", _make_gemini),
     ("mistral", _make_mistral),
+    ("together", _make_together),
+    ("fireworks", _make_fireworks),
 ]
 
 #: Subset of ``ALL_BACKENDS`` that hit a remote API and therefore populate

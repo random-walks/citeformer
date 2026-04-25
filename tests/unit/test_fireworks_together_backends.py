@@ -178,7 +178,8 @@ def test_fireworks_picks_up_env_var_for_api_key(monkeypatch) -> None:  # type: i
 
     monkeypatch.setattr(openai_sdk, "OpenAI", _CapturingOpenAI, raising=True)
     monkeypatch.setenv("FIREWORKS_API_KEY", "fw-test-key")
-    FireworksBackend(model="accounts/fireworks/models/llama-v3p1-8b-instruct")
+    backend = FireworksBackend(model="accounts/fireworks/models/llama-v3p1-8b-instruct")
+    _ = backend.client  # force lazy construction (ADR-014)
     assert captured["api_key"] == "fw-test-key"
     assert captured["base_url"] == FIREWORKS_BASE_URL
 
@@ -272,7 +273,8 @@ def test_together_picks_up_env_var_for_api_key(monkeypatch) -> None:  # type: ig
 
     monkeypatch.setattr(openai_sdk, "OpenAI", _CapturingOpenAI, raising=True)
     monkeypatch.setenv("TOGETHER_API_KEY", "tg-test-key")
-    TogetherBackend(model="meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo")
+    backend = TogetherBackend(model="meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo")
+    _ = backend.client  # force lazy construction (ADR-014)
     assert captured["api_key"] == "tg-test-key"
     assert captured["base_url"] == TOGETHER_BASE_URL
 

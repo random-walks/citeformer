@@ -38,7 +38,7 @@ Requires the ``anthropic`` extra: ``pip install citeformer[anthropic]``.
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 from typing import Any
 
 from citeformer.backends.base import Backend
@@ -72,7 +72,6 @@ class AnthropicBackend(Backend):
     """
 
     model: str
-    client: Any
     last_usage: TokenUsage | None
     last_rich_citations: list[dict[str, Any]]
 
@@ -81,6 +80,7 @@ class AnthropicBackend(Backend):
         model: str = _DEFAULT_MODEL,
         *,
         client: Any | None = None,
+        async_client: Any | None = None,
         **client_kwargs: Any,
     ) -> None:
         """Construct an Anthropic backend.
@@ -91,11 +91,16 @@ class AnthropicBackend(Backend):
             client: Pre-built ``anthropic.Anthropic`` client. If ``None``,
                 one is constructed from the environment (picks up
                 ``ANTHROPIC_API_KEY``).
-            **client_kwargs: Forwarded to ``Anthropic()`` when ``client`` is
-                ``None``.
+            async_client: Pre-built ``anthropic.AsyncAnthropic`` client used
+                by :meth:`agenerate` / :meth:`astream` (ADR-014). When
+                ``None``, one is built lazily from ``client_kwargs`` on the
+                first async call — sync-only callers don't pay the
+                construction cost.
+            **client_kwargs: Forwarded to ``Anthropic()`` /
+                ``AsyncAnthropic()`` when the respective client is ``None``.
         """
         try:
-            from anthropic import Anthropic
+            from anthropic import Anthropic  # noqa: F401  — verifies extra is installed
         except ImportError as e:
             raise ImportError(
                 "AnthropicBackend requires the `anthropic` extra. "
@@ -103,9 +108,44 @@ class AnthropicBackend(Backend):
             ) from e
 
         self.model = model
-        self.client = client if client is not None else Anthropic(**client_kwargs)
+        self._client_kwargs = dict(client_kwargs)
+        self._sync_client_override: Any | None = client
+        self._sync_client_cache: Any | None = None
+        self._async_client_override: Any | None = async_client
+        self._async_client_cache: Any | None = None
         self.last_usage = None
         self.last_rich_citations = []
+
+    @property
+    def client(self) -> Any:
+        """Lazy ``anthropic.Anthropic`` client used by the sync surface.
+
+        Built on first access from ``client_kwargs`` (or returns the
+        constructor-supplied override). Async-only callers never trigger
+        construction.
+        """
+        if self._sync_client_override is not None:
+            return self._sync_client_override
+        if self._sync_client_cache is None:
+            from anthropic import Anthropic
+
+            self._sync_client_cache = Anthropic(**self._client_kwargs)
+        return self._sync_client_cache
+
+    @property
+    def async_client(self) -> Any:
+        """Lazy ``anthropic.AsyncAnthropic`` client used by the async surface.
+
+        Built on first access from the same ``client_kwargs`` the sync client
+        used. Sync-only callers never trigger construction.
+        """
+        if self._async_client_override is not None:
+            return self._async_client_override
+        if self._async_client_cache is None:
+            from anthropic import AsyncAnthropic
+
+            self._async_client_cache = AsyncAnthropic(**self._client_kwargs)
+        return self._async_client_cache
 
     def generate(
         self,
@@ -152,6 +192,75 @@ class AnthropicBackend(Backend):
         text = _flatten_blocks(message.content, marker_style=marker_style, record=record)
         self.last_rich_citations = record
         return text
+
+    async def agenerate(
+        self,
+        prompt: str,
+        sources: list[Source],
+        policy: Policy,
+        **options: Any,
+    ) -> str:
+        """Native-async counterpart of :meth:`generate` (ADR-014).
+
+        Uses ``self.async_client`` (the lazy ``AsyncAnthropic``) so concurrent
+        callers don't tie up executor threads on the SDK's HTTP wait. Same
+        request-shape construction, prompt-caching, ``last_usage`` and
+        ``last_rich_citations`` capture as the sync path — only the client
+        call is awaited.
+        """
+        if len(sources) < 1:
+            raise ValueError("AnthropicBackend requires at least 1 source")
+
+        request_kwargs = self._build_request(prompt, sources, policy, options)
+        marker_style = options.get("marker_style", MarkerStyle.BRACKET)
+
+        message: Any = await self.async_client.messages.create(**request_kwargs)
+        self.last_usage = _extract_usage(getattr(message, "usage", None))
+        record: list[dict[str, Any]] = []
+        text = _flatten_blocks(message.content, marker_style=marker_style, record=record)
+        self.last_rich_citations = record
+        return text
+
+    async def astream(
+        self,
+        prompt: str,
+        sources: list[Source],
+        policy: Policy,
+        **options: Any,
+    ) -> AsyncIterator[str]:
+        """Native-async block-level streaming via ``AsyncAnthropic.messages.stream``.
+
+        Mirrors :meth:`stream` exactly but uses the SDK's async stream
+        context manager (``async with ...`` + ``async for event in stream``
+        + ``await stream.get_final_message()``). One yielded chunk per
+        completed text block, with citation markers attached.
+
+        Falls back to a single-chunk yield via :meth:`agenerate` when the
+        async client doesn't expose ``stream`` (test stand-ins that only
+        mock ``messages.create``).
+        """
+        if len(sources) < 1:
+            raise ValueError("AnthropicBackend requires at least 1 source")
+
+        marker_style = options.get("marker_style", MarkerStyle.BRACKET)
+        request_kwargs = self._build_request(prompt, sources, policy, options)
+
+        stream_method = getattr(self.async_client.messages, "stream", None)
+        if stream_method is None:
+            # Old SDK or a fake async client that only mocks `create` —
+            # fall back to a single-chunk yield via agenerate.
+            yield await self.agenerate(prompt=prompt, sources=sources, policy=policy, **options)
+            return
+
+        record: list[dict[str, Any]] = []
+        async with stream_method(**request_kwargs) as stream:
+            async for block in _aiter_completed_blocks(stream):
+                rendered = _render_block(block, marker_style=marker_style, record=record)
+                if rendered:
+                    yield rendered + " "
+            final_message = await stream.get_final_message()
+        self.last_usage = _extract_usage(getattr(final_message, "usage", None))
+        self.last_rich_citations = record
 
     def stream(
         self,
@@ -338,19 +447,44 @@ def _iter_completed_blocks(stream: Any) -> Iterator[Any]:
     we try the common ones in order.
     """
     for event in stream:
-        event_type = getattr(event, "type", None) or (
-            event.get("type") if isinstance(event, dict) else None
-        )
-        if event_type != "content_block_stop":
-            continue
-        block: Any = (
-            getattr(event, "content_block", None)
-            or getattr(event, "block", None)
-            or (event.get("content_block") if isinstance(event, dict) else None)
-            or (event.get("block") if isinstance(event, dict) else None)
-        )
+        block = _block_from_event(event)
         if block is not None:
             yield block
+
+
+async def _aiter_completed_blocks(stream: Any) -> AsyncIterator[Any]:
+    """Async counterpart of :func:`_iter_completed_blocks`.
+
+    Walks the ``AsyncAnthropic`` stream's event sequence with ``async for``
+    and yields the same per-block payload shape. Kept as a separate helper
+    (rather than parameterising) because async generators can't be sync
+    generators, and the iteration syntax is the only meaningful difference
+    between the two.
+    """
+    async for event in stream:
+        block = _block_from_event(event)
+        if block is not None:
+            yield block
+
+
+def _block_from_event(event: Any) -> Any:
+    """Extract a ``content_block`` payload from one streaming event.
+
+    Returns ``None`` for any event other than ``content_block_stop``,
+    which is the only event the orchestrator-facing stream cares about
+    (citation events for a block always land before its ``stop`` event).
+    """
+    event_type = getattr(event, "type", None) or (
+        event.get("type") if isinstance(event, dict) else None
+    )
+    if event_type != "content_block_stop":
+        return None
+    return (
+        getattr(event, "content_block", None)
+        or getattr(event, "block", None)
+        or (event.get("content_block") if isinstance(event, dict) else None)
+        or (event.get("block") if isinstance(event, dict) else None)
+    )
 
 
 def _render_block(

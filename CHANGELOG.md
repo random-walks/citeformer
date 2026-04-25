@@ -6,6 +6,57 @@ Versioning policy: **patch bumps are cheap**. See [docs/development/releasing.md
 
 ## [Unreleased]
 
+### Added — async surface, ADRs 014-017
+
+**Async surface end-to-end** (ADR-014). `Backend` ABC gains `agenerate()`
+and `astream()` with `asyncio.to_thread` defaults — every existing backend
+works in async code unchanged. `Citeformer` orchestrator gains
+`agenerate()` (async, returns `GenerationResult`) and `astream()` (sync
+call returning a new `AsyncStreamingResult` with `__aiter__` /
+`__anext__` / `await stream.finalize()` symmetry to the existing
+`StreamingResult`).
+
+Native async overrides land for the two most-used API backends:
+`OpenAIBackend.agenerate` / `astream` use `AsyncOpenAI` (cascades to
+`OpenRouterBackend` / `FireworksBackend` / `TogetherBackend` since they
+subclass), and `AnthropicBackend.agenerate` / `astream` use
+`AsyncAnthropic` plus the SDK's async streaming context manager
+(per-block `content_block_stop` events with `await
+stream.get_final_message()`). Both backends switched to **lazy property
+access for the sync + async clients** — sync-only callers don't pay the
+`AsyncOpenAI()` / `AsyncAnthropic()` construction cost; async-only
+callers don't pay the sync one. Out-of-tree backends written against
+the v0.1 `Backend` ABC keep working untouched (the new methods have
+concrete defaults, no abstract requirement).
+
+`AsyncStreamingResult` is exported from the top-level `citeformer`
+package alongside `StreamingResult`. 25 new unit tests cover the ABC
+defaults, orchestrator path, native overrides, lazy-client construction,
+and async-streaming `last_rich_citations` propagation — all green via
+`pytest-asyncio`'s `auto` mode (already configured).
+
+`GeminiBackend` and `MistralBackend` use the `to_thread` default for now
+— their SDKs both support async natively, but the default is correct,
+just not as concurrency-efficient. Flagged as a follow-up. Local
+backends (`HFBackend` / `VLLMBackend` / `LlamaCppBackend`) keep the
+default forever — async is for I/O concurrency, not GPU concurrency.
+
+**ADRs 015-017 lock in three deferral decisions:**
+
+- **ADR-015** — Bedrock + Vertex AI backends deferred. Both proxy to
+  providers we already support directly (Anthropic, Gemini), both have
+  non-trivial enterprise auth, and existing backends already accept
+  Bedrock/Vertex clients via `client=…` injection. Documented signals
+  that would justify the work.
+- **ADR-016** — fine-grain windowing in `verify()` deferred until
+  calibration data exists. The current `cited_text`-as-premise change
+  (ADR-013) is itself uncalibrated; adding window hyperparameters
+  before measurement is a tuning knob in search of a problem.
+- **ADR-017** — provider-specific cost-table inference not planned.
+  Pricing changes constantly, the data is one multiply away from the
+  token counts we expose, and OpenRouter solved it correctly by
+  reporting cost server-side. We surface tokens; consumers price.
+
 ### Added — Fireworks + Together backends, verify() against cited_text
 
 **`FireworksBackend`** (extra `fireworks`, re-uses `openai>=1.40` SDK).

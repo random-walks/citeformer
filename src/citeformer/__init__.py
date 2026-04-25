@@ -20,7 +20,12 @@ from __future__ import annotations
 
 from citeformer._version import __version__
 from citeformer.backends import Backend, MockBackend
-from citeformer.citeformer import Citeformer, StreamingResult, deduplicate_adjacent_cites
+from citeformer.citeformer import (
+    AsyncStreamingResult,
+    Citeformer,
+    StreamingResult,
+    deduplicate_adjacent_cites,
+)
 from citeformer.core import (
     Citation,
     GenerationResult,
@@ -49,6 +54,7 @@ from citeformer.render import bundled_style_names, render_references
 from citeformer.verify import CitationSupport, VerificationReport
 
 __all__ = [
+    "AsyncStreamingResult",
     "Backend",
     "CSLValidationError",
     "Citation",

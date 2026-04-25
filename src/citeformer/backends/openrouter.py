@@ -106,6 +106,7 @@ class OpenRouterBackend(OpenAIBackend):
         model: str = _DEFAULT_MODEL,
         *,
         client: Any | None = None,
+        async_client: Any | None = None,
         api_key: str | None = None,
         base_url: str = DEFAULT_BASE_URL,
         app_name: str | None = None,
@@ -162,7 +163,7 @@ class OpenRouterBackend(OpenAIBackend):
             if merged_headers:
                 client_kwargs["default_headers"] = merged_headers
 
-        super().__init__(model=model, client=client, **client_kwargs)
+        super().__init__(model=model, client=client, async_client=async_client, **client_kwargs)
         self.require_provider_parameters = require_provider_parameters
         self.fallback_models = list(fallback_models) if fallback_models else None
 

@@ -55,6 +55,7 @@ class TogetherBackend(OpenAIBackend):
         model: str = _DEFAULT_MODEL,
         *,
         client: Any | None = None,
+        async_client: Any | None = None,
         api_key: str | None = None,
         base_url: str = DEFAULT_BASE_URL,
         **client_kwargs: Any,
@@ -87,4 +88,4 @@ class TogetherBackend(OpenAIBackend):
             if resolved_api_key is not None:
                 client_kwargs["api_key"] = resolved_api_key
 
-        super().__init__(model=model, client=client, **client_kwargs)
+        super().__init__(model=model, client=client, async_client=async_client, **client_kwargs)

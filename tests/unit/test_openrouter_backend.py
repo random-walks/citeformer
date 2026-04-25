@@ -206,12 +206,15 @@ def test_openrouter_attaches_app_headers_when_provided(monkeypatch) -> None:  # 
     monkeypatch.setattr(openai_sdk, "OpenAI", _CapturingOpenAI, raising=True)
     # Keep the backend's `import os` from finding a real key.
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
-    OpenRouterBackend(
+    backend = OpenRouterBackend(
         model="anthropic/claude-sonnet-4.6",
         api_key="sk-test",
         app_name="citeformer-tests",
         app_url="https://example.invalid/citeformer",
     )
+    # Sync client is lazy (ADR-014) — accessing the property triggers
+    # construction with the captured kwargs.
+    _ = backend.client
     headers = captured["default_headers"]
     assert headers["X-Title"] == "citeformer-tests"
     assert headers["HTTP-Referer"] == "https://example.invalid/citeformer"
@@ -241,7 +244,8 @@ def test_openrouter_falls_back_to_env_var_for_api_key(monkeypatch) -> None:  # t
 
     monkeypatch.setattr(openai_sdk, "OpenAI", _CapturingOpenAI, raising=True)
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-env-test")
-    OpenRouterBackend(model="openai/gpt-4o")
+    backend = OpenRouterBackend(model="openai/gpt-4o")
+    _ = backend.client  # force lazy construction (ADR-014)
     assert captured["api_key"] == "sk-env-test"
 
 

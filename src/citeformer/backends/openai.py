@@ -29,7 +29,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 from typing import Any
 
 from citeformer.backends.base import Backend
@@ -69,7 +69,6 @@ class OpenAIBackend(Backend):
     """
 
     model: str
-    client: Any
     last_usage: TokenUsage | None
 
     def __init__(
@@ -77,6 +76,7 @@ class OpenAIBackend(Backend):
         model: str = _DEFAULT_MODEL,
         *,
         client: Any | None = None,
+        async_client: Any | None = None,
         **client_kwargs: Any,
     ) -> None:
         """Create an OpenAI backend.
@@ -84,15 +84,23 @@ class OpenAIBackend(Backend):
         Args:
             model: Model id supporting strict JSON schema (``gpt-4o-mini``
                 or later).
-            client: Pre-built ``openai.OpenAI`` client. If ``None``, one is
-                constructed from the environment (picks up ``OPENAI_API_KEY``).
-            **client_kwargs: Forwarded to ``openai.OpenAI()`` when ``client``
-                is ``None`` (``base_url``, ``api_key``, ``organization``,
-                ``timeout`` …). Useful for pointing at a compatible endpoint
-                (Azure, local LiteLLM, Together, Anyscale).
+            client: Pre-built ``openai.OpenAI`` client used by :meth:`generate`
+                / :meth:`stream`. If ``None``, one is built lazily from
+                ``client_kwargs`` on the first sync call (picks up
+                ``OPENAI_API_KEY`` from env then).
+            async_client: Pre-built ``openai.AsyncOpenAI`` client used by
+                :meth:`agenerate` / :meth:`astream` (ADR-014). If ``None``,
+                one is built lazily from ``client_kwargs`` on the first async
+                call. Sync-only callers don't pay the async construction
+                cost; async-only callers don't pay the sync one.
+            **client_kwargs: Forwarded to ``openai.OpenAI()`` /
+                ``openai.AsyncOpenAI()`` when the respective client is ``None``
+                (``base_url``, ``api_key``, ``organization``, ``timeout``, …).
+                Useful for pointing at a compatible endpoint (Azure, local
+                LiteLLM, Together, Anyscale).
         """
         try:
-            from openai import OpenAI
+            from openai import OpenAI  # noqa: F401  — verifies the extra is installed
         except ImportError as e:
             raise ImportError(
                 "OpenAIBackend requires the `openai` extra. "
@@ -100,8 +108,46 @@ class OpenAIBackend(Backend):
             ) from e
 
         self.model = model
-        self.client = client if client is not None else OpenAI(**client_kwargs)
+        self._client_kwargs = dict(client_kwargs)
+        self._sync_client_override: Any | None = client
+        self._sync_client_cache: Any | None = None
+        self._async_client_override: Any | None = async_client
+        self._async_client_cache: Any | None = None
         self.last_usage = None
+
+    @property
+    def client(self) -> Any:
+        """Lazy ``openai.OpenAI`` client used by the sync surface.
+
+        Built on first access from ``client_kwargs`` (or returns the
+        constructor-supplied override). Async-only callers never trigger
+        construction — important for tests that inject only an
+        ``async_client`` without setting ``OPENAI_API_KEY``.
+        """
+        if self._sync_client_override is not None:
+            return self._sync_client_override
+        if self._sync_client_cache is None:
+            from openai import OpenAI
+
+            self._sync_client_cache = OpenAI(**self._client_kwargs)
+        return self._sync_client_cache
+
+    @property
+    def async_client(self) -> Any:
+        """Lazy ``openai.AsyncOpenAI`` client used by the async surface.
+
+        Built on first access from the same ``client_kwargs`` the sync client
+        uses (so a backend pointing at ``base_url=...`` for OpenRouter /
+        Fireworks / Together cascades correctly to the async client too).
+        Sync-only callers never trigger construction.
+        """
+        if self._async_client_override is not None:
+            return self._async_client_override
+        if self._async_client_cache is None:
+            from openai import AsyncOpenAI
+
+            self._async_client_cache = AsyncOpenAI(**self._client_kwargs)
+        return self._async_client_cache
 
     def generate(
         self,
@@ -160,6 +206,56 @@ class OpenAIBackend(Backend):
         # Subclasses (OpenRouter) inject extra fields via _augment_create_kwargs.
         self._augment_create_kwargs(create_kwargs, options=options)
         completion: Any = self.client.chat.completions.create(**create_kwargs)
+        self.last_usage = _extract_openai_usage(getattr(completion, "usage", None))
+        raw = completion.choices[0].message.content
+        return self._decode_response_text(raw, marker_style=marker_style)
+
+    async def agenerate(
+        self,
+        prompt: str,
+        sources: list[Source],
+        policy: Policy,
+        **options: Any,
+    ) -> str:
+        """Native-async counterpart of :meth:`generate` (ADR-014).
+
+        Uses ``self.async_client`` (the lazy ``AsyncOpenAI``) so concurrent
+        callers don't tie up executor threads on the SDK's HTTP wait. The
+        request shape, schema construction, segment flattening, and
+        ``last_usage`` extraction are identical to the sync path — only the
+        client call is awaited. Subclasses (OpenRouter / Fireworks /
+        Together) inherit this unchanged; their ``_build_response_format``
+        / ``_augment_create_kwargs`` hooks fire from here just like in
+        the sync path.
+        """
+        if len(sources) < 1:
+            raise ValueError("OpenAIBackend requires at least 1 source")
+
+        max_tokens = int(options.get("max_tokens", _DEFAULT_MAX_TOKENS))
+        temperature = float(options.get("temperature", _DEFAULT_TEMPERATURE))
+        marker_style = options.get("marker_style", MarkerStyle.BRACKET)
+
+        messages = self._build_messages(
+            prompt=prompt,
+            sources=sources,
+            policy=policy,
+            system_prompt=options.get("system_prompt"),
+        )
+        response_format = self._build_response_format(
+            n_sources=len(sources),
+            policy=policy,
+            marker_style=marker_style,
+        )
+
+        create_kwargs: dict[str, Any] = {
+            "model": self.model,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "response_format": response_format,
+        }
+        self._augment_create_kwargs(create_kwargs, options=options)
+        completion: Any = await self.async_client.chat.completions.create(**create_kwargs)
         self.last_usage = _extract_openai_usage(getattr(completion, "usage", None))
         raw = completion.choices[0].message.content
         return self._decode_response_text(raw, marker_style=marker_style)
@@ -235,16 +331,25 @@ class OpenAIBackend(Backend):
         still see multiple chunks.
         """
         text = self.generate(prompt=prompt, sources=sources, policy=policy, **options)
-        # Split on sentence boundaries so downstream chunk consumers see
-        # more than one piece. Preserves trailing whitespace on each chunk.
-        buf: list[str] = []
-        for char in text:
-            buf.append(char)
-            if char in ".!?" and buf:
-                yield "".join(buf) + " "
-                buf = []
-        if buf:
-            yield "".join(buf)
+        yield from _chunk_on_sentences(text)
+
+    async def astream(
+        self,
+        prompt: str,
+        sources: list[Source],
+        policy: Policy,
+        **options: Any,
+    ) -> AsyncIterator[str]:
+        """Native-async counterpart of :meth:`stream` (ADR-014).
+
+        Awaits :meth:`agenerate` (uses the async client) and then yields the
+        same sentence-chunked output the sync :meth:`stream` produces.
+        Cascades to OpenRouter / Fireworks / Together since they don't
+        override ``stream`` either.
+        """
+        text = await self.agenerate(prompt=prompt, sources=sources, policy=policy, **options)
+        for chunk in _chunk_on_sentences(text):
+            yield chunk
 
     @staticmethod
     def _build_messages(
@@ -377,6 +482,23 @@ def _flatten_segments(raw_json: str, *, marker_style: MarkerStyle) -> str:
             joined = f"{text} {marker}".rstrip() if marker else text
         parts.append(joined)
     return " ".join(parts)
+
+
+def _chunk_on_sentences(text: str) -> Iterator[str]:
+    """Yield ``text`` in sentence-boundary chunks for streaming UX.
+
+    Shared between :meth:`OpenAIBackend.stream` and
+    :meth:`OpenAIBackend.astream` so the two paths produce byte-for-byte
+    identical chunk sequences.
+    """
+    buf: list[str] = []
+    for char in text:
+        buf.append(char)
+        if char in ".!?" and buf:
+            yield "".join(buf) + " "
+            buf = []
+    if buf:
+        yield "".join(buf)
 
 
 def _delimiters_for(

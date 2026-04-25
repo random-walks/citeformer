@@ -583,3 +583,227 @@ def test_anthropic_backend_streaming_falls_back_when_sdk_lacks_stream(
     backend = AnthropicBackend(model="claude-sonnet-4-6", client=fake)
     chunks = list(backend.stream(prompt="hi", sources=sources, policy=Policy.AUTO))
     assert any("[1]" in c for c in chunks)
+
+
+# ----- Anthropic rich citation metadata (cited_text / source_span / title) -
+
+
+def test_anthropic_backend_captures_rich_citation_metadata(
+    sources: list[Source],
+) -> None:
+    """The Citations API returns cited_text + char offsets + document_title
+    on every citation. The backend must capture them onto
+    ``last_rich_citations`` so the orchestrator can populate the new
+    Citation fields (ADR-013)."""
+    blocks = [
+        SimpleNamespace(
+            type="text",
+            text="Alpha claim.",
+            citations=[
+                SimpleNamespace(
+                    document_index=0,
+                    cited_text="Once upon a midnight dreary",
+                    start_char_index=0,
+                    end_char_index=27,
+                    document_title="The Raven",
+                )
+            ],
+        ),
+        SimpleNamespace(
+            type="text",
+            text="Beta claim.",
+            citations=[
+                SimpleNamespace(
+                    document_index=2,
+                    cited_text="Call me Ishmael.",
+                    start_char_index=0,
+                    end_char_index=16,
+                    document_title="Moby-Dick",
+                )
+            ],
+        ),
+    ]
+    fake = _FakeAnthropic(blocks)
+    backend = AnthropicBackend(model="claude-sonnet-4-6", client=fake)
+    backend.generate(prompt="hi", sources=sources, policy=Policy.AUTO)
+    rich = backend.last_rich_citations
+    assert len(rich) == 2
+    assert rich[0]["source_id"] == 1
+    assert rich[0]["cited_text"] == "Once upon a midnight dreary"
+    assert rich[0]["source_span"] == (0, 27)
+    assert rich[0]["document_title"] == "The Raven"
+    assert rich[1]["source_id"] == 3
+    assert rich[1]["cited_text"] == "Call me Ishmael."
+    assert rich[1]["source_span"] == (0, 16)
+
+
+def test_anthropic_backend_handles_dict_shaped_citations_with_rich_fields(
+    sources: list[Source],
+) -> None:
+    """Dict-shaped serialisations must surface the rich fields just like
+    object-shaped ones — the SDK swaps shapes between minor versions."""
+    blocks = [
+        {
+            "type": "text",
+            "text": "Claim.",
+            "citations": [
+                {
+                    "document_index": 1,
+                    "cited_text": "important quote",
+                    "start_char_index": 5,
+                    "end_char_index": 20,
+                    "document_title": "Source 2",
+                }
+            ],
+        },
+    ]
+    fake = _FakeAnthropic(blocks)
+    backend = AnthropicBackend(model="claude-sonnet-4-6", client=fake)
+    backend.generate(prompt="hi", sources=sources, policy=Policy.AUTO)
+    rich = backend.last_rich_citations
+    assert len(rich) == 1
+    assert rich[0]["cited_text"] == "important quote"
+    assert rich[0]["source_span"] == (5, 20)
+
+
+def test_anthropic_backend_rich_metadata_aligns_with_marker_order(
+    sources: list[Source],
+) -> None:
+    """The rich list must be in the same left-to-right order the regex
+    parser will see the markers — that's how the orchestrator zips."""
+    blocks = [
+        SimpleNamespace(
+            type="text",
+            text="Claim.",
+            citations=[
+                SimpleNamespace(
+                    document_index=2,  # source 3
+                    cited_text="text3",
+                    start_char_index=0,
+                    end_char_index=5,
+                    document_title="Source 3",
+                ),
+                SimpleNamespace(
+                    document_index=0,  # source 1
+                    cited_text="text1",
+                    start_char_index=0,
+                    end_char_index=5,
+                    document_title="Source 1",
+                ),
+            ],
+        ),
+    ]
+    fake = _FakeAnthropic(blocks)
+    backend = AnthropicBackend(model="claude-sonnet-4-6", client=fake)
+    text = backend.generate(prompt="hi", sources=sources, policy=Policy.AUTO)
+    # Marker order in the text matches citation iteration order from the SDK.
+    idx_3 = text.index("[3]")
+    idx_1 = text.index("[1]")
+    assert idx_3 < idx_1
+    rich = backend.last_rich_citations
+    assert rich[0]["source_id"] == 3
+    assert rich[1]["source_id"] == 1
+
+
+def test_orchestrator_merges_rich_metadata_onto_citations(
+    sources: list[Source],
+) -> None:
+    """End-to-end through the orchestrator: ``GenerationResult.citations``
+    carries the rich fields when the backend exposes them."""
+    from citeformer import Citeformer
+
+    blocks = [
+        SimpleNamespace(
+            type="text",
+            text="Alpha claim.",
+            citations=[
+                SimpleNamespace(
+                    document_index=0,
+                    cited_text="Once upon a midnight dreary",
+                    start_char_index=0,
+                    end_char_index=27,
+                    document_title="The Raven",
+                )
+            ],
+        ),
+    ]
+    fake = _FakeAnthropic(blocks)
+    backend = AnthropicBackend(model="claude-sonnet-4-6", client=fake)
+    cf = Citeformer(backend=backend, citation_policy=Policy.AUTO)
+    result = cf.generate(prompt="hi", sources=sources)
+    assert len(result.citations) == 1
+    citation = result.citations[0]
+    assert citation.source_id == 1
+    assert citation.cited_text == "Once upon a midnight dreary"
+    assert citation.source_span == (0, 27)
+    assert citation.document_title == "The Raven"
+
+
+def test_orchestrator_leaves_rich_fields_none_for_non_anthropic_backends(
+    sources: list[Source],
+) -> None:
+    """OpenAI / Mistral / Gemini / Mock don't expose
+    ``last_rich_citations`` — Citation objects must come back with the
+    new fields = None, not crash."""
+    from citeformer import Citeformer
+    from citeformer.backends import MockBackend
+
+    cf = Citeformer(backend=MockBackend(), citation_policy=Policy.AUTO)
+    result = cf.generate(prompt="hi", sources=sources)
+    assert result.citations  # mock fallback emits at least one
+    for c in result.citations:
+        assert c.cited_text is None
+        assert c.source_span is None
+        assert c.document_title is None
+
+
+def test_orchestrator_falls_through_when_rich_list_misaligned(
+    sources: list[Source],
+) -> None:
+    """If the rich list length doesn't match the marker count (provider
+    bug, dedup edge case, future schema change), we keep all the markers
+    but leave the rich fields ``None`` — misaligned data is worse than
+    no data."""
+    from citeformer import Citeformer
+
+    # Block emits 2 markers ([1] and [3]) but we'll inject only 1 rich entry.
+    blocks = [
+        SimpleNamespace(
+            type="text",
+            text="Claim.",
+            citations=[
+                SimpleNamespace(
+                    document_index=0,
+                    cited_text="x",
+                    start_char_index=0,
+                    end_char_index=1,
+                    document_title="t",
+                ),
+                SimpleNamespace(
+                    document_index=2,
+                    cited_text="y",
+                    start_char_index=0,
+                    end_char_index=1,
+                    document_title="t",
+                ),
+            ],
+        ),
+    ]
+    fake = _FakeAnthropic(blocks)
+    backend = AnthropicBackend(model="claude-sonnet-4-6", client=fake)
+    cf = Citeformer(backend=backend, citation_policy=Policy.AUTO)
+    result = cf.generate(prompt="hi", sources=sources)
+    # Tamper with the side-channel between the backend call and the
+    # orchestrator's parse — simulates a length mismatch.
+    backend.last_rich_citations = backend.last_rich_citations[:1]
+    # Re-run the orchestrator's parse path against the same text so the
+    # mismatch matters.
+    from citeformer.citeformer import Citeformer as Orch
+
+    parsed = Orch._parse_citations(
+        result.text,
+        marker_style=cf.marker_style,
+        rich=backend.last_rich_citations,
+    )
+    assert len(parsed) == 2  # both markers preserved
+    assert all(c.cited_text is None for c in parsed)  # but rich fields dropped

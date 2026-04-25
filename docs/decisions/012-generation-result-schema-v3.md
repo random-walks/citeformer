@@ -21,8 +21,10 @@ backends leave it `None` (they don't bill per token).
 
 1. Introduce `citeformer.core.TokenUsage` — a frozen pydantic model with
    `input_tokens`, `output_tokens`, optional `cache_creation_input_tokens`,
-   `cache_read_input_tokens`, and `cost_usd` fields. Top-level export
-   alongside the other types.
+   `cache_read_input_tokens`, and `cost_credits` fields. Top-level export
+   alongside the other types. (`cost_credits`, not `cost_usd`, because
+   OpenRouter — the only provider exposing per-call cost today — reports
+   in **credits**, not dollars.)
 2. Add `GenerationResult.usage: TokenUsage | None = None`.
 3. Bump `GenerationResult.schema_version` from **2 → 3**.
 4. Each API backend exposes a `last_usage: TokenUsage | None` instance
@@ -50,7 +52,7 @@ people have written against the v0.1 ABC keep working untouched.
   - `AnthropicBackend` — from `message.usage.{input,output,cache_creation_input,cache_read_input}_tokens`.
   - `GeminiBackend` — from `response.usage_metadata.{prompt,candidates}_token_count`.
   - `MistralBackend` — from `response.usage.{prompt,completion}_tokens`.
-  - `OpenRouterBackend` — same as OpenAI plus `usage.cost` (USD).
+  - `OpenRouterBackend` — same as OpenAI plus `usage.cost` (OpenRouter credits, surfaced on `cost_credits`).
 - Local backends (`HFBackend`, `VLLMBackend`, `LlamaCppBackend`,
   `MockBackend`) do not set `last_usage`; the orchestrator surfaces
   `usage = None` for those.

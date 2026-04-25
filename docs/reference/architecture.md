@@ -70,4 +70,4 @@ The bibliography pipeline is unchanged regardless: references are rendered deter
 
 ### Token usage + cost
 
-API-backend `GenerationResult` carries a `usage: TokenUsage | None` field with `input_tokens`, `output_tokens`, optional `cache_creation_input_tokens` / `cache_read_input_tokens` (Anthropic prompt-caching), and `cost_usd` (OpenRouter exposes per-call USD cost directly; other providers leave it `None` and consumers price tokens themselves). Local backends leave `usage = None` — token accounting is meaningless when you control the runtime.
+API-backend `GenerationResult` carries a `usage: TokenUsage | None` field with `input_tokens`, `output_tokens`, optional `cache_creation_input_tokens` / `cache_read_input_tokens` (Anthropic prompt-caching), and `cost_credits` (OpenRouter exposes a per-call cost in OR credits — 1 credit ≈ $1 USD by default but the unit is credits, not dollars; other providers leave it `None` and consumers price tokens themselves). Local backends leave `usage = None` — token accounting is meaningless when you control the runtime.

@@ -1,12 +1,18 @@
 citations:
-- entailment_score: null
+- cited_text: null
+  document_title: null
+  entailment_score: null
   source_id: 1
+  source_span: null
   span:
   - 31
   - 34
   verified: false
-- entailment_score: 0.88
+- cited_text: null
+  document_title: null
+  entailment_score: 0.88
   source_id: 2
+  source_span: null
   span:
   - 66
   - 69

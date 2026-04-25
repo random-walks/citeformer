@@ -60,11 +60,21 @@ class AnthropicBackend(Backend):
         last_usage: Token-usage payload from the most recent ``generate()``
             / ``stream()`` call. ``None`` before the first call. The
             orchestrator threads this onto :attr:`GenerationResult.usage`.
+        last_rich_citations: One dict per marker emitted in the most
+            recent call, in left-to-right output order. Each carries the
+            ``source_id``, ``cited_text`` (the exact span Claude cited
+            from), ``source_span`` (offsets into the source content), and
+            ``document_title`` returned by the Citations API. The
+            orchestrator zips this with the parsed marker list and
+            populates :attr:`Citation.cited_text` / ``source_span`` /
+            ``document_title``. Empty list when the call emitted no
+            citations.
     """
 
     model: str
     client: Any
     last_usage: TokenUsage | None
+    last_rich_citations: list[dict[str, Any]]
 
     def __init__(
         self,
@@ -95,6 +105,7 @@ class AnthropicBackend(Backend):
         self.model = model
         self.client = client if client is not None else Anthropic(**client_kwargs)
         self.last_usage = None
+        self.last_rich_citations = []
 
     def generate(
         self,
@@ -137,7 +148,10 @@ class AnthropicBackend(Backend):
 
         message: Any = self.client.messages.create(**request_kwargs)
         self.last_usage = _extract_usage(getattr(message, "usage", None))
-        return _flatten_blocks(message.content, marker_style=marker_style)
+        record: list[dict[str, Any]] = []
+        text = _flatten_blocks(message.content, marker_style=marker_style, record=record)
+        self.last_rich_citations = record
+        return text
 
     def stream(
         self,
@@ -183,13 +197,15 @@ class AnthropicBackend(Backend):
             yield self.generate(prompt=prompt, sources=sources, policy=policy, **options)
             return
 
+        record: list[dict[str, Any]] = []
         with stream_method(**request_kwargs) as stream:
             for block in _iter_completed_blocks(stream):
-                rendered = _render_block(block, marker_style=marker_style)
+                rendered = _render_block(block, marker_style=marker_style, record=record)
                 if rendered:
                     yield rendered + " "
             final_message = stream.get_final_message()
         self.last_usage = _extract_usage(getattr(final_message, "usage", None))
+        self.last_rich_citations = record
 
     def _build_request(
         self,
@@ -339,12 +355,22 @@ def _iter_completed_blocks(stream: Any) -> Iterator[Any]:
             yield block
 
 
-def _render_block(block: Any, *, marker_style: MarkerStyle) -> str:
+def _render_block(
+    block: Any,
+    *,
+    marker_style: MarkerStyle,
+    record: list[dict[str, Any]] | None = None,
+) -> str:
     """Render one content block to text + trailing markers (or just text)."""
-    return _flatten_blocks([block], marker_style=marker_style)
+    return _flatten_blocks([block], marker_style=marker_style, record=record)
 
 
-def _flatten_blocks(content: Any, *, marker_style: MarkerStyle) -> str:
+def _flatten_blocks(
+    content: Any,
+    *,
+    marker_style: MarkerStyle,
+    record: list[dict[str, Any]] | None = None,
+) -> str:
     """Fold Anthropic's block list back into plain text with inline markers.
 
     The Messages API returns ``content`` as a list of blocks. Text blocks
@@ -353,6 +379,14 @@ def _flatten_blocks(content: Any, *, marker_style: MarkerStyle) -> str:
     documents). We emit a marker (``[N]`` / ``(N)`` / ``{N}`` / ``^N`` per
     marker_style) for each citation at the *end* of the referenced text
     block, remapping document_index → 1-indexed cite id.
+
+    When ``record`` is supplied, one dict is appended for every marker
+    actually emitted (left-to-right, matching the order the regex parser
+    will see them) carrying ``source_id``, ``cited_text``,
+    ``source_span``, and ``document_title`` from the citation event. The
+    Anthropic backend's ``last_rich_citations`` is wired through this
+    side-channel; the orchestrator zips it with the parsed marker list
+    to populate the rich :class:`Citation` fields.
     """
     open_char, close_char = _delimiters_for(marker_style)
     parts: list[str] = []
@@ -373,17 +407,30 @@ def _flatten_blocks(content: Any, *, marker_style: MarkerStyle) -> str:
         seen: set[int] = set()
         marker_suffix: list[str] = []
         for cite in citations:
-            doc_index = (
-                getattr(cite, "document_index", None)
-                if not isinstance(cite, dict)
-                else cite.get("document_index")
-            )
+            doc_index = _attr_or_key(cite, "document_index")
             if doc_index is None:
                 continue
             cid = int(doc_index) + 1  # Anthropic is 0-indexed; we're 1-indexed
-            if cid not in seen:
-                seen.add(cid)
-                marker_suffix.append(f"{open_char}{cid}{close_char}")
+            if cid in seen:
+                continue
+            seen.add(cid)
+            marker_suffix.append(f"{open_char}{cid}{close_char}")
+            if record is not None:
+                start = _attr_or_key(cite, "start_char_index")
+                end = _attr_or_key(cite, "end_char_index")
+                source_span = (
+                    (int(start), int(end))
+                    if start is not None and end is not None
+                    else None
+                )
+                record.append(
+                    {
+                        "source_id": cid,
+                        "cited_text": _attr_or_key(cite, "cited_text"),
+                        "source_span": source_span,
+                        "document_title": _attr_or_key(cite, "document_title"),
+                    }
+                )
         joined = text.rstrip()
         if marker_suffix:
             suffix = " ".join(marker_suffix)
@@ -395,6 +442,18 @@ def _flatten_blocks(content: Any, *, marker_style: MarkerStyle) -> str:
         else:
             parts.append(joined)
     return " ".join(parts).strip()
+
+
+def _attr_or_key(obj: Any, name: str) -> Any:
+    """Read ``name`` off either an object (attribute) or a dict (key).
+
+    Anthropic's SDK returns typed objects in production; some
+    serialisations and the unit-test fakes use plain dicts. Both shapes
+    must work transparently across the citation-attribute reads.
+    """
+    if isinstance(obj, dict):
+        return obj.get(name)
+    return getattr(obj, name, None)
 
 
 def _delimiters_for(style: MarkerStyle) -> tuple[str, str]:

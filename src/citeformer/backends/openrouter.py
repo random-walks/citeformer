@@ -25,15 +25,24 @@ the OpenRouter-specific knobs:
   themselves with ``HTTP-Referer`` + ``X-Title`` headers. Pass
   ``app_name`` and/or ``app_url`` at construction time and they're
   threaded onto every request.
-- **Cost reporting.** When ``include_cost=True`` (default), OpenRouter
-  attaches a per-call ``cost`` field to the ``usage`` payload — actual
-  dollars charged for that completion. The ``OpenAIBackend`` usage
-  extractor already understands this field and surfaces it on
-  :attr:`GenerationResult.usage.cost_usd`.
+- **Cost reporting.** OpenRouter attaches a per-call ``cost`` to every
+  ``usage`` payload unconditionally — the older ``usage: {include: true}``
+  request flag is `deprecated and a no-op
+  <https://openrouter.ai/docs/guides/administration/usage-accounting>`_.
+  The cost is reported in **OpenRouter credits**, not USD (1 credit ≈
+  1 USD by default but the unit is credits); we surface it on
+  :attr:`GenerationResult.usage.cost_credits` to keep the label honest.
 - **Provider fallback.** Pass ``fallback_models=[...]`` to enable
   OpenRouter's automatic failover when the primary upstream is down or
   rate-limited. Citeformer's strict ``response_format`` requirement
   flows to fallback providers too.
+
+.. note::
+
+   OpenRouter model ids spell the version segment with a dot
+   (``anthropic/claude-sonnet-4.6``), while Anthropic's native API uses
+   a dash (``claude-sonnet-4-6``). They are the same model — easy
+   footgun if you copy-paste between configs.
 
 Tier honesty: when ``require_provider_parameters=True`` (the default),
 this backend is **logit-tier on every modern upstream** that supports
@@ -78,6 +87,8 @@ class OpenRouterBackend(OpenAIBackend):
     Attributes:
         model: OpenRouter model id including the provider prefix
             (``"anthropic/claude-sonnet-4.6"``, ``"openai/gpt-4o"``, …).
+            Note: OR uses a dot in the version (``4.6``) where Anthropic's
+            native API uses a dash (``4-6``).
         client: The underlying ``openai.OpenAI`` client, configured with
             OpenRouter's base URL + the user's app-attribution headers.
         require_provider_parameters: If ``True`` (default), only routes
@@ -85,13 +96,10 @@ class OpenRouterBackend(OpenAIBackend):
             the strict-schema enforcement guarantee end-to-end.
         fallback_models: Ordered list of secondary models OpenRouter may
             failover to. ``None`` disables fallback.
-        include_cost: If ``True`` (default), asks OpenRouter to attach a
-            per-call USD cost to the usage payload.
     """
 
     require_provider_parameters: bool
     fallback_models: list[str] | None
-    include_cost: bool
 
     def __init__(
         self,
@@ -104,7 +112,6 @@ class OpenRouterBackend(OpenAIBackend):
         app_url: str | None = None,
         require_provider_parameters: bool = True,
         fallback_models: list[str] | None = None,
-        include_cost: bool = True,
         **client_kwargs: Any,
     ) -> None:
         """Construct an OpenRouter backend.
@@ -131,9 +138,6 @@ class OpenRouterBackend(OpenAIBackend):
             fallback_models: Optional ordered list of secondary models for
                 automatic failover if the primary upstream errors or rate
                 limits.
-            include_cost: When ``True`` (default), asks OpenRouter to
-                attach the per-call USD cost to ``usage.cost`` so it
-                surfaces on :attr:`GenerationResult.usage.cost_usd`.
             **client_kwargs: Forwarded to ``openai.OpenAI(**kwargs)`` when
                 ``client`` is ``None`` (``timeout``, ``max_retries``, …).
         """
@@ -161,7 +165,6 @@ class OpenRouterBackend(OpenAIBackend):
         super().__init__(model=model, client=client, **client_kwargs)
         self.require_provider_parameters = require_provider_parameters
         self.fallback_models = list(fallback_models) if fallback_models else None
-        self.include_cost = include_cost
 
     def _augment_create_kwargs(
         self,
@@ -171,10 +174,15 @@ class OpenRouterBackend(OpenAIBackend):
     ) -> None:
         """Attach OpenRouter-specific routing fields to the completion call.
 
-        Threads ``provider``, ``models`` (fallback list), and ``usage`` flags
-        through ``extra_body`` — the OpenAI SDK's escape hatch for
-        non-standard request fields. The base ``OpenAIBackend.generate()``
-        calls this hook just before posting the request.
+        Threads ``provider`` and ``models`` (fallback list) through
+        ``extra_body`` — the OpenAI SDK's escape hatch for non-standard
+        request fields. The base ``OpenAIBackend.generate()`` calls this
+        hook just before posting the request.
+
+        Cost is included unconditionally on every response since
+        OpenRouter's structured-output GA — the older ``usage:
+        {include: true}`` knob is deprecated and a no-op, so we don't
+        send it.
         """
         extra_body: dict[str, Any] = dict(options.get("extra_body") or {})
 
@@ -186,9 +194,6 @@ class OpenRouterBackend(OpenAIBackend):
 
         if self.fallback_models and "models" not in extra_body:
             extra_body["models"] = [self.model, *self.fallback_models]
-
-        if self.include_cost and "usage" not in extra_body:
-            extra_body["usage"] = {"include": True}
 
         if extra_body:
             kwargs["extra_body"] = extra_body

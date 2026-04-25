@@ -250,10 +250,13 @@ class TokenUsage(BaseModel):
     against the provider's per-tier price (cache-read tokens are typically
     cheaper than fresh input tokens).
 
-    ``cost_usd`` is filled in by providers that report it directly
-    (OpenRouter exposes ``usage.cost`` per call when you include
-    ``include_cost`` in the request); other backends leave it ``None`` and
-    consumers compute it from token counts themselves.
+    ``cost_credits`` is filled in by providers that report a per-call cost
+    directly. Today only OpenRouter does so via ``usage.cost`` — and the
+    value is denominated in **OpenRouter credits**, not USD (1 credit ≈
+    $1 USD by default but the unit is credits, not dollars; see
+    https://openrouter.ai/docs/guides/administration/usage-accounting).
+    Other backends leave the field ``None`` and consumers compute cost
+    from token counts themselves.
 
     Attributes:
         input_tokens: Prompt + system + document tokens billed as input.
@@ -263,8 +266,8 @@ class TokenUsage(BaseModel):
             ``None`` if the provider doesn't surface caching metadata.
         cache_read_input_tokens: Tokens served from cache (typically billed at
             a discount). ``None`` if the provider doesn't surface caching.
-        cost_usd: Total call cost in USD if the provider returns it directly.
-            ``None`` when the consumer must price tokens themselves.
+        cost_credits: Provider-reported call cost in *provider-native units*
+            (OpenRouter credits today). ``None`` when not exposed.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -287,10 +290,10 @@ class TokenUsage(BaseModel):
         ge=0,
         description="Tokens served from cache.",
     )
-    cost_usd: float | None = Field(
+    cost_credits: float | None = Field(
         default=None,
         ge=0.0,
-        description="Provider-reported call cost in USD; None when not exposed.",
+        description="Provider-reported call cost in provider-native units (OpenRouter credits).",
     )
 
 
@@ -306,6 +309,20 @@ class Citation(BaseModel):
             iff the cited source entails the citing claim with score above threshold.
         entailment_score: Populated by `GenerationResult.verify()`; `None` until then.
             Value in [0, 1] indicating NLI entailment confidence.
+        cited_text: When the backend exposes it (Anthropic Citations API does;
+            others don't), the exact span of source text the model cited. Lets
+            downstream code show "the model cited *this passage*" without
+            recomputing — and lets verifiers run NLI against the cited span
+            instead of the whole source. ``None`` on backends without span-level
+            attribution.
+        source_span: `(start, end)` char offsets inside the source content that
+            ``cited_text`` came from. ``None`` on backends without span-level
+            attribution. Anthropic returns these as ``start_char_index`` /
+            ``end_char_index`` for plain-text documents.
+        document_title: The source's title as the provider saw it. Mostly a
+            convenience mirror of ``Source.metadata['title']`` — populated when
+            the backend echoes a title back (Anthropic's Citations API attaches
+            ``document_title`` to every citation in 2025+ payloads).
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -324,6 +341,18 @@ class Citation(BaseModel):
     entailment_score: float | None = Field(
         default=None,
         description="NLI entailment probability in [0, 1]; set by verify().",
+    )
+    cited_text: str | None = Field(
+        default=None,
+        description="Exact span of source text cited (Anthropic only); None elsewhere.",
+    )
+    source_span: tuple[int, int] | None = Field(
+        default=None,
+        description="(start, end) offsets inside the source for cited_text; None elsewhere.",
+    )
+    document_title: str | None = Field(
+        default=None,
+        description="Document title as echoed by the provider (Anthropic Citations API).",
     )
 
 

@@ -51,17 +51,32 @@ following OpenRouter's recommendation for credit attribution. Env:
 real-streaming events, fallback-when-no-stream, and `last_usage`
 extraction (object + dict shapes + missing).
 
-**`GenerationResult.usage` (schema_version 2 → 3, ADR-012).** New
-optional `usage: TokenUsage | None` field. `TokenUsage` carries
-`input_tokens`, `output_tokens`, optional
-`cache_creation_input_tokens` / `cache_read_input_tokens` (Anthropic
-prompt-caching), and `cost_usd` (OpenRouter exposes per-call USD
-directly). All five API backends (OpenAI, Anthropic, Gemini, Mistral,
-OpenRouter) populate `self.last_usage` at the end of `generate()`;
-the orchestrator threads it onto `GenerationResult.usage` for both
-`generate()` and `stream().finalize()` via `getattr(backend,
-"last_usage", None)` — which keeps the `Backend` ABC unchanged so
-out-of-tree backends written against v0.1 keep working.
+**`GenerationResult.usage` + `Citation` rich attribution (schema_version
+2 → 3; ADR-012 + ADR-013).** New optional `usage: TokenUsage | None`
+field on `GenerationResult`. `TokenUsage` carries `input_tokens`,
+`output_tokens`, optional `cache_creation_input_tokens` /
+`cache_read_input_tokens` (Anthropic prompt-caching), and
+`cost_credits` — the latter denominated in **OpenRouter credits**, not
+USD (1 credit ≈ $1 USD by default, but the unit is credits per
+OpenRouter's [accounting docs](https://openrouter.ai/docs/guides/administration/usage-accounting)).
+All five API backends (OpenAI, Anthropic, Gemini, Mistral, OpenRouter)
+populate `self.last_usage`; the orchestrator threads it onto
+`GenerationResult.usage` for both `generate()` and
+`stream().finalize()` via `getattr(backend, "last_usage", None)` —
+which keeps the `Backend` ABC unchanged so out-of-tree backends
+written against v0.1 keep working.
+
+`Citation` gains three optional fields (ADR-013): `cited_text: str |
+None`, `source_span: tuple[int, int] | None`, `document_title: str |
+None`. Anthropic's Citations API returns this rich metadata on every
+citation; the backend captures it via a `last_rich_citations: list[dict]`
+side-channel, and the orchestrator zips it with the parsed marker
+list inside `_parse_citations`. Other backends (OpenAI / Mistral /
+Gemini / Mock / local) leave the new fields `None` — honest signalling
+that schema-tier providers don't have span-level attribution. Length
+mismatch between the rich list and the marker count falls through
+silently (rich fields stay `None`) — misaligned data is worse than no
+data.
 
 **Cross-backend conformance test** (`tests/unit/test_backend_conformance.py`).
 Parametrised over MockBackend + all five API backends with fake
@@ -85,16 +100,52 @@ honest distinction is **where the masking runs** — in your process
 Architecture doc has the per-provider table. Backend count in prose
 went from "seven" to "eight" with OpenRouter joining.
 
+### Doc-pin verification + correctness fixes
+
+A pre-merge docs check against the live OpenRouter / Anthropic / OpenAI
+/ pydantic docs surfaced two real OpenRouter issues, both fixed:
+
+- **Dropped `extra_body={"usage": {"include": true}}`.** Per
+  OpenRouter's [usage-accounting docs](https://openrouter.ai/docs/guides/administration/usage-accounting),
+  the flag is *deprecated and a no-op* — cost is now returned on every
+  response unconditionally. We were sending a meaningless flag.
+- **Renamed `TokenUsage.cost_usd` → `cost_credits`.** OpenRouter
+  `usage.cost` is denominated in OpenRouter credits, not USD. The old
+  `cost_usd` label was actively misleading; renamed before any release
+  ships. (Costs roughly track 1:1 with USD by default but the unit is
+  the unit.)
+
+Both happened entirely within the unreleased branch — no migration
+needed. CHANGELOG entry above already reflects the renames.
+
+### Env-connectivity smoke (`tests/integration/test_env_connectivity.py`)
+
+Six `@pytest.mark.integration` tests — one per API backend, plus a
+dedicated Anthropic-streaming test. Each issues the smallest possible
+request (1 source, 80 max_tokens), asserts the structural §10.1
+invariant against the live provider, and asserts `backend.last_usage`
+populates with non-zero token counts (live verification of the
+ADR-012 token-accounting contract, not just under fakes). OpenRouter's
+test additionally asserts `cost_credits` lands on the response.
+Each test skips cleanly when the matching env var isn't set. Run with
+`make test-integration` or `pytest -m integration
+tests/integration/test_env_connectivity.py`. Total cost across all 5
+backends per full pass: ~$0.01.
+
 ### Contracts (§10)
 
 - §10.1 grammar shape — unchanged.
 - §10.2 CSL metadata — unchanged.
 - §10.3 output schemas — `GenerationResult.schema_version` bumped from
-  **2 → 3** to add the optional `usage: TokenUsage | None` field.
-  Snapshot regenerated; schema-version test bumped. Pre-bump
-  serialised results (v2) deserialise cleanly into the v3 model
-  (`usage` defaults to `None`). See
-  [ADR-012](docs/decisions/012-generation-result-schema-v3.md).
+  **2 → 3**. Two shape changes ship together inside this single bump:
+  - new optional `usage: TokenUsage | None` on `GenerationResult`
+    ([ADR-012](docs/decisions/012-generation-result-schema-v3.md));
+  - three new optional fields on `Citation` (`cited_text`,
+    `source_span`, `document_title`)
+    ([ADR-013](docs/decisions/013-citation-rich-attribution.md)).
+  Snapshot regenerated; schema-version test bumped. Pre-bump v2
+  serialisations deserialise cleanly into the v3 model (the new fields
+  default to `None`).
 
 
 ## [0.2.0] — 2026-04-24

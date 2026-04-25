@@ -392,5 +392,5 @@ def _extract_openai_usage(raw: Any) -> TokenUsage | None:
         input_tokens=int(prompt or 0),
         output_tokens=int(completion or 0),
         cache_read_input_tokens=int(cached) if cached is not None else None,
-        cost_usd=float(cost) if cost is not None else None,
+        cost_credits=float(cost) if cost is not None else None,
     )

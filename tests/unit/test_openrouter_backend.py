@@ -126,23 +126,27 @@ def test_openrouter_omits_models_when_no_fallback(sources: list[Source]) -> None
     assert "models" not in fake.last_payload["extra_body"]
 
 
-def test_openrouter_requests_cost_in_usage_by_default(sources: list[Source]) -> None:
-    """``include_cost=True`` (default) asks OpenRouter for per-call USD cost."""
+def test_openrouter_does_not_send_deprecated_usage_include_flag(
+    sources: list[Source],
+) -> None:
+    """OpenRouter's ``usage: {include: true}`` flag is deprecated and a no-op
+    as of structured-outputs GA — cost is always returned. We must not send it."""
     fake = _FakeOpenAI(json.dumps({"segments": []}))
     backend = OpenRouterBackend(
         model="anthropic/claude-sonnet-4.6",
         client=fake,
     )
     backend.generate(prompt="hi", sources=sources, policy=Policy.AUTO)
-    assert fake.last_payload["extra_body"]["usage"] == {"include": True}
+    extra_body = fake.last_payload.get("extra_body") or {}
+    assert "usage" not in extra_body
 
 
 # ----- Cost / usage reporting ------------------------------------------------
 
 
 def test_openrouter_extracts_cost_into_last_usage(sources: list[Source]) -> None:
-    """When OpenRouter returns ``usage.cost``, it surfaces on
-    ``GenerationResult.usage.cost_usd`` via ``backend.last_usage``."""
+    """When OpenRouter returns ``usage.cost`` (in OR credits), it surfaces on
+    ``GenerationResult.usage.cost_credits`` via ``backend.last_usage``."""
     fake = _FakeOpenAI(
         json.dumps({"segments": [{"text": "Claim.", "citations": [1]}]}),
         usage=SimpleNamespace(prompt_tokens=420, completion_tokens=60, cost=0.0042),
@@ -155,7 +159,7 @@ def test_openrouter_extracts_cost_into_last_usage(sources: list[Source]) -> None
     assert backend.last_usage is not None
     assert backend.last_usage.input_tokens == 420
     assert backend.last_usage.output_tokens == 60
-    assert backend.last_usage.cost_usd == 0.0042
+    assert backend.last_usage.cost_credits == 0.0042
 
 
 def test_openrouter_handles_response_without_cost(sources: list[Source]) -> None:
@@ -172,7 +176,7 @@ def test_openrouter_handles_response_without_cost(sources: list[Source]) -> None
     backend.generate(prompt="hi", sources=sources, policy=Policy.AUTO)
     assert backend.last_usage is not None
     assert backend.last_usage.input_tokens == 100
-    assert backend.last_usage.cost_usd is None
+    assert backend.last_usage.cost_credits is None
 
 
 # ----- App attribution headers ----------------------------------------------

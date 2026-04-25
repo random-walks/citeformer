@@ -180,7 +180,11 @@ class Citeformer:
             marker_style=effective_marker,
             **options,
         )
-        citations = self._parse_citations(text, effective_marker)
+        citations = self._parse_citations(
+            text,
+            effective_marker,
+            rich=_pull_rich_citations(self.backend),
+        )
         references = self._render_references(sources, citations)
         return GenerationResult(
             text=text,
@@ -241,14 +245,43 @@ class Citeformer:
 
     @staticmethod
     def _parse_citations(
-        text: str, marker_style: MarkerStyle = MarkerStyle.BRACKET
+        text: str,
+        marker_style: MarkerStyle = MarkerStyle.BRACKET,
+        rich: list[dict[str, Any]] | None = None,
     ) -> list[Citation]:
-        """Extract markers from `text` into `Citation` objects."""
+        """Extract markers from `text` into `Citation` objects.
+
+        If ``rich`` is supplied (the Anthropic backend's
+        ``last_rich_citations`` is the only producer today), each marker
+        is merged with the corresponding rich-metadata dict by *order*
+        — both lists track the same emit sequence, so ``rich[i]`` lines
+        up with the i-th marker the regex finds. Length mismatches fall
+        through silently (the marker stays plain) since misaligned data
+        is worse than no data.
+        """
         pattern = _pattern_for(marker_style)
-        return [
-            Citation(span=(m.start(), m.end()), source_id=int(m.group(1)))
-            for m in pattern.finditer(text)
-        ]
+        matches = list(pattern.finditer(text))
+        rich = rich or []
+        rich_aligned = len(rich) == len(matches)
+        citations: list[Citation] = []
+        for i, m in enumerate(matches):
+            extra: dict[str, Any] = {}
+            if rich_aligned:
+                meta = rich[i]
+                extra["cited_text"] = meta.get("cited_text")
+                src_span = meta.get("source_span")
+                extra["source_span"] = (
+                    tuple(src_span) if src_span is not None else None
+                )
+                extra["document_title"] = meta.get("document_title")
+            citations.append(
+                Citation(
+                    span=(m.start(), m.end()),
+                    source_id=int(m.group(1)),
+                    **extra,
+                )
+            )
+        return citations
 
     def _render_references(
         self,
@@ -328,11 +361,10 @@ class StreamingResult:
         for _ in self:
             pass
         text = self.text
-        pattern = _pattern_for(self.marker_style)
-        citations = [
-            Citation(span=(m.start(), m.end()), source_id=int(m.group(1)))
-            for m in pattern.finditer(text)
-        ]
+        rich = (
+            _pull_rich_citations(self._backend) if self._backend is not None else None
+        )
+        citations = Citeformer._parse_citations(text, self.marker_style, rich=rich)
         references = render_references(self.sources, citations, self.style)
         self._finalized = GenerationResult(
             text=text,
@@ -353,3 +385,15 @@ def _pull_usage(backend: Backend) -> TokenUsage | None:
     orchestrator can copy the value onto the resulting ``GenerationResult``.
     """
     return getattr(backend, "last_usage", None)
+
+
+def _pull_rich_citations(backend: Backend) -> list[dict[str, Any]] | None:
+    """Read ``backend.last_rich_citations`` if the backend exposes it.
+
+    Anthropic is the only backend today that surfaces rich per-citation
+    metadata (``cited_text``, ``source_span``, ``document_title``) — this
+    helper hides the duck-typed lookup so the orchestrator stays
+    backend-agnostic.
+    """
+    rich = getattr(backend, "last_rich_citations", None)
+    return rich if rich else None

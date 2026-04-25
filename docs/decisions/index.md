@@ -21,4 +21,5 @@ and link to the replacement rather than editing history.
 010-verification-report-schema-v3
 011-configurable-marker-styles
 012-generation-result-schema-v3
+013-citation-rich-attribution
 ```

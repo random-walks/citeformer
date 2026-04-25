@@ -247,7 +247,7 @@ repository.
 
 ## References
 
-[^jsonformer]: Kapur, N. jsonformer: *A Bulletproof Way to Generate
+[^jsonformer]: 1rgs. jsonformer: *A Bulletproof Way to Generate
 Structured JSON from Language Models.* GitHub, 2023.
 <https://github.com/1rgs/jsonformer>. The original insight this
 library extends to citation markers.

@@ -65,14 +65,25 @@ vllm = ["vllm>=0.7"]
 llamacpp = ["llama-cpp-python>=0.3"]
 # P6: NLI-based verification.
 verify = ["transformers>=4.46", "torch>=2.8", "sentence-transformers>=3"]
-# P7: API-provider backends — schema-level enforcement tier. Citeformer's
-# local-only bulletproof claim is unchanged; these are honest second-tier
-# integrations where the constraint lives in the provider's JSON-schema
-# validator rather than in logit masking.
+# P7: API-provider backends. With strict structured-outputs now GA on
+# every modern provider, "API tier" is no longer synonymous with
+# "schema-tier post-validation" — most of these enforce at the logit
+# layer too, just inside the provider's runtime instead of ours. See
+# docs/reference/architecture.md for the per-provider breakdown.
 openai = ["openai>=1.40"]
 anthropic = ["anthropic>=0.40"]
 gemini = ["google-genai>=0.7"]
 mistral = ["mistralai>=2.0"]
+# OpenRouter is OpenAI wire-compatible — re-uses the openai SDK and adds
+# multi-provider routing on top.
+openrouter = ["openai>=1.40"]
+# Fireworks is OpenAI wire-compatible AND exposes native GBNF grammar
+# mode — citeformer's `cite-id` rule is dropped in unchanged for true
+# logit-tier enforcement on a hosted API.
+fireworks = ["openai>=1.40"]
+# Together is OpenAI wire-compatible — runs strict json_schema constrained
+# decoding on open-weight upstream models (Llama, Qwen, DeepSeek, …).
+together = ["openai>=1.40"]
 # Optional richer PDF extractor — GROBID is an external Java service the
 # user stands up separately (Docker one-liner in the docs). Installing the
 # extra pulls in the Python client only; the server is the user's concern.
@@ -95,7 +106,7 @@ examples = [
     "jupyter>=1",
     "matplotlib>=3.8",
 ]
-all = ["citeformer[hf,llamacpp,verify,openai,anthropic,gemini,mistral]"]
+all = ["citeformer[hf,llamacpp,verify,openai,anthropic,gemini,mistral,openrouter,fireworks,together]"]
 # Intentionally lightweight during P0 — just docs + tooling, no ML deps yet.
 # Grows to include `all` in P2 once src/ actually imports transformers / xgrammar.
 dev = [

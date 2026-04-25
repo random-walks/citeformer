@@ -37,9 +37,10 @@ from citeformer.backends.openai import (
     _build_citation_schema as _shared_schema_builder,
 )
 from citeformer.backends.openai import (
+    _extract_openai_usage,
     _flatten_segments,
 )
-from citeformer.core import MarkerStyle, Policy, Source
+from citeformer.core import MarkerStyle, Policy, Source, TokenUsage
 
 _LOG = logging.getLogger(__name__)
 
@@ -57,10 +58,13 @@ class MistralBackend(Backend):
     Attributes:
         model: Mistral model id (``mistral-large-latest`` by default).
         client: The authenticated ``mistralai.Mistral`` client.
+        last_usage: Token-usage payload from the most recent ``generate()``
+            call. ``None`` before the first call.
     """
 
     model: str
     client: Any
+    last_usage: TokenUsage | None
 
     def __init__(
         self,
@@ -92,6 +96,7 @@ class MistralBackend(Backend):
 
         self.model = model
         self.client = client if client is not None else Mistral(**client_kwargs)
+        self.last_usage = None
 
     def generate(
         self,
@@ -148,6 +153,7 @@ class MistralBackend(Backend):
                 },
             },
         )
+        self.last_usage = _extract_openai_usage(getattr(response, "usage", None))
         raw = response.choices[0].message.content
         return _flatten_segments(raw, marker_style=marker_style)
 

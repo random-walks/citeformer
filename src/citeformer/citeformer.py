@@ -18,7 +18,7 @@ Streaming:
 from __future__ import annotations
 
 import re
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 from typing import Any
 
 from citeformer.backends.base import Backend
@@ -29,6 +29,7 @@ from citeformer.core import (
     Policy,
     Reference,
     Source,
+    TokenUsage,
 )
 from citeformer.render import render_references
 
@@ -179,13 +180,18 @@ class Citeformer:
             marker_style=effective_marker,
             **options,
         )
-        citations = self._parse_citations(text, effective_marker)
+        citations = self._parse_citations(
+            text,
+            effective_marker,
+            rich=_pull_rich_citations(self.backend),
+        )
         references = self._render_references(sources, citations)
         return GenerationResult(
             text=text,
             citations=citations,
             references=references,
             sources=list(sources),
+            usage=_pull_usage(self.backend),
         )
 
     def stream(
@@ -234,18 +240,135 @@ class Citeformer:
             sources=list(sources),
             style=self.style,
             marker_style=effective_marker,
+            backend=self.backend,
+        )
+
+    async def agenerate(
+        self,
+        prompt: str,
+        sources: list[Source],
+        policy: Policy | None = None,
+        **options: Any,
+    ) -> GenerationResult:
+        """Async counterpart of :meth:`generate`. See ADR-014.
+
+        Calls the backend's ``agenerate()`` (which is concrete on every backend
+        — the ABC default uses ``asyncio.to_thread``; OpenAI / Anthropic
+        backends override with native async clients). Parsing, rendering, and
+        usage-threading are identical to the sync path; the only difference is
+        the ``await`` on the backend call.
+
+        Returns:
+            Same as :meth:`generate`.
+        """
+        effective_policy = policy if policy is not None else self.citation_policy
+        effective_marker = options.pop("marker_style", self.marker_style)
+        text = await self.backend.agenerate(
+            prompt=prompt,
+            sources=sources,
+            policy=effective_policy,
+            marker_style=effective_marker,
+            **options,
+        )
+        citations = self._parse_citations(
+            text,
+            effective_marker,
+            rich=_pull_rich_citations(self.backend),
+        )
+        references = self._render_references(sources, citations)
+        return GenerationResult(
+            text=text,
+            citations=citations,
+            references=references,
+            sources=list(sources),
+            usage=_pull_usage(self.backend),
+        )
+
+    def astream(
+        self,
+        prompt: str,
+        sources: list[Source],
+        policy: Policy | None = None,
+        **options: Any,
+    ) -> AsyncStreamingResult:
+        """Async counterpart of :meth:`stream`. See ADR-014.
+
+        Returns an :class:`AsyncStreamingResult` — async-iterable for chunk
+        consumption and ``await`` -finalizable to a complete
+        :class:`GenerationResult`. The orchestrator method itself is sync (no
+        ``await``); the async work happens when you iterate or finalize.
+
+        Typical usage::
+
+            stream = cf.astream(prompt="...", sources=sources)
+            async for chunk in stream:
+                print(chunk, end="", flush=True)
+            result = await stream.finalize()
+
+        Args:
+            prompt: User prompt, same semantics as :meth:`generate`.
+            sources: Sources in scope (position → citation id).
+            policy: Override the default ``citation_policy`` for this call.
+            **options: Forwarded to :meth:`Backend.astream`.
+
+        Returns:
+            An :class:`AsyncStreamingResult` wrapping the backend's async
+            chunk iterator.
+        """
+        effective_policy = policy if policy is not None else self.citation_policy
+        effective_marker = options.pop("marker_style", self.marker_style)
+        chunks = self.backend.astream(
+            prompt=prompt,
+            sources=sources,
+            policy=effective_policy,
+            marker_style=effective_marker,
+            **options,
+        )
+        return AsyncStreamingResult(
+            chunks=chunks,
+            sources=list(sources),
+            style=self.style,
+            marker_style=effective_marker,
+            backend=self.backend,
         )
 
     @staticmethod
     def _parse_citations(
-        text: str, marker_style: MarkerStyle = MarkerStyle.BRACKET
+        text: str,
+        marker_style: MarkerStyle = MarkerStyle.BRACKET,
+        rich: list[dict[str, Any]] | None = None,
     ) -> list[Citation]:
-        """Extract markers from `text` into `Citation` objects."""
+        """Extract markers from `text` into `Citation` objects.
+
+        If ``rich`` is supplied (the Anthropic backend's
+        ``last_rich_citations`` is the only producer today), each marker
+        is merged with the corresponding rich-metadata dict by *order*
+        — both lists track the same emit sequence, so ``rich[i]`` lines
+        up with the i-th marker the regex finds. Length mismatches fall
+        through silently (the marker stays plain) since misaligned data
+        is worse than no data.
+        """
         pattern = _pattern_for(marker_style)
-        return [
-            Citation(span=(m.start(), m.end()), source_id=int(m.group(1)))
-            for m in pattern.finditer(text)
-        ]
+        matches = list(pattern.finditer(text))
+        rich = rich or []
+        rich_aligned = len(rich) == len(matches)
+        citations: list[Citation] = []
+        for i, m in enumerate(matches):
+            extra: dict[str, Any] = {}
+            if rich_aligned:
+                meta = rich[i]
+                extra["cited_text"] = meta.get("cited_text")
+                src_span = meta.get("source_span")
+                extra["source_span"] = tuple(src_span) if src_span is not None else None
+                extra["document_title"] = meta.get("document_title")
+            citations.append(
+                Citation(
+                    span=(m.start(), m.end()),
+                    source_id=int(m.group(1)),
+                    **extra,
+                )
+            )
+        return citations
 
     def _render_references(
         self,
@@ -289,6 +412,7 @@ class StreamingResult:
         sources: list[Source],
         style: str,
         marker_style: MarkerStyle = MarkerStyle.BRACKET,
+        backend: Backend | None = None,
     ) -> None:
         """Wrap a backend chunk iterator. Not for direct construction by users."""
         self._chunks = chunks
@@ -297,6 +421,7 @@ class StreamingResult:
         self.marker_style = marker_style
         self._accumulated: list[str] = []
         self._finalized: GenerationResult | None = None
+        self._backend = backend
 
     def __iter__(self) -> StreamingResult:
         return self
@@ -323,16 +448,117 @@ class StreamingResult:
         for _ in self:
             pass
         text = self.text
-        pattern = _pattern_for(self.marker_style)
-        citations = [
-            Citation(span=(m.start(), m.end()), source_id=int(m.group(1)))
-            for m in pattern.finditer(text)
-        ]
+        rich = _pull_rich_citations(self._backend) if self._backend is not None else None
+        citations = Citeformer._parse_citations(text, self.marker_style, rich=rich)
         references = render_references(self.sources, citations, self.style)
         self._finalized = GenerationResult(
             text=text,
             citations=citations,
             references=references,
             sources=self.sources,
+            usage=_pull_usage(self._backend) if self._backend is not None else None,
         )
         return self._finalized
+
+
+class AsyncStreamingResult:
+    """Async-iterable wrapper over a backend's async streaming output.
+
+    The async parallel of :class:`StreamingResult`. Same surface — chunks
+    arrive in order, accumulated text is exposed via :attr:`text`, and
+    :meth:`finalize` builds the full :class:`GenerationResult` — but the
+    iteration is ``async for`` and ``finalize()`` is awaitable.
+
+    Idempotent: calling ``await stream.finalize()`` multiple times returns
+    the same `GenerationResult` instance. Calling it before exhausting
+    the iterator awaits the remaining chunks so the result is complete.
+
+    Typical usage::
+
+        stream = cf.astream(prompt="...", sources=sources)
+        async for chunk in stream:
+            print(chunk, end="", flush=True)
+        result = await stream.finalize()
+
+    Attributes:
+        sources: Sources passed to :meth:`Citeformer.astream`.
+        style: CSL style used to render references.
+    """
+
+    def __init__(
+        self,
+        *,
+        chunks: AsyncIterator[str],
+        sources: list[Source],
+        style: str,
+        marker_style: MarkerStyle = MarkerStyle.BRACKET,
+        backend: Backend | None = None,
+    ) -> None:
+        """Wrap a backend async-chunk iterator. Not for direct construction by users."""
+        self._chunks = chunks
+        self.sources = sources
+        self.style = style
+        self.marker_style = marker_style
+        self._accumulated: list[str] = []
+        self._finalized: GenerationResult | None = None
+        self._backend = backend
+
+    def __aiter__(self) -> AsyncStreamingResult:
+        return self
+
+    async def __anext__(self) -> str:
+        chunk = await self._chunks.__anext__()
+        self._accumulated.append(chunk)
+        return chunk
+
+    @property
+    def text(self) -> str:
+        """The text consumed so far. Updates as iteration progresses."""
+        return "".join(self._accumulated)
+
+    async def finalize(self) -> GenerationResult:
+        """Exhaust the async iterator (if needed) and build the full result.
+
+        Safe to call multiple times — the first call caches the result and
+        subsequent calls return the same instance.
+        """
+        if self._finalized is not None:
+            return self._finalized
+        # Exhaust any remaining chunks so the result is complete.
+        async for _ in self:
+            pass
+        text = self.text
+        rich = _pull_rich_citations(self._backend) if self._backend is not None else None
+        citations = Citeformer._parse_citations(text, self.marker_style, rich=rich)
+        references = render_references(self.sources, citations, self.style)
+        self._finalized = GenerationResult(
+            text=text,
+            citations=citations,
+            references=references,
+            sources=self.sources,
+            usage=_pull_usage(self._backend) if self._backend is not None else None,
+        )
+        return self._finalized
+
+
+def _pull_usage(backend: Backend) -> TokenUsage | None:
+    """Read ``backend.last_usage`` if the backend exposes it.
+
+    Local backends (HF, vLLM, llama.cpp, MockBackend) don't define
+    ``last_usage``; getattr's default keeps them silent. API backends set
+    it at the end of every ``generate()`` / ``stream()`` call so the
+    orchestrator can copy the value onto the resulting ``GenerationResult``.
+    """
+    return getattr(backend, "last_usage", None)
+
+
+def _pull_rich_citations(backend: Backend) -> list[dict[str, Any]] | None:
+    """Read ``backend.last_rich_citations`` if the backend exposes it.
+
+    Anthropic is the only backend today that surfaces rich per-citation
+    metadata (``cited_text``, ``source_span``, ``document_title``) — this
+    helper hides the duck-typed lookup so the orchestrator stays
+    backend-agnostic.
+    """
+    rich = getattr(backend, "last_rich_citations", None)
+    return rich if rich else None

@@ -86,16 +86,17 @@ def test_reference_rejects_source_id_zero() -> None:
 
 def test_generation_result_defaults() -> None:
     result = GenerationResult(text="plain text with no markers")
-    assert result.schema_version == 2
+    assert result.schema_version == 3
     assert result.citations == []
     assert result.references == []
     assert result.sources == []
+    assert result.usage is None
 
 
-def test_generation_result_schema_version_is_2() -> None:
-    """§10.3 contract — schema_version MUST be 2 after the P6 bump."""
+def test_generation_result_schema_version_is_3() -> None:
+    """§10.3 contract — schema_version MUST be 3 after the ADR-012 ``usage`` bump."""
     result = GenerationResult(text="x")
-    assert result.schema_version == 2
+    assert result.schema_version == 3
 
 
 def test_generation_result_roundtrip() -> None:

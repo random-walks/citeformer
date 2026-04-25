@@ -4,15 +4,42 @@ Every concrete backend (`HFBackend`, `VLLMBackend`, `LlamaCppBackend`, `MockBack
 implements this ABC. The orchestration layer (`Citeformer`) is backend-agnostic and
 delegates generation via this interface, keeping grammar-building and decoding logic
 scoped to the backend that cares about them.
+
+Async surface (ADR-014): `Backend` exposes `agenerate()` and `astream()` alongside
+`generate()` / `stream()`. Concrete backends inherit `asyncio.to_thread` defaults
+that delegate to the sync methods — every backend works in async code without any
+override. API backends with native async clients (`OpenAIBackend.agenerate` uses
+`AsyncOpenAI`, `AnthropicBackend.agenerate` uses `AsyncAnthropic`) override for
+genuine concurrency under load.
 """
 
 from __future__ import annotations
 
+import asyncio
 from abc import ABC, abstractmethod
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 from typing import Any
 
 from citeformer.core import Policy, Source
+
+#: Sentinel returned by ``_next_or_sentinel`` when a sync iterator is exhausted.
+#: Using a singleton sentinel rather than letting ``StopIteration`` escape an
+#: ``asyncio.to_thread`` call (which Python 3.8+ rejects with a runtime warning
+#: about generator cleanup) keeps the default ``astream()`` behaviour clean.
+_STREAM_SENTINEL: Any = object()
+
+
+def _next_or_sentinel(iterator: Iterator[str]) -> Any:
+    """Return the next item or the module sentinel on exhaustion.
+
+    Used by ``Backend.astream``'s default implementation to wrap a sync
+    iterator's ``next()`` call inside ``asyncio.to_thread`` without
+    leaking ``StopIteration`` (which raises in async contexts).
+    """
+    try:
+        return next(iterator)
+    except StopIteration:
+        return _STREAM_SENTINEL
 
 
 class Backend(ABC):
@@ -29,6 +56,11 @@ class Backend(ABC):
     them. The default implementation falls back to `generate()` and emits the full
     text as a single chunk — any backend works with `Citeformer.stream()`, but only
     overriding backends deliver true token-by-token behavior.
+
+    Async surface (ADR-014): `agenerate()` and `astream()` default to running the sync
+    methods via `asyncio.to_thread`. Backends with native async clients
+    (`OpenAIBackend`, `AnthropicBackend`, and their subclasses) override these for
+    genuine concurrency.
     """
 
     @abstractmethod
@@ -89,3 +121,67 @@ class Backend(ABC):
             reconstructs what `generate()` would have returned.
         """
         yield self.generate(prompt=prompt, sources=sources, policy=policy, **options)
+
+    async def agenerate(
+        self,
+        prompt: str,
+        sources: list[Source],
+        policy: Policy,
+        **options: Any,
+    ) -> str:
+        """Async counterpart of `generate()`. See ADR-014.
+
+        The default implementation runs `generate()` on a worker thread via
+        `asyncio.to_thread` — correct on every backend but only frees the event
+        loop while the SDK call is in flight. Backends with native async clients
+        (`OpenAIBackend`, `AnthropicBackend`, and their subclasses) override
+        this to use `AsyncOpenAI` / `AsyncAnthropic` for genuine concurrency
+        under load.
+
+        Args:
+            prompt: See `generate()`.
+            sources: See `generate()`.
+            policy: See `generate()`.
+            **options: See `generate()`.
+
+        Returns:
+            Same as `generate()`.
+        """
+        return await asyncio.to_thread(
+            self.generate,
+            prompt=prompt,
+            sources=sources,
+            policy=policy,
+            **options,
+        )
+
+    async def astream(
+        self,
+        prompt: str,
+        sources: list[Source],
+        policy: Policy,
+        **options: Any,
+    ) -> AsyncIterator[str]:
+        """Async counterpart of `stream()`. See ADR-014.
+
+        The default implementation wraps the sync iterator from `stream()` in
+        `asyncio.to_thread` per chunk — yields control back to the event loop
+        between chunks but is bounded by the sync generator's blocking behaviour.
+        Backends with native async streaming (`OpenAIBackend`,
+        `AnthropicBackend`) override this for genuine concurrency.
+
+        Yields:
+            Same as `stream()`, just async.
+        """
+        sync_iter = await asyncio.to_thread(
+            self.stream,
+            prompt=prompt,
+            sources=sources,
+            policy=policy,
+            **options,
+        )
+        while True:
+            chunk = await asyncio.to_thread(_next_or_sentinel, sync_iter)
+            if chunk is _STREAM_SENTINEL:
+                break
+            yield chunk

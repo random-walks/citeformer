@@ -233,6 +233,70 @@ class Source(BaseModel):
         return [cls(metadata=item, content="") for item in items]
 
 
+class TokenUsage(BaseModel):
+    """Token-level cost accounting for one ``Backend.generate()`` call.
+
+    Populated by API backends from their provider's per-call ``usage`` payload
+    and threaded onto :class:`GenerationResult.usage` by the orchestrator.
+    Local backends leave this ``None`` — token accounting is meaningless when
+    you control the runtime and the bill is just GPU time.
+
+    Cache fields are populated when the provider exposes prompt-caching info
+    (Anthropic surfaces ``cache_creation_input_tokens`` /
+    ``cache_read_input_tokens``; the OpenAI-compatible ``prompt_tokens_details``
+    cached-tokens field is normalised into the same shape). Consumers
+    aggregating cost should sum
+    ``input_tokens + cache_creation_input_tokens + cache_read_input_tokens``
+    against the provider's per-tier price (cache-read tokens are typically
+    cheaper than fresh input tokens).
+
+    ``cost_credits`` is filled in by providers that report a per-call cost
+    directly. Today only OpenRouter does so via ``usage.cost`` — and the
+    value is denominated in **OpenRouter credits**, not USD (1 credit ≈
+    $1 USD by default but the unit is credits, not dollars; see
+    https://openrouter.ai/docs/guides/administration/usage-accounting).
+    Other backends leave the field ``None`` and consumers compute cost
+    from token counts themselves.
+
+    Attributes:
+        input_tokens: Prompt + system + document tokens billed as input.
+            Excludes cache-read tokens (those are reported separately).
+        output_tokens: Tokens the model generated.
+        cache_creation_input_tokens: Tokens billed at the cache-write rate.
+            ``None`` if the provider doesn't surface caching metadata.
+        cache_read_input_tokens: Tokens served from cache (typically billed at
+            a discount). ``None`` if the provider doesn't surface caching.
+        cost_credits: Provider-reported call cost in *provider-native units*
+            (OpenRouter credits today). ``None`` when not exposed.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    input_tokens: int = Field(
+        ge=0,
+        description="Prompt + system + document tokens billed as input.",
+    )
+    output_tokens: int = Field(
+        ge=0,
+        description="Tokens the model generated.",
+    )
+    cache_creation_input_tokens: int | None = Field(
+        default=None,
+        ge=0,
+        description="Tokens billed at the cache-write rate (Anthropic-style).",
+    )
+    cache_read_input_tokens: int | None = Field(
+        default=None,
+        ge=0,
+        description="Tokens served from cache.",
+    )
+    cost_credits: float | None = Field(
+        default=None,
+        ge=0.0,
+        description="Provider-reported call cost in provider-native units (OpenRouter credits).",
+    )
+
+
 class Citation(BaseModel):
     """A single inline citation marker emitted by the model.
 
@@ -245,6 +309,20 @@ class Citation(BaseModel):
             iff the cited source entails the citing claim with score above threshold.
         entailment_score: Populated by `GenerationResult.verify()`; `None` until then.
             Value in [0, 1] indicating NLI entailment confidence.
+        cited_text: When the backend exposes it (Anthropic Citations API does;
+            others don't), the exact span of source text the model cited. Lets
+            downstream code show "the model cited *this passage*" without
+            recomputing — and lets verifiers run NLI against the cited span
+            instead of the whole source. ``None`` on backends without span-level
+            attribution.
+        source_span: `(start, end)` char offsets inside the source content that
+            ``cited_text`` came from. ``None`` on backends without span-level
+            attribution. Anthropic returns these as ``start_char_index`` /
+            ``end_char_index`` for plain-text documents.
+        document_title: The source's title as the provider saw it. Mostly a
+            convenience mirror of ``Source.metadata['title']`` — populated when
+            the backend echoes a title back (Anthropic's Citations API attaches
+            ``document_title`` to every citation in 2025+ payloads).
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -263,6 +341,18 @@ class Citation(BaseModel):
     entailment_score: float | None = Field(
         default=None,
         description="NLI entailment probability in [0, 1]; set by verify().",
+    )
+    cited_text: str | None = Field(
+        default=None,
+        description="Exact span of source text cited (Anthropic only); None elsewhere.",
+    )
+    source_span: tuple[int, int] | None = Field(
+        default=None,
+        description="(start, end) offsets inside the source for cited_text; None elsewhere.",
+    )
+    document_title: str | None = Field(
+        default=None,
+        description="Document title as echoed by the provider (Anthropic Citations API).",
     )
 
 
@@ -302,9 +392,10 @@ class GenerationResult(BaseModel):
 
     §10.3 contract: `schema_version` is pinned by `tests/integration/test_schemas.py`.
     Any shape change requires bumping `schema_version` and following the ceremony in
-    `docs/reference/contracts.md`. Current version: **2** — added the
-    ``sources`` field so ``verify()`` is self-contained. See
-    ``docs/decisions/008-generation-result-schema-v2.md``.
+    `docs/reference/contracts.md`. Current version: **3** — added the optional
+    ``usage`` field so API-backend callers see token counts and (where the
+    provider exposes it) per-call USD cost without reaching into the raw
+    response. See ``docs/decisions/012-generation-result-schema-v3.md``.
 
     Attributes:
         schema_version: Contract version. Bump on any field add/rename/removal.
@@ -316,12 +407,16 @@ class GenerationResult(BaseModel):
         sources: The sources that were in scope for this generation call. Carried
             on the result so `verify()` can run NLI against them without the
             caller having to pass them separately.
+        usage: Token counts (and provider-reported cost when exposed) for the
+            backend call that produced this result. ``None`` for local
+            backends — token accounting is meaningless when you control the
+            runtime.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     schema_version: int = Field(
-        default=2,
+        default=3,
         description="§10.3 contract version. Bumped on any shape change.",
     )
     text: str = Field(
@@ -338,6 +433,10 @@ class GenerationResult(BaseModel):
     sources: list[Source] = Field(
         default_factory=list,
         description="The sources that were in scope when this result was generated.",
+    )
+    usage: TokenUsage | None = Field(
+        default=None,
+        description="Token usage + (where exposed) cost for the backend call.",
     )
 
     def verify(

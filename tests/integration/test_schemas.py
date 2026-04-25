@@ -81,12 +81,15 @@ def test_verification_report_canonical_snapshot(data_regression) -> None:  # typ
     data_regression.check(report.model_dump(mode="json"))
 
 
-def test_generation_result_schema_version_is_2() -> None:
+def test_generation_result_schema_version_is_3() -> None:
     """Belt-and-suspenders: even if snapshots are regenerated carelessly, this asserts
-    the contract version number explicitly.
+    the contract version number explicitly. Bumped to 3 when ``usage`` was
+    added — see ADR-012.
     """
     result = GenerationResult(text="x")
-    assert result.schema_version == 2
+    assert result.schema_version == 3
+    # Default is None — local backends don't populate it.
+    assert result.usage is None
 
 
 def test_verification_report_schema_version_is_3() -> None:

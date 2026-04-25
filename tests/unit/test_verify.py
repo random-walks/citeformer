@@ -295,3 +295,93 @@ def test_generation_result_verify_with_mock_nli() -> None:
     report = result.verify(nli=nli, run_coverage=False)
     assert report.support_rate == 1.0
     assert report.per_citation[0].supported is True
+
+
+# --- ADR-013: verify() uses cited_text as premise when populated ------------
+
+
+class _CapturingNLI(_ScriptedNLI):
+    """Captures every ``(premise, hypothesis)`` pair the verifier sends.
+
+    Lets us assert that ``Citation.cited_text`` (when populated) is used
+    as the NLI premise instead of the full source content — the sharper-
+    signal upgrade enabled by ADR-013.
+    """
+
+    def __init__(  # type: ignore[no-untyped-def]
+        self, rules: dict[tuple[str, str], float] | None = None
+    ) -> None:
+        super().__init__(rules=rules)
+        self.captured_premises: list[str] = []
+
+    def entail_batch(self, pairs: list[tuple[str, str]]) -> list[NLIResult]:  # type: ignore[override]
+        for premise, _hyp in pairs:
+            self.captured_premises.append(premise)
+        return super().entail_batch(pairs)
+
+
+def test_verify_uses_cited_text_as_premise_when_populated() -> None:
+    """When ``Citation.cited_text`` is set (Anthropic Citations API path),
+    NLI scores against that span — not the whole source content."""
+    sources = _sources(
+        [
+            "A very long source with lots of irrelevant material before "
+            "the actual cited passage which appears way down here at the "
+            "very end of the document body, surrounded by yet more noise."
+        ]
+    )
+    text = "The model says something [1]."
+    citations = [
+        Citation(
+            span=(25, 28),
+            source_id=1,
+            cited_text="the actual cited passage",
+            source_span=(60, 84),
+            document_title="Long Source",
+        )
+    ]
+    nli = _CapturingNLI()
+    verifier = Verifier(threshold=0.5, nli=nli)
+    verifier.verify(text=text, citations=citations, sources=sources, run_coverage=False)
+    assert nli.captured_premises == ["the actual cited passage"]
+
+
+def test_verify_falls_back_to_source_content_when_cited_text_absent() -> None:
+    """Backends without span attribution (everyone except Anthropic today)
+    leave ``cited_text`` ``None`` — the verifier falls back to the full
+    source content, preserving the v0.1 behaviour."""
+    sources = _sources(["The full source content used as premise."])
+    text = "Claim [1]."
+    citations = [Citation(span=(6, 9), source_id=1)]  # no cited_text
+    nli = _CapturingNLI()
+    verifier = Verifier(threshold=0.5, nli=nli)
+    verifier.verify(text=text, citations=citations, sources=sources, run_coverage=False)
+    assert nli.captured_premises == ["The full source content used as premise."]
+
+
+def test_verify_mixes_cited_text_and_full_source_per_citation() -> None:
+    """In a single result, some citations carry ``cited_text`` (Anthropic)
+    and some don't (other backends mixed in the same pipeline). Each
+    citation should use the sharpest premise available to *it*."""
+    sources = _sources(
+        [
+            "A very long source with the relevant snippet hidden in the middle.",
+            "Second full source content.",
+        ]
+    )
+    text = "First claim [1]. Second claim [2]."
+    citations = [
+        Citation(
+            span=(13, 16),
+            source_id=1,
+            cited_text="the relevant snippet",
+        ),
+        Citation(span=(31, 34), source_id=2),  # no cited_text — full source
+    ]
+    nli = _CapturingNLI()
+    verifier = Verifier(threshold=0.5, nli=nli)
+    verifier.verify(text=text, citations=citations, sources=sources, run_coverage=False)
+    assert nli.captured_premises == [
+        "the relevant snippet",
+        "Second full source content.",
+    ]

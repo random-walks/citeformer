@@ -33,7 +33,7 @@ from typing import Any
 
 from citeformer.backends.base import Backend
 from citeformer.backends.openai import _flatten_segments
-from citeformer.core import MarkerStyle, Policy, Source
+from citeformer.core import MarkerStyle, Policy, Source, TokenUsage
 
 _LOG = logging.getLogger(__name__)
 
@@ -62,10 +62,13 @@ class GeminiBackend(Backend):
     Attributes:
         model: Gemini model identifier (``gemini-2.0-flash`` default).
         client: The authenticated ``google.genai.Client``.
+        last_usage: Token-usage payload from the most recent ``generate()``
+            call. ``None`` before the first call.
     """
 
     model: str
     client: Any
+    last_usage: TokenUsage | None
 
     def __init__(
         self,
@@ -93,6 +96,7 @@ class GeminiBackend(Backend):
 
         self.model = model
         self.client = client if client is not None else genai.Client(**client_kwargs)
+        self.last_usage = None
 
     def generate(
         self,
@@ -144,6 +148,7 @@ class GeminiBackend(Backend):
                 "temperature": temperature,
             },
         )
+        self.last_usage = _extract_gemini_usage(getattr(response, "usage_metadata", None))
         raw = getattr(response, "text", None) or ""
         return _flatten_segments(raw, marker_style=marker_style)
 
@@ -219,6 +224,34 @@ def _build_citation_schema(*, n_sources: int, policy: Policy) -> dict[str, Any]:
             }
         },
     }
+
+
+def _extract_gemini_usage(raw: Any) -> TokenUsage | None:
+    """Pull token counts off Gemini's ``usage_metadata`` payload.
+
+    Gemini's field names differ from the OpenAI shape — ``prompt_token_count``
+    / ``candidates_token_count`` (per-completion candidate tokens, summed
+    when there are multiple). Cached-content tokens land in
+    ``cached_content_token_count`` when prompt caching is in use.
+    """
+    if raw is None:
+        return None
+
+    def _get(name: str) -> Any:
+        if isinstance(raw, dict):
+            return raw.get(name)
+        return getattr(raw, name, None)
+
+    prompt = _get("prompt_token_count")
+    candidates = _get("candidates_token_count")
+    if prompt is None and candidates is None:
+        return None
+    cached = _get("cached_content_token_count")
+    return TokenUsage(
+        input_tokens=int(prompt or 0),
+        output_tokens=int(candidates or 0),
+        cache_read_input_tokens=int(cached) if cached is not None else None,
+    )
 
 
 def _build_system_instruction(

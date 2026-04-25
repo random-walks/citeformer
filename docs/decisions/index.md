@@ -20,4 +20,10 @@ and link to the replacement rather than editing history.
 009-bounded-content-required
 010-verification-report-schema-v3
 011-configurable-marker-styles
+012-generation-result-schema-v3
+013-citation-rich-attribution
+014-async-surface
+015-defer-bedrock-vertex
+016-defer-fine-grain-windowing
+017-defer-cost-tables
 ```

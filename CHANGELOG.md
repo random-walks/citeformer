@@ -6,6 +6,253 @@ Versioning policy: **patch bumps are cheap**. See [docs/development/releasing.md
 
 ## [Unreleased]
 
+### Added — async surface, ADRs 014-017
+
+**Async surface end-to-end** (ADR-014). `Backend` ABC gains `agenerate()`
+and `astream()` with `asyncio.to_thread` defaults — every existing backend
+works in async code unchanged. `Citeformer` orchestrator gains
+`agenerate()` (async, returns `GenerationResult`) and `astream()` (sync
+call returning a new `AsyncStreamingResult` with `__aiter__` /
+`__anext__` / `await stream.finalize()` symmetry to the existing
+`StreamingResult`).
+
+Native async overrides land for the two most-used API backends:
+`OpenAIBackend.agenerate` / `astream` use `AsyncOpenAI` (cascades to
+`OpenRouterBackend` / `FireworksBackend` / `TogetherBackend` since they
+subclass), and `AnthropicBackend.agenerate` / `astream` use
+`AsyncAnthropic` plus the SDK's async streaming context manager
+(per-block `content_block_stop` events with `await
+stream.get_final_message()`). Both backends switched to **lazy property
+access for the sync + async clients** — sync-only callers don't pay the
+`AsyncOpenAI()` / `AsyncAnthropic()` construction cost; async-only
+callers don't pay the sync one. Out-of-tree backends written against
+the v0.1 `Backend` ABC keep working untouched (the new methods have
+concrete defaults, no abstract requirement).
+
+`AsyncStreamingResult` is exported from the top-level `citeformer`
+package alongside `StreamingResult`. 25 new unit tests cover the ABC
+defaults, orchestrator path, native overrides, lazy-client construction,
+and async-streaming `last_rich_citations` propagation — all green via
+`pytest-asyncio`'s `auto` mode (already configured).
+
+`GeminiBackend` and `MistralBackend` use the `to_thread` default for now
+— their SDKs both support async natively, but the default is correct,
+just not as concurrency-efficient. Flagged as a follow-up. Local
+backends (`HFBackend` / `VLLMBackend` / `LlamaCppBackend`) keep the
+default forever — async is for I/O concurrency, not GPU concurrency.
+
+**ADRs 015-017 lock in three deferral decisions:**
+
+- **ADR-015** — Bedrock + Vertex AI backends deferred. Both proxy to
+  providers we already support directly (Anthropic, Gemini), both have
+  non-trivial enterprise auth, and existing backends already accept
+  Bedrock/Vertex clients via `client=…` injection. Documented signals
+  that would justify the work.
+- **ADR-016** — fine-grain windowing in `verify()` deferred until
+  calibration data exists. The current `cited_text`-as-premise change
+  (ADR-013) is itself uncalibrated; adding window hyperparameters
+  before measurement is a tuning knob in search of a problem.
+- **ADR-017** — provider-specific cost-table inference not planned.
+  Pricing changes constantly, the data is one multiply away from the
+  token counts we expose, and OpenRouter solved it correctly by
+  reporting cost server-side. We surface tokens; consumers price.
+
+### Added — Fireworks + Together backends, verify() against cited_text
+
+**`FireworksBackend`** (extra `fireworks`, re-uses `openai>=1.40` SDK).
+The cleanest "true logit-tier on a hosted API" backend possible:
+Fireworks's [`response_format={"type": "grammar", "grammar": "<GBNF>"}`](https://docs.fireworks.ai/structured-responses/structured-output-grammar-based)
+mode accepts citeformer's existing `cite-id` GBNF rule **unchanged**, so
+the same grammar that masks logits inside `HFBackend` runs inside the
+Fireworks runtime. Subclasses `OpenAIBackend` and overrides only two
+hooks added in this release — `_build_response_format` (swap strict-JSON
+for grammar mode) and `_decode_response_text` (Fireworks returns plain
+text with markers, not segments JSON, so flattening is a no-op).
+Default model `accounts/fireworks/models/llama-v3p1-8b-instruct`. Env:
+`FIREWORKS_API_KEY`. 7 unit tests cover the GBNF construction
+(including marker-style propagation through the grammar), the
+passthrough decode, env-var pickup, and usage extraction.
+
+**`TogetherBackend`** (extra `together`, re-uses `openai>=1.40` SDK).
+Strict `json_schema` constrained decoding on Together's open-weight
+upstream models (Llama, Qwen, DeepSeek, …). OpenAI-wire-compatible —
+the schema construction, segment flattening, streaming, and
+`last_usage` extraction all inherited unchanged from `OpenAIBackend`.
+Default model `meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo`. Env:
+`TOGETHER_API_KEY`. 5 unit tests cover the strict-JSON shape, segment
+flattening, env-var pickup, and usage extraction.
+
+**`OpenAIBackend` refactor — extracted `_build_response_format` and
+`_decode_response_text` hooks.** Lets backends with non-OpenAI
+response shapes (today: Fireworks's grammar mode) reuse all the
+messaging assembly + streaming + usage code without touching
+`generate()` itself. Pure refactor — no behavioural change for
+`OpenAIBackend` / `MistralBackend` / `OpenRouterBackend` consumers.
+
+**`verify()` uses `cited_text` as NLI premise when populated** (uses the
+ADR-013 work). When a `Citation` carries `cited_text` (Anthropic
+Citations API path), `score_entailment` uses that span as the NLI
+premise instead of the full source content — sharper signal,
+especially on long documents where the relevant assertion is buried
+past DeBERTa's 512-token horizon. Falls back to the full source
+content when `cited_text` is `None` (every backend except Anthropic
+today). Mixed-citation results work too — each citation uses the
+sharpest premise available to *it*. 3 new unit tests cover the
+cited-text-as-premise path, the fallback path, and the per-citation
+mix.
+
+**Cross-backend conformance grid extended to 8 backends** (was 6) —
+Fireworks + Together added. Fireworks's fake client introspects the
+GBNF payload to emit text with matching delimiters, simulating
+provider-side grammar-constrained sampling; lets the marker-style
+propagation grid exercise Fireworks just like the others.
+
+**Env-connectivity test extended** (`tests/integration/test_env_connectivity.py`)
+with `test_connectivity_fireworks` and `test_connectivity_together`.
+Both skip cleanly when their `*_API_KEY` env var is absent.
+
+### Added — OpenRouter backend, Anthropic revamp, token-usage on results
+
+**`OpenRouterBackend`** (extra `openrouter`, re-uses the `openai` SDK
+since OpenRouter is OpenAI wire-compatible). Multi-provider routing
+across Anthropic / OpenAI / Google / Mistral / Groq / Fireworks /
+Together / Cohere via model strings like `"anthropic/claude-sonnet-4.6"`,
+`"openai/gpt-4o"`, `"google/gemini-2.5-pro"`. Three OpenRouter-specific
+knobs threaded onto every request:
+
+- `provider.require_parameters: true` (default) refuses to land on any
+  upstream that drops the strict `response_format` parameter — preserves
+  citeformer's logit-tier guarantee end-to-end. Disable with
+  `require_provider_parameters=False`.
+- `models=[primary, *fallbacks]` enables OpenRouter's automatic failover
+  when the primary upstream errors. Pass `fallback_models=[...]`.
+- `usage.include: true` (default) asks for per-call USD cost; surfaces
+  on `GenerationResult.usage.cost_usd`.
+
+App-attribution `HTTP-Referer` / `X-Title` headers are wired through
+`default_headers` from the `app_url` / `app_name` constructor kwargs,
+following OpenRouter's recommendation for credit attribution. Env:
+`OPENROUTER_API_KEY`. 13 new unit tests in
+`tests/unit/test_openrouter_backend.py`.
+
+**`AnthropicBackend` revamp** — three load-bearing fixes for live use:
+
+- **Prompt caching by default.** Document blocks now carry
+  `cache_control: {"type": "ephemeral"}`, so repeat-source RAG bills
+  cache-read prices on subsequent calls (~10% of fresh input on Claude
+  4.x). Disable with `use_prompt_cache=False` for one-shot calls.
+- **Honoured `temperature`.** The pre-revamp backend silently dropped
+  the option; `temperature` is now threaded through when supplied
+  (omitted otherwise so Anthropic's own default applies).
+- **Real `messages.stream()` block-level streaming.** The prior pseudo-
+  stream (call `generate()`, slice on `.!?`) is gone. The new path uses
+  the SDK's stream context manager and yields one chunk per
+  `content_block_stop` event — the natural granularity for the
+  Citations API since citation events only land at block boundaries.
+  Falls back to the non-streaming path on older SDKs / fakes that
+  mock only `messages.create`.
+
+10 new unit tests cover cache_control on/off, temperature threading,
+real-streaming events, fallback-when-no-stream, and `last_usage`
+extraction (object + dict shapes + missing).
+
+**`GenerationResult.usage` + `Citation` rich attribution (schema_version
+2 → 3; ADR-012 + ADR-013).** New optional `usage: TokenUsage | None`
+field on `GenerationResult`. `TokenUsage` carries `input_tokens`,
+`output_tokens`, optional `cache_creation_input_tokens` /
+`cache_read_input_tokens` (Anthropic prompt-caching), and
+`cost_credits` — the latter denominated in **OpenRouter credits**, not
+USD (1 credit ≈ $1 USD by default, but the unit is credits per
+OpenRouter's [accounting docs](https://openrouter.ai/docs/guides/administration/usage-accounting)).
+All five API backends (OpenAI, Anthropic, Gemini, Mistral, OpenRouter)
+populate `self.last_usage`; the orchestrator threads it onto
+`GenerationResult.usage` for both `generate()` and
+`stream().finalize()` via `getattr(backend, "last_usage", None)` —
+which keeps the `Backend` ABC unchanged so out-of-tree backends
+written against v0.1 keep working.
+
+`Citation` gains three optional fields (ADR-013): `cited_text: str |
+None`, `source_span: tuple[int, int] | None`, `document_title: str |
+None`. Anthropic's Citations API returns this rich metadata on every
+citation; the backend captures it via a `last_rich_citations: list[dict]`
+side-channel, and the orchestrator zips it with the parsed marker
+list inside `_parse_citations`. Other backends (OpenAI / Mistral /
+Gemini / Mock / local) leave the new fields `None` — honest signalling
+that schema-tier providers don't have span-level attribution. Length
+mismatch between the rich list and the marker count falls through
+silently (rich fields stay `None`) — misaligned data is worse than no
+data.
+
+**Cross-backend conformance test** (`tests/unit/test_backend_conformance.py`).
+Parametrised over MockBackend + all five API backends with fake
+clients: every cite id in `[1..N]`, empty-source rejection, marker
+styles propagate (4 shapes), `last_usage` populated for API backends,
+and `stream().finalize().citations == generate().citations`. 33 grid
+cells, runs in <1s without network.
+
+### Changed — tier-honesty docs reflect the modern API landscape
+
+The README, `docs/index.md`, `docs/reference/architecture.md`, and the
+`backends/__init__.py` docstring all framed the API/local split as
+"schema-tier vs logit-tier", but as of late 2025 that's no longer the
+honest line: every modern provider's strict structured-outputs mode is
+real token-level constrained sampling inside their runtime — see
+[OpenAI's Structured Outputs announcement](https://openai.com/index/introducing-structured-outputs-in-the-api/),
+Anthropic's [structured-outputs docs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs),
+and the equivalent for Mistral / Groq / Fireworks / Together. The new
+honest distinction is **where the masking runs** — in your process
+(local backends), or inside the provider's runtime (API backends).
+Architecture doc has the per-provider table. Backend count in prose
+went from "seven" to "eight" with OpenRouter joining.
+
+### Doc-pin verification + correctness fixes
+
+A pre-merge docs check against the live OpenRouter / Anthropic / OpenAI
+/ pydantic docs surfaced two real OpenRouter issues, both fixed:
+
+- **Dropped `extra_body={"usage": {"include": true}}`.** Per
+  OpenRouter's [usage-accounting docs](https://openrouter.ai/docs/guides/administration/usage-accounting),
+  the flag is *deprecated and a no-op* — cost is now returned on every
+  response unconditionally. We were sending a meaningless flag.
+- **Renamed `TokenUsage.cost_usd` → `cost_credits`.** OpenRouter
+  `usage.cost` is denominated in OpenRouter credits, not USD. The old
+  `cost_usd` label was actively misleading; renamed before any release
+  ships. (Costs roughly track 1:1 with USD by default but the unit is
+  the unit.)
+
+Both happened entirely within the unreleased branch — no migration
+needed. CHANGELOG entry above already reflects the renames.
+
+### Env-connectivity smoke (`tests/integration/test_env_connectivity.py`)
+
+Six `@pytest.mark.integration` tests — one per API backend, plus a
+dedicated Anthropic-streaming test. Each issues the smallest possible
+request (1 source, 80 max_tokens), asserts the structural §10.1
+invariant against the live provider, and asserts `backend.last_usage`
+populates with non-zero token counts (live verification of the
+ADR-012 token-accounting contract, not just under fakes). OpenRouter's
+test additionally asserts `cost_credits` lands on the response.
+Each test skips cleanly when the matching env var isn't set. Run with
+`make test-integration` or `pytest -m integration
+tests/integration/test_env_connectivity.py`. Total cost across all 5
+backends per full pass: ~$0.01.
+
+### Contracts (§10)
+
+- §10.1 grammar shape — unchanged.
+- §10.2 CSL metadata — unchanged.
+- §10.3 output schemas — `GenerationResult.schema_version` bumped from
+  **2 → 3**. Two shape changes ship together inside this single bump:
+  - new optional `usage: TokenUsage | None` on `GenerationResult`
+    ([ADR-012](docs/decisions/012-generation-result-schema-v3.md));
+  - three new optional fields on `Citation` (`cited_text`,
+    `source_span`, `document_title`)
+    ([ADR-013](docs/decisions/013-citation-rich-attribution.md)).
+  Snapshot regenerated; schema-version test bumped. Pre-bump v2
+  serialisations deserialise cleanly into the v3 model (the new fields
+  default to `None`).
+
+
 ## [0.2.0] — 2026-04-24
 
 ### Added — two new API backends, richer PDF extraction, ALCE harness

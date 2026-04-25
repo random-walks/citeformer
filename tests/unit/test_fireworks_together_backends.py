@@ -285,6 +285,4 @@ def test_module_constants_are_https() -> None:
     assert FIREWORKS_BASE_URL.startswith("https://")
     assert TOGETHER_BASE_URL.startswith("https://")
     # `os.environ.get` smoke — guards against a typo'd env var name.
-    assert os.environ.get("FIREWORKS_API_KEY", "") == os.environ.get(
-        "FIREWORKS_API_KEY", ""
-    )
+    assert os.environ.get("FIREWORKS_API_KEY", "") == os.environ.get("FIREWORKS_API_KEY", "")

@@ -86,9 +86,7 @@ class FireworksBackend(OpenAIBackend):
             import os
 
             resolved_api_key = (
-                api_key
-                or os.environ.get("FIREWORKS_API_KEY")
-                or client_kwargs.pop("api_key", None)
+                api_key or os.environ.get("FIREWORKS_API_KEY") or client_kwargs.pop("api_key", None)
             )
             client_kwargs.setdefault("base_url", base_url)
             if resolved_api_key is not None:

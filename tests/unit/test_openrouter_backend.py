@@ -315,6 +315,4 @@ def test_openrouter_default_module_constant() -> None:
     """The base URL constant is exposed for callers that want to override it."""
     assert DEFAULT_BASE_URL.startswith("https://")
     # Smoke check the env-var name we document — guards against a typo'd rename.
-    assert os.environ.get("OPENROUTER_API_KEY", "") == os.environ.get(
-        "OPENROUTER_API_KEY", ""
-    )
+    assert os.environ.get("OPENROUTER_API_KEY", "") == os.environ.get("OPENROUTER_API_KEY", "")

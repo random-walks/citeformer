@@ -270,9 +270,7 @@ class Citeformer:
                 meta = rich[i]
                 extra["cited_text"] = meta.get("cited_text")
                 src_span = meta.get("source_span")
-                extra["source_span"] = (
-                    tuple(src_span) if src_span is not None else None
-                )
+                extra["source_span"] = tuple(src_span) if src_span is not None else None
                 extra["document_title"] = meta.get("document_title")
             citations.append(
                 Citation(
@@ -361,9 +359,7 @@ class StreamingResult:
         for _ in self:
             pass
         text = self.text
-        rich = (
-            _pull_rich_citations(self._backend) if self._backend is not None else None
-        )
+        rich = _pull_rich_citations(self._backend) if self._backend is not None else None
         citations = Citeformer._parse_citations(text, self.marker_style, rich=rich)
         references = render_references(self.sources, citations, self.style)
         self._finalized = GenerationResult(

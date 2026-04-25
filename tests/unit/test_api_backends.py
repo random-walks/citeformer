@@ -365,9 +365,7 @@ def test_anthropic_backend_omits_cache_control_when_opted_out(
     cache_control — useful for truly one-shot calls where caching is overhead."""
     fake = _FakeAnthropic([])
     backend = AnthropicBackend(model="claude-sonnet-4-6", client=fake)
-    backend.generate(
-        prompt="hi", sources=sources, policy=Policy.AUTO, use_prompt_cache=False
-    )
+    backend.generate(prompt="hi", sources=sources, policy=Policy.AUTO, use_prompt_cache=False)
     docs = [
         item
         for item in fake.last_kwargs["messages"][0]["content"]
@@ -386,9 +384,7 @@ def test_anthropic_backend_threads_temperature_when_supplied(
     through to the SDK call so users can actually control sampling temperature."""
     fake = _FakeAnthropic([])
     backend = AnthropicBackend(model="claude-sonnet-4-6", client=fake)
-    backend.generate(
-        prompt="hi", sources=sources, policy=Policy.AUTO, temperature=0.0
-    )
+    backend.generate(prompt="hi", sources=sources, policy=Policy.AUTO, temperature=0.0)
     assert fake.last_kwargs["temperature"] == 0.0
 
 

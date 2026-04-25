@@ -81,9 +81,7 @@ def _fake_gemini_client(payload: str) -> Any:
     fake.models = SimpleNamespace(
         generate_content=lambda **kwargs: SimpleNamespace(
             text=payload,
-            usage_metadata=SimpleNamespace(
-                prompt_token_count=10, candidates_token_count=5
-            ),
+            usage_metadata=SimpleNamespace(prompt_token_count=10, candidates_token_count=5),
         )
     )
     return fake
@@ -143,9 +141,7 @@ def _make_openrouter(n_sources: int) -> Backend:
         model="anthropic/claude-sonnet-4.6",
         client=_fake_openai_client(
             _segments_payload(n_sources),
-            usage=SimpleNamespace(
-                prompt_tokens=42, completion_tokens=12, cost=0.001
-            ),
+            usage=SimpleNamespace(prompt_tokens=42, completion_tokens=12, cost=0.001),
         ),
     )
 
@@ -153,9 +149,7 @@ def _make_openrouter(n_sources: int) -> Backend:
 def _make_anthropic(n_sources: int) -> Backend:
     return AnthropicBackend(
         model="claude-sonnet-4-6",
-        client=_fake_anthropic_client(
-            "Claim about each source.", n_sources=n_sources
-        ),
+        client=_fake_anthropic_client("Claim about each source.", n_sources=n_sources),
     )
 
 
@@ -200,9 +194,7 @@ def _make_fireworks(n_sources: int) -> Backend:
             open_d, close_d = "{", "}"
         elif '"^"' in grammar:
             open_d, close_d = "^", ""
-        text = " ".join(
-            f"Claim {i} {open_d}{i}{close_d}." for i in range(1, n_sources + 1)
-        )
+        text = " ".join(f"Claim {i} {open_d}{i}{close_d}." for i in range(1, n_sources + 1))
         return SimpleNamespace(
             choices=[SimpleNamespace(message=SimpleNamespace(content=text))],
             usage=SimpleNamespace(prompt_tokens=42, completion_tokens=12),
@@ -246,8 +238,7 @@ def _all_cite_ids(text: str) -> list[int]:
 @pytest.fixture
 def sources() -> list[Source]:
     return [
-        Source(metadata={"id": f"s{i}", "type": "book"}, content=f"Body {i}.")
-        for i in range(1, 4)
+        Source(metadata={"id": f"s{i}", "type": "book"}, content=f"Body {i}.") for i in range(1, 4)
     ]
 
 

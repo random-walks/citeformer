@@ -323,9 +323,7 @@ def _extract_usage(raw: Any) -> TokenUsage | None:
     return TokenUsage(
         input_tokens=int(input_tokens or 0),
         output_tokens=int(output_tokens or 0),
-        cache_creation_input_tokens=(
-            int(cache_creation) if cache_creation is not None else None
-        ),
+        cache_creation_input_tokens=(int(cache_creation) if cache_creation is not None else None),
         cache_read_input_tokens=(int(cache_read) if cache_read is not None else None),
     )
 
@@ -419,9 +417,7 @@ def _flatten_blocks(
                 start = _attr_or_key(cite, "start_char_index")
                 end = _attr_or_key(cite, "end_char_index")
                 source_span = (
-                    (int(start), int(end))
-                    if start is not None and end is not None
-                    else None
+                    (int(start), int(end)) if start is not None and end is not None else None
                 )
                 record.append(
                     {

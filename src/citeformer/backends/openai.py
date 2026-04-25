@@ -33,7 +33,7 @@ from collections.abc import Iterator
 from typing import Any
 
 from citeformer.backends.base import Backend
-from citeformer.core import MarkerStyle, Policy, Source
+from citeformer.core import MarkerStyle, Policy, Source, TokenUsage
 
 _LOG = logging.getLogger(__name__)
 
@@ -63,10 +63,14 @@ class OpenAIBackend(Backend):
     Attributes:
         model: OpenAI model identifier (e.g. ``"gpt-4o-mini"``).
         client: The authenticated ``openai.OpenAI`` client.
+        last_usage: Token-usage payload from the most recent ``generate()``
+            call. ``None`` before the first call. The orchestrator threads
+            this onto :attr:`GenerationResult.usage`.
     """
 
     model: str
     client: Any
+    last_usage: TokenUsage | None
 
     def __init__(
         self,
@@ -97,6 +101,7 @@ class OpenAIBackend(Backend):
 
         self.model = model
         self.client = client if client is not None else OpenAI(**client_kwargs)
+        self.last_usage = None
 
     def generate(
         self,
@@ -141,12 +146,12 @@ class OpenAIBackend(Backend):
             system_prompt=options.get("system_prompt"),
         )
 
-        completion: Any = self.client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            response_format={
+        create_kwargs: dict[str, Any] = {
+            "model": self.model,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "response_format": {
                 "type": "json_schema",
                 "json_schema": {
                     "name": "CitedSegments",
@@ -154,9 +159,28 @@ class OpenAIBackend(Backend):
                     "schema": schema,
                 },
             },
-        )
+        }
+        # Subclasses (OpenRouter) inject extra fields via _augment_create_kwargs.
+        self._augment_create_kwargs(create_kwargs, options=options)
+        completion: Any = self.client.chat.completions.create(**create_kwargs)
+        self.last_usage = _extract_openai_usage(getattr(completion, "usage", None))
         raw = completion.choices[0].message.content
         return _flatten_segments(raw, marker_style=marker_style)
+
+    def _augment_create_kwargs(
+        self,
+        kwargs: dict[str, Any],
+        *,
+        options: dict[str, Any],
+    ) -> None:
+        """Hook for subclasses to inject provider-specific request fields.
+
+        The base OpenAI backend is a no-op; OpenRouter overrides this to
+        thread ``extra_body`` (provider routing) and ``extra_headers`` (app
+        attribution) onto the completion call without duplicating any of the
+        schema or message-assembly logic.
+        """
+        del kwargs, options  # intentionally unused on the base backend
 
     def stream(
         self,
@@ -331,3 +355,42 @@ def _delimiters_for(
         MarkerStyle.CURLY: ("{", "}"),
         MarkerStyle.CARET: ("^", ""),
     }[style]
+
+
+def _extract_openai_usage(raw: Any) -> TokenUsage | None:
+    """Pull token counts off an OpenAI-style ``usage`` payload.
+
+    Shared by ``OpenAIBackend``, ``MistralBackend`` (the SDK's response
+    shape mirrors OpenAI's), and ``OpenRouterBackend``. Handles both
+    object and dict shapes — fake clients in unit tests use
+    SimpleNamespace, real SDKs use typed objects, OpenRouter occasionally
+    surfaces extra fields like ``cost`` and ``prompt_tokens_details``.
+    """
+    if raw is None:
+        return None
+
+    def _get(name: str) -> Any:
+        if isinstance(raw, dict):
+            return raw.get(name)
+        return getattr(raw, name, None)
+
+    prompt = _get("prompt_tokens")
+    completion = _get("completion_tokens")
+    if prompt is None and completion is None:
+        return None
+
+    cached = None
+    details = _get("prompt_tokens_details")
+    if details is not None:
+        if isinstance(details, dict):
+            cached = details.get("cached_tokens")
+        else:
+            cached = getattr(details, "cached_tokens", None)
+
+    cost = _get("cost")
+    return TokenUsage(
+        input_tokens=int(prompt or 0),
+        output_tokens=int(completion or 0),
+        cache_read_input_tokens=int(cached) if cached is not None else None,
+        cost_usd=float(cost) if cost is not None else None,
+    )

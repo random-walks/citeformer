@@ -233,6 +233,67 @@ class Source(BaseModel):
         return [cls(metadata=item, content="") for item in items]
 
 
+class TokenUsage(BaseModel):
+    """Token-level cost accounting for one ``Backend.generate()`` call.
+
+    Populated by API backends from their provider's per-call ``usage`` payload
+    and threaded onto :class:`GenerationResult.usage` by the orchestrator.
+    Local backends leave this ``None`` — token accounting is meaningless when
+    you control the runtime and the bill is just GPU time.
+
+    Cache fields are populated when the provider exposes prompt-caching info
+    (Anthropic surfaces ``cache_creation_input_tokens`` /
+    ``cache_read_input_tokens``; the OpenAI-compatible ``prompt_tokens_details``
+    cached-tokens field is normalised into the same shape). Consumers
+    aggregating cost should sum
+    ``input_tokens + cache_creation_input_tokens + cache_read_input_tokens``
+    against the provider's per-tier price (cache-read tokens are typically
+    cheaper than fresh input tokens).
+
+    ``cost_usd`` is filled in by providers that report it directly
+    (OpenRouter exposes ``usage.cost`` per call when you include
+    ``include_cost`` in the request); other backends leave it ``None`` and
+    consumers compute it from token counts themselves.
+
+    Attributes:
+        input_tokens: Prompt + system + document tokens billed as input.
+            Excludes cache-read tokens (those are reported separately).
+        output_tokens: Tokens the model generated.
+        cache_creation_input_tokens: Tokens billed at the cache-write rate.
+            ``None`` if the provider doesn't surface caching metadata.
+        cache_read_input_tokens: Tokens served from cache (typically billed at
+            a discount). ``None`` if the provider doesn't surface caching.
+        cost_usd: Total call cost in USD if the provider returns it directly.
+            ``None`` when the consumer must price tokens themselves.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    input_tokens: int = Field(
+        ge=0,
+        description="Prompt + system + document tokens billed as input.",
+    )
+    output_tokens: int = Field(
+        ge=0,
+        description="Tokens the model generated.",
+    )
+    cache_creation_input_tokens: int | None = Field(
+        default=None,
+        ge=0,
+        description="Tokens billed at the cache-write rate (Anthropic-style).",
+    )
+    cache_read_input_tokens: int | None = Field(
+        default=None,
+        ge=0,
+        description="Tokens served from cache.",
+    )
+    cost_usd: float | None = Field(
+        default=None,
+        ge=0.0,
+        description="Provider-reported call cost in USD; None when not exposed.",
+    )
+
+
 class Citation(BaseModel):
     """A single inline citation marker emitted by the model.
 
@@ -302,9 +363,10 @@ class GenerationResult(BaseModel):
 
     §10.3 contract: `schema_version` is pinned by `tests/integration/test_schemas.py`.
     Any shape change requires bumping `schema_version` and following the ceremony in
-    `docs/reference/contracts.md`. Current version: **2** — added the
-    ``sources`` field so ``verify()`` is self-contained. See
-    ``docs/decisions/008-generation-result-schema-v2.md``.
+    `docs/reference/contracts.md`. Current version: **3** — added the optional
+    ``usage`` field so API-backend callers see token counts and (where the
+    provider exposes it) per-call USD cost without reaching into the raw
+    response. See ``docs/decisions/012-generation-result-schema-v3.md``.
 
     Attributes:
         schema_version: Contract version. Bump on any field add/rename/removal.
@@ -316,12 +378,16 @@ class GenerationResult(BaseModel):
         sources: The sources that were in scope for this generation call. Carried
             on the result so `verify()` can run NLI against them without the
             caller having to pass them separately.
+        usage: Token counts (and provider-reported cost when exposed) for the
+            backend call that produced this result. ``None`` for local
+            backends — token accounting is meaningless when you control the
+            runtime.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     schema_version: int = Field(
-        default=2,
+        default=3,
         description="§10.3 contract version. Bumped on any shape change.",
     )
     text: str = Field(
@@ -338,6 +404,10 @@ class GenerationResult(BaseModel):
     sources: list[Source] = Field(
         default_factory=list,
         description="The sources that were in scope when this result was generated.",
+    )
+    usage: TokenUsage | None = Field(
+        default=None,
+        description="Token usage + (where exposed) cost for the backend call.",
     )
 
     def verify(

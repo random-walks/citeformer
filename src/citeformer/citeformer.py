@@ -29,6 +29,7 @@ from citeformer.core import (
     Policy,
     Reference,
     Source,
+    TokenUsage,
 )
 from citeformer.render import render_references
 
@@ -186,6 +187,7 @@ class Citeformer:
             citations=citations,
             references=references,
             sources=list(sources),
+            usage=_pull_usage(self.backend),
         )
 
     def stream(
@@ -234,6 +236,7 @@ class Citeformer:
             sources=list(sources),
             style=self.style,
             marker_style=effective_marker,
+            backend=self.backend,
         )
 
     @staticmethod
@@ -289,6 +292,7 @@ class StreamingResult:
         sources: list[Source],
         style: str,
         marker_style: MarkerStyle = MarkerStyle.BRACKET,
+        backend: Backend | None = None,
     ) -> None:
         """Wrap a backend chunk iterator. Not for direct construction by users."""
         self._chunks = chunks
@@ -297,6 +301,7 @@ class StreamingResult:
         self.marker_style = marker_style
         self._accumulated: list[str] = []
         self._finalized: GenerationResult | None = None
+        self._backend = backend
 
     def __iter__(self) -> StreamingResult:
         return self
@@ -334,5 +339,17 @@ class StreamingResult:
             citations=citations,
             references=references,
             sources=self.sources,
+            usage=_pull_usage(self._backend) if self._backend is not None else None,
         )
         return self._finalized
+
+
+def _pull_usage(backend: Backend) -> TokenUsage | None:
+    """Read ``backend.last_usage`` if the backend exposes it.
+
+    Local backends (HF, vLLM, llama.cpp, MockBackend) don't define
+    ``last_usage``; getattr's default keeps them silent. API backends set
+    it at the end of every ``generate()`` / ``stream()`` call so the
+    orchestrator can copy the value onto the resulting ``GenerationResult``.
+    """
+    return getattr(backend, "last_usage", None)

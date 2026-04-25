@@ -383,10 +383,10 @@ def test_generation_result_is_frozen(text: str, cite_ids: list[int]) -> None:
 
 @_FUZZ_SETTINGS
 @given(text=st.text(max_size=50))
-def test_generation_result_default_schema_version_is_2(text: str) -> None:
-    """Default schema_version must stay 2 until an explicit bump."""
+def test_generation_result_default_schema_version_is_3(text: str) -> None:
+    """Default schema_version must stay 3 until the next explicit bump."""
     result = GenerationResult(text=text)
-    assert result.schema_version == 2
+    assert result.schema_version == 3
 
 
 @_FUZZ_SETTINGS

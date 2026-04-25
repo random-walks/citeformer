@@ -18,7 +18,7 @@ references:
 - inline_marker: '[2]'
   rendered: Melville, H. (1851). Moby-Dick.
   source_id: 2
-schema_version: 2
+schema_version: 3
 sources:
 - content: Once upon a midnight dreary...
   metadata:
@@ -31,3 +31,4 @@ sources:
     title: Moby-Dick
     type: book
 text: Poe's Raven opens with mystery [1]. Melville begins with identity [2].
+usage: null

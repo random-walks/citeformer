@@ -1,22 +1,36 @@
 """Anthropic backend — adapter over Anthropic's native Citations API.
 
 Anthropic's Messages API has first-class Citations support (launched
-Jan 2025): pass documents as `{"type": "document", ..., "citations": {"enabled": true}}`
-and every assistant-side text block is decorated with an optional
-``citations`` array referencing the document index + character span.
+Jan 2025): pass documents as ``{"type": "document", ..., "citations":
+{"enabled": true}}`` and every assistant-side text block is decorated
+with an optional ``citations`` array referencing the document index +
+character span.
 
 This backend is an **adapter**, not an enforcement layer. Claude's own
 system ensures the returned citation references point at a document that
-was actually provided — so fabricating a reference is a provider-side
-impossibility. We translate Anthropic's native shape back into citeformer's
+was actually provided — fabricating a reference is provider-side
+impossible. We translate Anthropic's native shape back into citeformer's
 :class:`~citeformer.core.Citation` / :class:`~citeformer.core.Reference`
-types so downstream code can mix Anthropic output with local-backend output
-in the same pipeline.
+types so downstream code can mix Anthropic output with local-backend
+output in the same pipeline.
 
 Because the enforcement is native, ``marker_style`` is advisory on this
-backend — we render Claude's citations in the chosen shape for consistency
-with the rest of citeformer, but the provider itself doesn't know about
-marker styles; it emits a structured citation block per assertion.
+backend — we render Claude's citations in the chosen shape for
+consistency with the rest of citeformer, but the provider itself doesn't
+know about marker styles; it emits a structured citation block per
+assertion.
+
+Prompt caching (``cache_control``) is on by default for the document
+blocks. Claude prices cache-read tokens at ~10% of fresh input tokens,
+so for any RAG pipeline that reuses the same source list across calls
+the saving is substantial. Disable with ``use_prompt_cache=False`` if
+the documents are one-shot.
+
+True per-block streaming via :meth:`stream` is wired to the SDK's
+``messages.stream()`` context manager — text deltas are batched per
+block so the citation markers attach to the right block when the block
+finishes (the per-token delta path doesn't carry citation info on the
+wire; you only see citations at ``content_block_stop``).
 
 Requires the ``anthropic`` extra: ``pip install citeformer[anthropic]``.
 """
@@ -28,11 +42,12 @@ from collections.abc import Iterator
 from typing import Any
 
 from citeformer.backends.base import Backend
-from citeformer.core import MarkerStyle, Policy, Source
+from citeformer.core import MarkerStyle, Policy, Source, TokenUsage
 
 _LOG = logging.getLogger(__name__)
 
 _DEFAULT_MAX_TOKENS = 1024
+_DEFAULT_TEMPERATURE = 1.0  # Anthropic's API default; honoured if caller passes one
 _DEFAULT_MODEL = "claude-sonnet-4-6"
 
 
@@ -42,10 +57,14 @@ class AnthropicBackend(Backend):
     Attributes:
         model: Anthropic model id (e.g. ``"claude-sonnet-4-6"``).
         client: The ``anthropic.Anthropic`` client.
+        last_usage: Token-usage payload from the most recent ``generate()``
+            / ``stream()`` call. ``None`` before the first call. The
+            orchestrator threads this onto :attr:`GenerationResult.usage`.
     """
 
     model: str
     client: Any
+    last_usage: TokenUsage | None
 
     def __init__(
         self,
@@ -75,6 +94,7 @@ class AnthropicBackend(Backend):
 
         self.model = model
         self.client = client if client is not None else Anthropic(**client_kwargs)
+        self.last_usage = None
 
     def generate(
         self,
@@ -92,9 +112,15 @@ class AnthropicBackend(Backend):
                 Claude sees the caller's enforcement intent. The provider
                 itself doesn't have a typed policy, so we rely on the
                 system prompt to shape behaviour.
-            **options: ``max_tokens`` (default 1024), ``system_prompt``
-                (optional extra system content), ``marker_style`` (default
-                BRACKET — advisory, used to render citation markers).
+            **options: ``max_tokens`` (default 1024), ``temperature``
+                (default Anthropic's own default — passed through only
+                when explicitly supplied), ``system_prompt`` (extra
+                system content), ``marker_style`` (default BRACKET —
+                advisory, used to render citation markers),
+                ``use_prompt_cache`` (default ``True``; sets
+                ``cache_control: ephemeral`` on every document block so
+                repeat-source RAG pays cache-read prices on subsequent
+                calls), ``extra_headers`` (forwarded to the SDK).
 
         Returns:
             Flattened text carrying the configured marker style for every
@@ -106,38 +132,11 @@ class AnthropicBackend(Backend):
         if len(sources) < 1:
             raise ValueError("AnthropicBackend requires at least 1 source")
 
-        max_tokens = int(options.get("max_tokens", _DEFAULT_MAX_TOKENS))
+        request_kwargs = self._build_request(prompt, sources, policy, options)
         marker_style = options.get("marker_style", MarkerStyle.BRACKET)
-        system_prompt = _build_system_prompt(policy, options.get("system_prompt"))
 
-        documents = [
-            {
-                "type": "document",
-                "source": {
-                    "type": "text",
-                    "media_type": "text/plain",
-                    "data": src.content or str(src.metadata.get("title", f"Source {i}")),
-                },
-                "title": str(src.metadata.get("title", f"Source {i}")),
-                "citations": {"enabled": True},
-            }
-            for i, src in enumerate(sources, start=1)
-        ]
-
-        message: Any = self.client.messages.create(
-            model=self.model,
-            max_tokens=max_tokens,
-            system=system_prompt,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        *documents,
-                        {"type": "text", "text": prompt},
-                    ],
-                }
-            ],
-        )
+        message: Any = self.client.messages.create(**request_kwargs)
+        self.last_usage = _extract_usage(getattr(message, "usage", None))
         return _flatten_blocks(message.content, marker_style=marker_style)
 
     def stream(
@@ -147,21 +146,117 @@ class AnthropicBackend(Backend):
         policy: Policy,
         **options: Any,
     ) -> Iterator[str]:
-        """Yield the flattened response in sentence-sized chunks.
+        """Stream block-sized chunks via Anthropic's native ``messages.stream()``.
 
-        Anthropic's streaming surface is block-oriented; we take the simpler
-        path of calling :meth:`generate` once and slicing the result on
-        punctuation so downstream chunk consumers still see progression.
+        Each yielded chunk corresponds to one finished text block from
+        Claude — text + the marker(s) for any citations attached to that
+        block. Yielding per-block (rather than per-token) is the natural
+        granularity for the Citations API: citation events only arrive at
+        ``content_block_stop``, so per-token text deltas would have to be
+        rewritten in-place when the citations land. The per-block path is
+        honest and produces clean output.
+
+        Falls back to the non-streaming path on SDKs that don't expose
+        ``messages.stream`` (very old client versions or test stand-ins
+        that mock only ``messages.create``).
+
+        Args:
+            prompt: See :meth:`generate`.
+            sources: See :meth:`generate`.
+            policy: See :meth:`generate`.
+            **options: Same options as :meth:`generate`.
+
+        Yields:
+            Per-block text chunks (each terminated by a single space)
+            carrying any citation markers that landed on the block.
         """
-        text = self.generate(prompt=prompt, sources=sources, policy=policy, **options)
-        buf: list[str] = []
-        for char in text:
-            buf.append(char)
-            if char in ".!?" and buf:
-                yield "".join(buf) + " "
-                buf = []
-        if buf:
-            yield "".join(buf)
+        if len(sources) < 1:
+            raise ValueError("AnthropicBackend requires at least 1 source")
+
+        marker_style = options.get("marker_style", MarkerStyle.BRACKET)
+        request_kwargs = self._build_request(prompt, sources, policy, options)
+
+        stream_method = getattr(self.client.messages, "stream", None)
+        if stream_method is None:
+            # Old SDK or a fake client that only mocked `create` — fall back
+            # to the non-streaming path so callers still get a usable result.
+            yield self.generate(prompt=prompt, sources=sources, policy=policy, **options)
+            return
+
+        with stream_method(**request_kwargs) as stream:
+            for block in _iter_completed_blocks(stream):
+                rendered = _render_block(block, marker_style=marker_style)
+                if rendered:
+                    yield rendered + " "
+            final_message = stream.get_final_message()
+        self.last_usage = _extract_usage(getattr(final_message, "usage", None))
+
+    def _build_request(
+        self,
+        prompt: str,
+        sources: list[Source],
+        policy: Policy,
+        options: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Assemble the kwargs dict shared by ``generate()`` and ``stream()``.
+
+        Centralised so caching, system-prompt assembly, and document-block
+        construction stay consistent across the two entry points — and so
+        the unit tests only need to verify one shape.
+        """
+        max_tokens = int(options.get("max_tokens", _DEFAULT_MAX_TOKENS))
+        system_prompt = _build_system_prompt(policy, options.get("system_prompt"))
+        use_cache = bool(options.get("use_prompt_cache", True))
+        documents = _build_documents(sources, use_cache=use_cache)
+
+        request_kwargs: dict[str, Any] = {
+            "model": self.model,
+            "max_tokens": max_tokens,
+            "system": system_prompt,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        *documents,
+                        {"type": "text", "text": prompt},
+                    ],
+                }
+            ],
+        }
+        if "temperature" in options:
+            request_kwargs["temperature"] = float(options["temperature"])
+        elif options.get("_force_default_temperature"):
+            request_kwargs["temperature"] = _DEFAULT_TEMPERATURE
+        if "extra_headers" in options:
+            request_kwargs["extra_headers"] = options["extra_headers"]
+        return request_kwargs
+
+
+def _build_documents(sources: list[Source], *, use_cache: bool) -> list[dict[str, Any]]:
+    """Build the document content blocks Claude consumes for citations.
+
+    Setting ``cache_control: {"type": "ephemeral"}`` on each document
+    block opts the prefix into Anthropic's prompt-caching path — repeat
+    calls with the same source list bill cache-read tokens (~10% of
+    input) instead of full input tokens. Set ``use_cache=False`` for
+    truly one-shot calls where caching is overhead.
+    """
+    documents: list[dict[str, Any]] = []
+    for i, src in enumerate(sources, start=1):
+        block: dict[str, Any] = {
+            "type": "document",
+            "source": {
+                "type": "text",
+                "media_type": "text/plain",
+                "data": src.content or str(src.metadata.get("title", f"Source {i}")),
+            },
+            "title": str(src.metadata.get("title", f"Source {i}")),
+            "citations": {"enabled": True},
+        }
+        if use_cache:
+            block["cache_control"] = {"type": "ephemeral"}
+        documents.append(block)
+    return documents
 
 
 def _build_system_prompt(policy: Policy, extra: str | None) -> str:
@@ -185,6 +280,68 @@ def _build_system_prompt(policy: Policy, extra: str | None) -> str:
             "question."
         )
     return "\n\n".join(parts) if parts else "Cite your sources."
+
+
+def _extract_usage(raw: Any) -> TokenUsage | None:
+    """Pull ``input_tokens`` / ``output_tokens`` (and cache fields) off a usage object.
+
+    Handles both the SDK's typed ``Usage`` object (attribute access) and
+    a plain dict (the unit tests' fake clients return SimpleNamespace,
+    real SDKs may evolve, and dicts arrive when consumers unpickle a
+    response). Missing fields collapse to zero / ``None``.
+    """
+    if raw is None:
+        return None
+
+    def _get(name: str) -> Any:
+        if isinstance(raw, dict):
+            return raw.get(name)
+        return getattr(raw, name, None)
+
+    input_tokens = _get("input_tokens")
+    output_tokens = _get("output_tokens")
+    if input_tokens is None and output_tokens is None:
+        return None
+    cache_creation = _get("cache_creation_input_tokens")
+    cache_read = _get("cache_read_input_tokens")
+    return TokenUsage(
+        input_tokens=int(input_tokens or 0),
+        output_tokens=int(output_tokens or 0),
+        cache_creation_input_tokens=(
+            int(cache_creation) if cache_creation is not None else None
+        ),
+        cache_read_input_tokens=(int(cache_read) if cache_read is not None else None),
+    )
+
+
+def _iter_completed_blocks(stream: Any) -> Iterator[Any]:
+    """Yield each block the stream finishes, in order.
+
+    Anthropic's streaming surface emits a sequence of typed events; we
+    only care about ``content_block_stop`` (the moment a block is
+    complete with all its citations attached). Different SDK versions
+    surface the block payload at slightly different attribute names —
+    we try the common ones in order.
+    """
+    for event in stream:
+        event_type = getattr(event, "type", None) or (
+            event.get("type") if isinstance(event, dict) else None
+        )
+        if event_type != "content_block_stop":
+            continue
+        block: Any = (
+            getattr(event, "content_block", None)
+            or getattr(event, "block", None)
+            or (event.get("content_block") if isinstance(event, dict) else None)
+            or (event.get("block") if isinstance(event, dict) else None)
+        )
+        if block is not None:
+            yield block
+
+
+def _render_block(block: Any, *, marker_style: MarkerStyle) -> str:
+    """Render one content block to text + trailing markers (or just text)."""
+    return _flatten_blocks([block], marker_style=marker_style)
 
 
 def _flatten_blocks(content: Any, *, marker_style: MarkerStyle) -> str:

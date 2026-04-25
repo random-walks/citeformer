@@ -28,6 +28,7 @@ from citeformer.core import (
     Policy,
     Reference,
     Source,
+    TokenUsage,
 )
 from citeformer.csl import (
     CSLValidationError,
@@ -60,6 +61,7 @@ __all__ = [
     "Reference",
     "Source",
     "StreamingResult",
+    "TokenUsage",
     "ValidationReport",
     "VerificationReport",
     "__version__",

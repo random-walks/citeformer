@@ -934,6 +934,9 @@ mistral = [
 openai = [
     { name = "openai" },
 ]
+openrouter = [
+    { name = "openai" },
+]
 verify = [
     { name = "sentence-transformers" },
     { name = "torch" },
@@ -978,6 +981,7 @@ requires-dist = [
     { name = "myst-parser", extras = ["linkify"], marker = "extra == 'docs'", specifier = ">=3" },
     { name = "openai", marker = "extra == 'all'", specifier = ">=1.40" },
     { name = "openai", marker = "extra == 'openai'", specifier = ">=1.40" },
+    { name = "openai", marker = "extra == 'openrouter'", specifier = ">=1.40" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3" },
     { name = "pydantic", specifier = ">=2" },
     { name = "pypdf", specifier = ">=5" },
@@ -1019,7 +1023,7 @@ requires-dist = [
     { name = "xgrammar", marker = "extra == 'examples'", specifier = ">=0.1.30" },
     { name = "xgrammar", marker = "extra == 'hf'", specifier = ">=0.1.30" },
 ]
-provides-extras = ["all", "anthropic", "dev", "docs", "examples", "gemini", "grobid", "hf", "llamacpp", "mistral", "openai", "verify", "vllm"]
+provides-extras = ["all", "anthropic", "dev", "docs", "examples", "gemini", "grobid", "hf", "llamacpp", "mistral", "openai", "openrouter", "verify", "vllm"]
 
 [[package]]
 name = "click"

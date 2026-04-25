@@ -6,6 +6,8 @@ Versioning policy: **patch bumps are cheap**. See [docs/development/releasing.md
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-04-25
+
 ### Added — async surface, ADRs 014-017
 
 **Async surface end-to-end** (ADR-014). `Backend` ABC gains `agenerate()`
@@ -1207,4 +1209,5 @@ the guarantee on a real (tiny) model — ``gpt2`` via MPS/CPU.
 - §10.2 CSL metadata: not yet implemented (lands in P3).
 - §10.3 output schemas: not yet implemented (lands in P1).
 
-[Unreleased]: https://github.com/random-walks/citeformer/compare/HEAD
+[Unreleased]: https://github.com/random-walks/citeformer/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/random-walks/citeformer/releases/tag/v0.3.0

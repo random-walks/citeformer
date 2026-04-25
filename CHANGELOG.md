@@ -6,6 +6,97 @@ Versioning policy: **patch bumps are cheap**. See [docs/development/releasing.md
 
 ## [Unreleased]
 
+### Added — OpenRouter backend, Anthropic revamp, token-usage on results
+
+**`OpenRouterBackend`** (extra `openrouter`, re-uses the `openai` SDK
+since OpenRouter is OpenAI wire-compatible). Multi-provider routing
+across Anthropic / OpenAI / Google / Mistral / Groq / Fireworks /
+Together / Cohere via model strings like `"anthropic/claude-sonnet-4.6"`,
+`"openai/gpt-4o"`, `"google/gemini-2.5-pro"`. Three OpenRouter-specific
+knobs threaded onto every request:
+
+- `provider.require_parameters: true` (default) refuses to land on any
+  upstream that drops the strict `response_format` parameter — preserves
+  citeformer's logit-tier guarantee end-to-end. Disable with
+  `require_provider_parameters=False`.
+- `models=[primary, *fallbacks]` enables OpenRouter's automatic failover
+  when the primary upstream errors. Pass `fallback_models=[...]`.
+- `usage.include: true` (default) asks for per-call USD cost; surfaces
+  on `GenerationResult.usage.cost_usd`.
+
+App-attribution `HTTP-Referer` / `X-Title` headers are wired through
+`default_headers` from the `app_url` / `app_name` constructor kwargs,
+following OpenRouter's recommendation for credit attribution. Env:
+`OPENROUTER_API_KEY`. 13 new unit tests in
+`tests/unit/test_openrouter_backend.py`.
+
+**`AnthropicBackend` revamp** — three load-bearing fixes for live use:
+
+- **Prompt caching by default.** Document blocks now carry
+  `cache_control: {"type": "ephemeral"}`, so repeat-source RAG bills
+  cache-read prices on subsequent calls (~10% of fresh input on Claude
+  4.x). Disable with `use_prompt_cache=False` for one-shot calls.
+- **Honoured `temperature`.** The pre-revamp backend silently dropped
+  the option; `temperature` is now threaded through when supplied
+  (omitted otherwise so Anthropic's own default applies).
+- **Real `messages.stream()` block-level streaming.** The prior pseudo-
+  stream (call `generate()`, slice on `.!?`) is gone. The new path uses
+  the SDK's stream context manager and yields one chunk per
+  `content_block_stop` event — the natural granularity for the
+  Citations API since citation events only land at block boundaries.
+  Falls back to the non-streaming path on older SDKs / fakes that
+  mock only `messages.create`.
+
+10 new unit tests cover cache_control on/off, temperature threading,
+real-streaming events, fallback-when-no-stream, and `last_usage`
+extraction (object + dict shapes + missing).
+
+**`GenerationResult.usage` (schema_version 2 → 3, ADR-012).** New
+optional `usage: TokenUsage | None` field. `TokenUsage` carries
+`input_tokens`, `output_tokens`, optional
+`cache_creation_input_tokens` / `cache_read_input_tokens` (Anthropic
+prompt-caching), and `cost_usd` (OpenRouter exposes per-call USD
+directly). All five API backends (OpenAI, Anthropic, Gemini, Mistral,
+OpenRouter) populate `self.last_usage` at the end of `generate()`;
+the orchestrator threads it onto `GenerationResult.usage` for both
+`generate()` and `stream().finalize()` via `getattr(backend,
+"last_usage", None)` — which keeps the `Backend` ABC unchanged so
+out-of-tree backends written against v0.1 keep working.
+
+**Cross-backend conformance test** (`tests/unit/test_backend_conformance.py`).
+Parametrised over MockBackend + all five API backends with fake
+clients: every cite id in `[1..N]`, empty-source rejection, marker
+styles propagate (4 shapes), `last_usage` populated for API backends,
+and `stream().finalize().citations == generate().citations`. 33 grid
+cells, runs in <1s without network.
+
+### Changed — tier-honesty docs reflect the modern API landscape
+
+The README, `docs/index.md`, `docs/reference/architecture.md`, and the
+`backends/__init__.py` docstring all framed the API/local split as
+"schema-tier vs logit-tier", but as of late 2025 that's no longer the
+honest line: every modern provider's strict structured-outputs mode is
+real token-level constrained sampling inside their runtime — see
+[OpenAI's Structured Outputs announcement](https://openai.com/index/introducing-structured-outputs-in-the-api/),
+Anthropic's [structured-outputs docs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs),
+and the equivalent for Mistral / Groq / Fireworks / Together. The new
+honest distinction is **where the masking runs** — in your process
+(local backends), or inside the provider's runtime (API backends).
+Architecture doc has the per-provider table. Backend count in prose
+went from "seven" to "eight" with OpenRouter joining.
+
+### Contracts (§10)
+
+- §10.1 grammar shape — unchanged.
+- §10.2 CSL metadata — unchanged.
+- §10.3 output schemas — `GenerationResult.schema_version` bumped from
+  **2 → 3** to add the optional `usage: TokenUsage | None` field.
+  Snapshot regenerated; schema-version test bumped. Pre-bump
+  serialised results (v2) deserialise cleanly into the v3 model
+  (`usage` defaults to `None`). See
+  [ADR-012](docs/decisions/012-generation-result-schema-v3.md).
+
+
 ## [0.2.0] — 2026-04-24
 
 ### Added — two new API backends, richer PDF extraction, ALCE harness

@@ -20,7 +20,7 @@ Language models hallucinate citations. Ask GPT-4, Claude, or an open-source mode
 > If you've read the jsonformer source or thought about logit-layer structured output, skip to [Backends](#backends).
 
 - **Logit-masked GBNF.** The `cite-id` terminal is compiled per call to `"[" ("1" | "2" | ... | "N") "]"` and handed to [XGrammar](https://github.com/mlc-ai/xgrammar) (default) or [llguidance](https://github.com/guidance-ai/llguidance). Out-of-scope tokens get masked to zero probability before sampling — the sampler *never sees them*. This is structural, not rejection-sampled.
-- **Seven backends, three enforcement tiers, one `GenerationResult`.** HF + vLLM + llama.cpp enforce at the logit layer. OpenAI + Gemini + Mistral enforce at the schema layer (`enum`-bounded `citations` in `strict=true` JSON schema — server-side rejection of non-conforming payloads). Anthropic is adapted from its native Citations API. All collapse to the same typed output for downstream verify / render / streaming.
+- **Eight backends, two enforcement loci, one `GenerationResult`.** HF + vLLM + llama.cpp enforce in-process via XGrammar / llguidance / GBNF. OpenAI + Mistral + Gemini + OpenRouter enforce inside the provider runtime via strict structured outputs (which became real token-level constrained sampling in late 2025 — see [architecture.md](docs/reference/architecture.md#tiered-enforcement--where-the-masking-runs)). Anthropic is adapted from its native Citations API. All collapse to the same typed output for downstream verify / render / streaming.
 - **The model never touches the bibliography.** Six hand-written CSL formatters (~1 kLOC, no citeproc-py dependency — see [ADR-004](docs/decisions/004-citeproc-rewrite.md)) render references deterministically. 300 locked snapshots pin the formatter outputs.
 - **Verify is real, not a hit rate.** `result.verify()` runs DeBERTa-v3-large-MNLI over every (source content, cited sentence) pair and returns a typed `VerificationReport` — with a coverage check for uncited-but-entailed sentences. Threshold calibration + the honest bimodal-score finding live in [benchmarks/README.md#finding-4](benchmarks/README.md#finding-4--nli-threshold-calibration-deberta-v3-large-is-bimodal).
 - **0.0 ± 0.0 fabrication across 40 runs.** 4 prompt shapes × 2 models × 5 seeds in [`benchmarks/multiprompt_sweep.py`](benchmarks/multiprompt_sweep.py). The stds are identically zero because there's no variance to measure — the guarantee is a contract, not a mean.
@@ -37,7 +37,7 @@ LLM-generated citations are wrong 14–95% of the time depending on the benchmar
 
 citeformer delivers that in three independent ways:
 
-- **Citation markers can't be fabricated.** `[N]` where `N > len(sources)` is token-impossible to sample on local backends, and schema-rejected on the API tier. Proven across [40 multi-prompt runs](benchmarks/README.md#finding-5--multi-prompt-sweep-structural-guarantee-is-prompt-invariant) — **0% fabrication on every prompt × model × seed triple**.
+- **Citation markers can't be fabricated.** `[N]` where `N > len(sources)` is token-impossible to sample on local backends, and (since strict structured outputs went GA across providers in late 2025) token-impossible inside the provider's runtime on the API backends too. Proven across [40 multi-prompt runs](benchmarks/README.md#finding-5--multi-prompt-sweep-structural-guarantee-is-prompt-invariant) — **0% fabrication on every prompt × model × seed triple**.
 - **Bibliographies are rendered by the library, not the model.** Six styles, deterministic output, [300 locked snapshots](tests/unit/test_csl_suite/).
 - **Every citation is claim-verifiable.** `result.verify()` runs NLI entailment per cite and returns a structured `VerificationReport` — not just a hit rate.
 
@@ -47,14 +47,18 @@ citeformer delivers that in three independent ways:
 # Core only — no model backend, just the types + rendering + metadata adapters.
 pip install citeformer
 
-# Local backends (logit-tier enforcement).
+# Local backends — masking runs in-process via XGrammar / llguidance / GBNF.
 pip install 'citeformer[hf]'             # HuggingFace transformers + XGrammar
 pip install 'citeformer[llamacpp]'       # llama.cpp native GBNF
 pip install 'citeformer[vllm]'           # vLLM guided-decoding (Linux/CUDA only)
 
-# API backends (schema-tier enforcement).
+# API backends — masking runs inside the provider's runtime (strict structured
+# outputs is real token-level constrained sampling on every modern provider).
 pip install 'citeformer[openai]'         # Structured Outputs strict=true
-pip install 'citeformer[anthropic]'      # Citations API adapter
+pip install 'citeformer[anthropic]'      # Citations API adapter (with prompt-caching on)
+pip install 'citeformer[openrouter]'     # Multi-provider routing (anthropic/.., openai/.., google/..)
+pip install 'citeformer[gemini]'         # response_schema constrained generation
+pip install 'citeformer[mistral]'        # Strict JSON schema
 
 # NLI verification (DeBERTa-v3-MNLI).
 pip install 'citeformer[verify]'
@@ -107,20 +111,21 @@ print(f"{report.support_rate:.0%} of cites entailed by their source")
 
 ## Backends
 
-Seven backends, three enforcement tiers, one `Backend` ABC:
+Eight backends, two enforcement loci ("where the masking runs"), one `Backend` ABC:
 
-| Backend            | Extra      | Enforcement tier   | Where it lives               | Notes |
-|--------------------|------------|--------------------|------------------------------|-------|
-| `HFBackend`        | `hf`       | **Logit (XGrammar)** | `citeformer.backends.hf`    | Flagship. Grammar-level token masking. |
-| `LlamaCppBackend`  | `llamacpp` | **Logit (GBNF)**     | `citeformer.backends.llamacpp` | Native GBNF via `llama-cpp-python`. CPU + Metal + CUDA. |
-| `VLLMBackend`      | `vllm`     | **Logit (XGrammar/llguidance)** | `citeformer.backends.vllm` | vLLM guided decoding. Linux/CUDA only. |
-| `OpenAIBackend`    | `openai`   | **Schema (strict JSON)** | `citeformer.backends.openai` | OpenAI Structured Outputs — live verified. |
-| `AnthropicBackend` | `anthropic`| **Provider-native** | `citeformer.backends.anthropic` | Adapter over Anthropic's Citations API — live verified. |
-| `GeminiBackend`    | `gemini`   | **Schema (response_schema)** | `citeformer.backends.gemini` | Gemini's OpenAPI-subset structured output. |
-| `MistralBackend`   | `mistral`  | **Schema (strict JSON)** | `citeformer.backends.mistral` | Mistral's `response_format` strict JSON schema. |
-| `MockBackend`      | (core)     | Scripted             | `citeformer.backends.mock`  | For tests. Honors policies + marker styles. |
+| Backend            | Extra        | Enforcement                                | Where it lives                  | Notes |
+|--------------------|--------------|--------------------------------------------|---------------------------------|-------|
+| `HFBackend`        | `hf`         | In-process (XGrammar)                      | `citeformer.backends.hf`        | Flagship. Grammar-level token masking. |
+| `LlamaCppBackend`  | `llamacpp`   | In-process (GBNF)                          | `citeformer.backends.llamacpp`  | Native GBNF via `llama-cpp-python`. CPU + Metal + CUDA. |
+| `VLLMBackend`      | `vllm`       | In-process (XGrammar/llguidance)           | `citeformer.backends.vllm`      | vLLM guided decoding. Linux/CUDA only. |
+| `OpenAIBackend`    | `openai`     | Provider-runtime (strict JSON)             | `citeformer.backends.openai`    | OpenAI Structured Outputs — live verified. |
+| `AnthropicBackend` | `anthropic`  | Provider-native (Citations API)            | `citeformer.backends.anthropic` | Live verified. Prompt-caching on by default; real `messages.stream()` streaming. |
+| `OpenRouterBackend`| `openrouter` | Provider-runtime (per-upstream)            | `citeformer.backends.openrouter`| Multi-provider routing on the OpenAI wire format. `provider.require_parameters: true` keeps strict mode end-to-end. Reports per-call USD cost. |
+| `GeminiBackend`    | `gemini`     | Provider-runtime (`response_schema`)       | `citeformer.backends.gemini`    | Gemini's OpenAPI-subset structured output. |
+| `MistralBackend`   | `mistral`    | Provider-runtime (strict JSON)             | `citeformer.backends.mistral`   | Mistral's `response_format` strict JSON schema. |
+| `MockBackend`      | (core)       | Scripted                                   | `citeformer.backends.mock`      | For tests. Honors policies + marker styles. |
 
-All produce the same `GenerationResult`, so verify / render / streaming work identically across tiers. OpenAI + Anthropic are live-verified against production endpoints in [`tests/integration/test_api_backends_live.py`](tests/integration/test_api_backends_live.py); Gemini + Mistral ship with fake-client coverage and the same schema contract. Full tier discussion: [architecture.md](docs/reference/architecture.md#tiered-enforcement--local-vs-api).
+All produce the same `GenerationResult`, so verify / render / streaming work identically across backends. OpenAI + Anthropic are live-verified against production endpoints in [`tests/integration/test_api_backends_live.py`](tests/integration/test_api_backends_live.py); Gemini + Mistral ship with fake-client coverage and the same schema contract. Full per-provider discussion: [architecture.md](docs/reference/architecture.md#tiered-enforcement--where-the-masking-runs).
 
 ### API backends (quickstart)
 
@@ -143,7 +148,7 @@ cf = Citeformer(backend=OpenAIBackend(model="gpt-4o-mini"),
 result = cf.generate(prompt="Describe the opening in one sentence.", sources=sources)
 ```
 
-Honest about tiers: **logit-layer** (local) backends make out-of-scope citations *token-impossible to sample*. **Schema-layer** (OpenAI) rejects non-conforming payloads server-side — fabrication is structurally impossible in the returned payload. **Provider-native** (Anthropic) trusts the provider's own Citations system. All three collapse to the same `GenerationResult` for downstream verify / render.
+Honest about where the masking runs: **local** backends mask in-process via XGrammar / llguidance / GBNF — out-of-scope citations are token-impossible to sample on your hardware. **API** backends (OpenAI / Mistral / OpenRouter / Gemini) hand the strict schema to the provider, which has done real token-level constrained sampling since strict structured outputs went GA in late 2025; the same guarantee, just enforced inside their runtime. **Anthropic** uses its own Citations API — provider-side, structurally constrained that every cite references a supplied document. All collapse to the same `GenerationResult` for downstream verify / render. Per-call token usage and (on OpenRouter) per-call USD cost are exposed on `result.usage`.
 
 ## Citation policies
 

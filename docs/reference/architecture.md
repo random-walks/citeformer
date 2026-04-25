@@ -20,7 +20,7 @@ Before writing new code, ask: is this already done by one of these?
 | **transformers** (HF) | Running local causal LMs |
 | **vLLM** | High-throughput inference with `--guided-decoding-backend` |
 | **llama.cpp** (`llama-cpp-python`) | CPU / Apple Silicon inference with GBNF grammars |
-| **openai** / **anthropic** / **google-genai** / **mistralai** | API-provider generation clients |
+| **openai** / **anthropic** / **google-genai** / **mistralai** | API-provider generation clients (the `openai` SDK is also the wire client for OpenRouter) |
 | **lark** | Authoring the citation grammar before handing off to the decoder |
 | **httpx** + **diskcache** | Metadata fetchers (Crossref, arXiv) with polite caching |
 | **pypdf** / **grobid-client-python** | PDF text extraction — pypdf default, GROBID opt-in for cleaner scientific-paper parsing |
@@ -49,14 +49,25 @@ v0.1.0 shipped on 2026-04-24. Each phase was a mergeable milestone with its own 
 
 Next-up (v0.2 scope TBD): full-ALCE reproducibility (ASQA / QAMPARI / ELI5), per-chunk NLI during generation, streaming refinements on API backends, and a possible `citeformer-ts` sibling if ecosystem demand materialises.
 
-## Tiered enforcement — local vs API
+## Tiered enforcement — where the masking runs
 
-v0.1 ships **three tiers** of backends with **one honest distinction**:
+v0.1 framed the API/local split as "schema-tier vs logit-tier", but as of late 2025 that's no longer the honest line: every modern provider's strict structured-outputs mode is real token-level constrained sampling inside their runtime, not post-hoc validation. The current honest distinction is **where the masking runs** — in your process, or inside the provider:
 
-- **Local backends** (`HFBackend`, `VLLMBackend`, `LlamaCppBackend`) enforce at the **logit layer** via XGrammar / llguidance / llama.cpp GBNF. A fabricated cite id is *token-impossible to sample* — the sampler never sees that token distribution.
-- **Schema backends** (`OpenAIBackend`, `GeminiBackend`, `MistralBackend`) enforce at the **schema layer**: `strict=true` JSON schema (OpenAI, Mistral) or OpenAPI-subset `response_schema` (Gemini) rejects non-conforming responses server-side. Fabrication is impossible *in the returned payload*, not at the sampler.
-- **Provider-native** (`AnthropicBackend`) adapts Anthropic's native Citations API — the provider's own per-block `document_index` references are the guarantee; we translate them into citeformer's `Citation` / `Reference` shape.
+| Backend             | Where the masking runs       | Mechanism                                    | Notes |
+|---------------------|------------------------------|----------------------------------------------|-------|
+| `HFBackend`         | In-process                   | XGrammar `LogitsProcessor`                   | The flagship — you own the runtime. |
+| `VLLMBackend`       | In-process                   | XGrammar / llguidance via `GuidedDecodingParams` | Linux/CUDA only. |
+| `LlamaCppBackend`   | In-process                   | Native GBNF (`Llama(grammar=...)`)           | CPU + Metal + CUDA. |
+| `OpenAIBackend`     | Provider runtime             | Strict JSON schema                           | Token-level constrained sampling on `gpt-4o-2024-08-06+` and successors per OpenAI's [Aug 2024 announcement](https://openai.com/index/introducing-structured-outputs-in-the-api/). |
+| `AnthropicBackend`  | Provider runtime             | Native Citations API + `cache_control`       | Provider enforces that every cite references a supplied document. Prompt-caching on by default — repeat-source RAG bills cache-read prices on subsequent calls. |
+| `OpenRouterBackend` | Provider runtime (per upstream) | Strict JSON via OpenAI wire format        | Routes to Anthropic / OpenAI / Google / Mistral / Groq / Fireworks / Together / Cohere. `provider.require_parameters: true` (default) refuses to land on upstreams that don't honour strict mode — preserves the guarantee end-to-end. |
+| `GeminiBackend`     | Provider runtime             | `response_schema` (OpenAPI subset)           | Constrained generation on Gemini 1.5+ / 2.x. |
+| `MistralBackend`    | Provider runtime             | `response_format` strict JSON                | `mistral-large-2411+`. |
 
-All seven backends produce the same `GenerationResult` — the orchestration layer, verify layer, and render layer are backend-agnostic. Users who want the bulletproof structural claim pick a local backend; users who want frontier-model prose without self-hosting pick a schema or provider-native backend and accept that framing.
+All eight backends produce the same `GenerationResult` — the orchestration, verify, and render layers are backend-agnostic. The choice between in-process and provider-runtime masking is mostly an operational question: do you want to host the model, or pay someone to do it? The structural guarantee — fabricated cite ids are token-impossible to emit — holds either way.
 
-Tier choice doesn't change the bibliography pipeline: references are always rendered deterministically by our home-grown formatters, regardless of which backend produced the text.
+The bibliography pipeline is unchanged regardless: references are rendered deterministically by our home-grown formatters, never by the model.
+
+### Token usage + cost
+
+API-backend `GenerationResult` carries a `usage: TokenUsage | None` field with `input_tokens`, `output_tokens`, optional `cache_creation_input_tokens` / `cache_read_input_tokens` (Anthropic prompt-caching), and `cost_usd` (OpenRouter exposes per-call USD cost directly; other providers leave it `None` and consumers price tokens themselves). Local backends leave `usage = None` — token accounting is meaningless when you control the runtime.

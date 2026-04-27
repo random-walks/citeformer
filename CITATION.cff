@@ -14,8 +14,8 @@ authors:
 license: Apache-2.0
 repository-code: "https://github.com/random-walks/citeformer"
 url: "https://citeformer.readthedocs.io"
-version: 0.3.0
-date-released: 2026-04-25
+version: 0.3.1
+date-released: 2026-04-27
 keywords:
   - large-language-models
   - retrieval-augmented-generation

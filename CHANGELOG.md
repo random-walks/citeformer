@@ -6,6 +6,42 @@ Versioning policy: **patch bumps are cheap**. See [docs/development/releasing.md
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-04-27
+
+### Fixed — PyPI page rendering
+
+Cover image and ~30 inline links in the README pointed at relative
+paths (e.g. `benchmarks/findings/figures/cover-annotated.png`,
+`docs/reference/architecture.md`, `examples/01_quickstart_mock.py`).
+PyPI does not rewrite relative paths in long-description markdown, so
+the cover image returned 404 on the project page and every relative
+link was a dead click. All image srcs are now absolute
+`raw.githubusercontent.com` URLs; code/test/script links point to
+`github.com/.../blob/main/...`; doc content already mirrored on Read
+the Docs (architecture, contracts, ADRs) points to
+`citeformer.readthedocs.io/en/stable/...` with anchors verified
+against rendered HTML.
+
+### Added — CITATION.cff
+
+New `CITATION.cff` at repo root (CFF schema 1.2.0). Validates with
+`cffconvert --validate`. Enables GitHub's "Cite this repository"
+widget and BibTeX/APA exports — appropriate for an academic-shaped
+library that ships a `PREPRINT.md`. The `/bump` slash-command is
+extended to keep `version` + `date-released` in `CITATION.cff` in
+lockstep with `_version.py` + `CHANGELOG.md`, so the three
+release-stamped files cannot drift via the slash-command path.
+
+### Changed — codecov upload reliability
+
+`.github/workflows/ci.yml`: bump `codecov/codecov-action` v4 → v5
+(per codecov's current recommendation), require `CODECOV_TOKEN`
+(now set as a repo secret), drop the `continue-on-error: true`
+masking, and flip `fail_ci_if_error` to `true`. Coverage upload
+failures are now visible instead of silently swallowed; the
+codecov badge flips from "unknown" to a percentage on the next
+clean run.
+
 ## [0.3.0] — 2026-04-25
 
 ### Added — async surface, ADRs 014-017
@@ -1209,5 +1245,6 @@ the guarantee on a real (tiny) model — ``gpt2`` via MPS/CPU.
 - §10.2 CSL metadata: not yet implemented (lands in P3).
 - §10.3 output schemas: not yet implemented (lands in P1).
 
-[Unreleased]: https://github.com/random-walks/citeformer/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/random-walks/citeformer/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/random-walks/citeformer/releases/tag/v0.3.1
 [0.3.0]: https://github.com/random-walks/citeformer/releases/tag/v0.3.0

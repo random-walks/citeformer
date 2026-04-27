@@ -8,8 +8,8 @@ End-to-end release flow for citeformer. Usage: `/release minor` (opens a PR) or 
 ## Steps
 
 1. **Preflight** — run `/release-check` and confirm green. If anything fails, stop.
-2. **Bump** — invoke `/bump <type>` to update `_version.py` + `CHANGELOG.md`.
-3. **Commit** — stage `src/citeformer/_version.py` + `CHANGELOG.md`, commit with message `release: vX.Y.Z`.
+2. **Bump** — invoke `/bump <type>` to update `_version.py` + `CHANGELOG.md` + `CITATION.cff`.
+3. **Commit** — stage `src/citeformer/_version.py` + `CHANGELOG.md` + `CITATION.cff`, commit with message `release: vX.Y.Z`.
 4. **Tag** — create `vX.Y.Z` annotated tag locally.
 5. **Push**:
    - **Default (no flag)**: open a branch `release/vX.Y.Z`, push it, open a PR via `gh pr create` titled `release: vX.Y.Z` with the new changelog section as the body. Human review + merge required before the tag hits main. Tag lands when someone pushes it after merge.

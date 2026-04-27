@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use citeformer in academic work, please cite it."
+title: "citeformer: structurally unforgeable citations from language models"
+abstract: >-
+  A Python library that makes citation fabrication structurally impossible
+  at the logit level via grammar-constrained decoding, with deterministic
+  CSL bibliography rendering and NLI-based claim verification.
+type: software
+authors:
+  - family-names: Albis-Burdige
+    given-names: Blaise
+    email: blaise@ubik.studio
+    website: https://blaiseab.com
+license: Apache-2.0
+repository-code: "https://github.com/random-walks/citeformer"
+url: "https://citeformer.readthedocs.io"
+version: 0.3.0
+date-released: 2026-04-25
+keywords:
+  - large-language-models
+  - retrieval-augmented-generation
+  - constrained-decoding
+  - citation-verification
+  - structured-output
+  - hallucination-mitigation

@@ -2,14 +2,14 @@
 
 [![PyPI](https://img.shields.io/pypi/v/citeformer?color=blue)](https://pypi.org/project/citeformer/)
 [![Docs](https://readthedocs.org/projects/citeformer/badge/?version=latest)](https://citeformer.readthedocs.io/en/latest/)
-[![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache--2.0-green)](https://github.com/random-walks/citeformer/blob/main/LICENSE)
 [![Python](https://img.shields.io/pypi/pyversions/citeformer)](https://pypi.org/project/citeformer/)
 [![CI](https://github.com/random-walks/citeformer/actions/workflows/ci.yml/badge.svg)](https://github.com/random-walks/citeformer/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/random-walks/citeformer/branch/main/graph/badge.svg)](https://codecov.io/gh/random-walks/citeformer)
 
 ***A bulletproof way to generate verifiably cited text from language models.***
 
-![Side-by-side: baseline HF generation happily emits [7] and [8] when only 6 sources are in scope; citeformer's grammar mask makes [7]/[8] token-impossible to sample](benchmarks/findings/figures/cover-annotated.png)
+![Side-by-side: baseline HF generation happily emits [7] and [8] when only 6 sources are in scope; citeformer's grammar mask makes [7]/[8] token-impossible to sample](https://raw.githubusercontent.com/random-walks/citeformer/main/benchmarks/findings/figures/cover-annotated.png)
 
 ### What it does — one paragraph for everyone
 
@@ -20,16 +20,16 @@ Language models hallucinate citations. Ask GPT-4, Claude, or an open-source mode
 > If you've read the jsonformer source or thought about logit-layer structured output, skip to [Backends](#backends).
 
 - **Logit-masked GBNF.** The `cite-id` terminal is compiled per call to `"[" ("1" | "2" | ... | "N") "]"` and handed to [XGrammar](https://github.com/mlc-ai/xgrammar) (default) or [llguidance](https://github.com/guidance-ai/llguidance). Out-of-scope tokens get masked to zero probability before sampling — the sampler *never sees them*. This is structural, not rejection-sampled.
-- **Ten backends, two enforcement loci, one `GenerationResult`.** HF + vLLM + llama.cpp enforce in-process via XGrammar / llguidance / GBNF. **Fireworks** drops citeformer's GBNF in *unchanged* via its native `type: grammar` mode — the same `cite-id` rule that masks logits in `HFBackend` runs inside the Fireworks runtime. OpenAI + Mistral + Gemini + OpenRouter + Together enforce inside the provider runtime via strict structured outputs (which became real token-level constrained sampling in late 2025 — see [architecture.md](docs/reference/architecture.md#tiered-enforcement--where-the-masking-runs)). Anthropic is adapted from its native Citations API. All collapse to the same typed output for downstream verify / render / streaming.
-- **The model never touches the bibliography.** Six hand-written CSL formatters (~1 kLOC, no citeproc-py dependency — see [ADR-004](docs/decisions/004-citeproc-rewrite.md)) render references deterministically. 300 locked snapshots pin the formatter outputs.
-- **Verify is real, not a hit rate.** `result.verify()` runs DeBERTa-v3-large-MNLI over every (source content, cited sentence) pair and returns a typed `VerificationReport` — with a coverage check for uncited-but-entailed sentences. Threshold calibration + the honest bimodal-score finding live in [benchmarks/README.md#finding-4](benchmarks/README.md#finding-4--nli-threshold-calibration-deberta-v3-large-is-bimodal).
-- **0.0 ± 0.0 fabrication across 40 runs.** 4 prompt shapes × 2 models × 5 seeds in [`benchmarks/multiprompt_sweep.py`](benchmarks/multiprompt_sweep.py). The stds are identically zero because there's no variance to measure — the guarantee is a contract, not a mean.
+- **Ten backends, two enforcement loci, one `GenerationResult`.** HF + vLLM + llama.cpp enforce in-process via XGrammar / llguidance / GBNF. **Fireworks** drops citeformer's GBNF in *unchanged* via its native `type: grammar` mode — the same `cite-id` rule that masks logits in `HFBackend` runs inside the Fireworks runtime. OpenAI + Mistral + Gemini + OpenRouter + Together enforce inside the provider runtime via strict structured outputs (which became real token-level constrained sampling in late 2025 — see [architecture.md](https://citeformer.readthedocs.io/en/stable/reference/architecture.html#tiered-enforcement-where-the-masking-runs)). Anthropic is adapted from its native Citations API. All collapse to the same typed output for downstream verify / render / streaming.
+- **The model never touches the bibliography.** Six hand-written CSL formatters (~1 kLOC, no citeproc-py dependency — see [ADR-004](https://citeformer.readthedocs.io/en/stable/decisions/004-citeproc-rewrite.html)) render references deterministically. 300 locked snapshots pin the formatter outputs.
+- **Verify is real, not a hit rate.** `result.verify()` runs DeBERTa-v3-large-MNLI over every (source content, cited sentence) pair and returns a typed `VerificationReport` — with a coverage check for uncited-but-entailed sentences. Threshold calibration + the honest bimodal-score finding live in [benchmarks/README.md#finding-4](https://github.com/random-walks/citeformer/blob/main/benchmarks/README.md#finding-4--nli-threshold-calibration-deberta-v3-large-is-bimodal).
+- **0.0 ± 0.0 fabrication across 40 runs.** 4 prompt shapes × 2 models × 5 seeds in [`benchmarks/multiprompt_sweep.py`](https://github.com/random-walks/citeformer/blob/main/benchmarks/multiprompt_sweep.py). The stds are identically zero because there's no variance to measure — the guarantee is a contract, not a mean.
 
 ### Hi, I'm [Blaise](https://blaiseab.com) — how this got built
 
-Hi — I'm [Blaise Albis-Burdige](https://blaiseab.com) ([@blaiseab](https://github.com/blaiseab)). I wrote citeformer on and immediately around a trip to [Ramp's](https://ramp.com) NYC office. On the subway ride up I was rereading [jsonformer](https://github.com/1rgs/jsonformer) by [@1rgs](https://github.com/1rgs) — partly to sharpen my intuition for how the applied-AI folks at Ramp think about structured output, partly because jsonformer is one of those projects whose core insight ("don't prompt it; constrain the token distribution") has aged extraordinarily well. By the time I got off the train I was convinced the same move applied to RAG citations, which are — empirically, in 2026 benchmarks — wrong [14–95% of the time depending on what you measure](https://arxiv.org/search/?query=RAG+citation+fabrication&searchtype=all). jsonformer has been dormant since early 2024; no successor had applied the insight to citation markers. This is that successor. The heavy lifting lives in dependencies I didn't write (XGrammar, transformers, vLLM, DeBERTa, httpx, pypdf, GROBID, readability) — citeformer's contribution is the composition plus the six §10 contracts that keep the seams honest as the surface grows. Paper-shaped write-up: [PREPRINT.md](PREPRINT.md).
+Hi — I'm [Blaise Albis-Burdige](https://blaiseab.com) ([@blaiseab](https://github.com/blaiseab)). I wrote citeformer on and immediately around a trip to [Ramp's](https://ramp.com) NYC office. On the subway ride up I was rereading [jsonformer](https://github.com/1rgs/jsonformer) by [@1rgs](https://github.com/1rgs) — partly to sharpen my intuition for how the applied-AI folks at Ramp think about structured output, partly because jsonformer is one of those projects whose core insight ("don't prompt it; constrain the token distribution") has aged extraordinarily well. By the time I got off the train I was convinced the same move applied to RAG citations, which are — empirically, in 2026 benchmarks — wrong [14–95% of the time depending on what you measure](https://arxiv.org/search/?query=RAG+citation+fabrication&searchtype=all). jsonformer has been dormant since early 2024; no successor had applied the insight to citation markers. This is that successor. The heavy lifting lives in dependencies I didn't write (XGrammar, transformers, vLLM, DeBERTa, httpx, pypdf, GROBID, readability) — citeformer's contribution is the composition plus the six §10 contracts that keep the seams honest as the surface grows. Paper-shaped write-up: [PREPRINT.md](https://github.com/random-walks/citeformer/blob/main/PREPRINT.md).
 
-> **Status**: v0.1.0 on [PyPI](https://pypi.org/project/citeformer/). Seven backends (HF + vLLM + llama.cpp local, OpenAI + Anthropic + Gemini + Mistral API), six hand-written CSL styles, deterministic bibliography rendering, and claim-level NLI verification. Follow [CHANGELOG.md](CHANGELOG.md) for the full change log.
+> **Status**: v0.1.0 on [PyPI](https://pypi.org/project/citeformer/). Seven backends (HF + vLLM + llama.cpp local, OpenAI + Anthropic + Gemini + Mistral API), six hand-written CSL styles, deterministic bibliography rendering, and claim-level NLI verification. Follow [CHANGELOG.md](https://github.com/random-walks/citeformer/blob/main/CHANGELOG.md) for the full change log.
 
 ## Why structural, not statistical
 
@@ -37,8 +37,8 @@ LLM-generated citations are wrong 14–95% of the time depending on the benchmar
 
 citeformer delivers that in three independent ways:
 
-- **Citation markers can't be fabricated.** `[N]` where `N > len(sources)` is token-impossible to sample on local backends, and (since strict structured outputs went GA across providers in late 2025) token-impossible inside the provider's runtime on the API backends too. Proven across [40 multi-prompt runs](benchmarks/README.md#finding-5--multi-prompt-sweep-structural-guarantee-is-prompt-invariant) — **0% fabrication on every prompt × model × seed triple**.
-- **Bibliographies are rendered by the library, not the model.** Six styles, deterministic output, [300 locked snapshots](tests/unit/test_csl_suite/).
+- **Citation markers can't be fabricated.** `[N]` where `N > len(sources)` is token-impossible to sample on local backends, and (since strict structured outputs went GA across providers in late 2025) token-impossible inside the provider's runtime on the API backends too. Proven across [40 multi-prompt runs](https://github.com/random-walks/citeformer/blob/main/benchmarks/README.md#finding-5--multi-prompt-sweep-structural-guarantee-is-prompt-invariant) — **0% fabrication on every prompt × model × seed triple**.
+- **Bibliographies are rendered by the library, not the model.** Six styles, deterministic output, [300 locked snapshots](https://github.com/random-walks/citeformer/tree/main/tests/unit/test_csl_suite).
 - **Every citation is claim-verifiable.** `result.verify()` runs NLI entailment per cite and returns a structured `VerificationReport` — not just a hit rate.
 
 ## Install
@@ -71,7 +71,7 @@ pip install 'citeformer[all]'
 
 Python 3.11+ (tested through 3.14). Apache-2.0.
 
-**Try it without installing.** The [HF Space demo](hf-space/) runs the adversarial "100% → 0% fabrication" swing on CPU in your browser. The [literature-review notebook](examples/08_literature_review.ipynb) walks end-to-end from arXiv fetch → grammar-constrained generation → NLI verification → APA-7 bibliography on a laptop-friendly 500 MB model.
+**Try it without installing.** The [HF Space demo](https://github.com/random-walks/citeformer/tree/main/hf-space) runs the adversarial "100% → 0% fabrication" swing on CPU in your browser. The [literature-review notebook](https://github.com/random-walks/citeformer/blob/main/examples/08_literature_review.ipynb) walks end-to-end from arXiv fetch → grammar-constrained generation → NLI verification → APA-7 bibliography on a laptop-friendly 500 MB model.
 
 ## Quickstart
 
@@ -129,11 +129,11 @@ Ten backends, two enforcement loci ("where the masking runs"), one `Backend` ABC
 | `MistralBackend`   | `mistral`    | Provider-runtime (strict JSON)             | `citeformer.backends.mistral`   | Mistral's `response_format` strict JSON schema. |
 | `MockBackend`      | (core)       | Scripted                                   | `citeformer.backends.mock`      | For tests. Honors policies + marker styles. |
 
-All produce the same `GenerationResult`, so verify / render / streaming work identically across backends. OpenAI + Anthropic are live-verified against production endpoints in [`tests/integration/test_api_backends_live.py`](tests/integration/test_api_backends_live.py); Gemini + Mistral ship with fake-client coverage and the same schema contract. Full per-provider discussion: [architecture.md](docs/reference/architecture.md#tiered-enforcement--where-the-masking-runs).
+All produce the same `GenerationResult`, so verify / render / streaming work identically across backends. OpenAI + Anthropic are live-verified against production endpoints in [`tests/integration/test_api_backends_live.py`](https://github.com/random-walks/citeformer/blob/main/tests/integration/test_api_backends_live.py); Gemini + Mistral ship with fake-client coverage and the same schema contract. Full per-provider discussion: [architecture.md](https://citeformer.readthedocs.io/en/stable/reference/architecture.html#tiered-enforcement-where-the-masking-runs).
 
 ### API backends (quickstart)
 
-Both API backends are live-tested against production endpoints — see [`tests/integration/test_api_backends_live.py`](tests/integration/test_api_backends_live.py).
+Both API backends are live-tested against production endpoints — see [`tests/integration/test_api_backends_live.py`](https://github.com/random-walks/citeformer/blob/main/tests/integration/test_api_backends_live.py).
 
 ```python
 from citeformer import Citeformer, Policy, Source
@@ -164,7 +164,7 @@ Honest about where the masking runs: **local** backends mask in-process via XGra
 | `QUOTES_ONLY` | Only `"..."` quoted spans require a trailing `cite-group`. | Mixed analytical prose — narrative is uncited, direct quotations are tracked. |
 | `AUTO`        | `cite-group` is allowed anywhere, never required. `verify()` flags uncited-but-entailed sentences post-hoc. | Open-ended generation; NLI coverage check does the policing. |
 
-Pass via `Citeformer(citation_policy=Policy.REQUIRED)` or per-call `cf.generate(..., policy=Policy.AUTO)`. See [`Policy`](src/citeformer/core.py).
+Pass via `Citeformer(citation_policy=Policy.REQUIRED)` or per-call `cf.generate(..., policy=Policy.AUTO)`. See [`Policy`](https://github.com/random-walks/citeformer/blob/main/src/citeformer/core.py).
 
 ## Metadata adapters
 
@@ -196,7 +196,7 @@ cf = Citeformer(backend=backend, marker_style=MarkerStyle.CURLY)    # {1}, {2} .
 cf = Citeformer(backend=backend, marker_style=MarkerStyle.CARET)    # ^1, ^2 ...
 ```
 
-The structural guarantee is identical across styles — the grammar's digit enum is bounded by `range(1, len(sources) + 1)` regardless of which delimiters surround it. See [ADR-011](docs/decisions/011-configurable-marker-styles.md).
+The structural guarantee is identical across styles — the grammar's digit enum is bounded by `range(1, len(sources) + 1)` regardless of which delimiters surround it. See [ADR-011](https://citeformer.readthedocs.io/en/stable/decisions/011-configurable-marker-styles.html).
 
 ## Streaming
 
@@ -211,17 +211,17 @@ Grammar constraints apply to every chunk. HF and llama.cpp deliver true token-by
 
 ## Evidence
 
-All numbers below come from running scripts in [`benchmarks/`](benchmarks/) — reproducible on a commodity laptop with `uv run python -m benchmarks.<script>`.
+All numbers below come from running scripts in [`benchmarks/`](https://github.com/random-walks/citeformer/tree/main/benchmarks) — reproducible on a commodity laptop with `uv run python -m benchmarks.<script>`.
 
-![Multi-prompt summary](benchmarks/findings/figures/multiprompt-summary.png)
+![Multi-prompt summary](https://raw.githubusercontent.com/random-walks/citeformer/main/benchmarks/findings/figures/multiprompt-summary.png)
 
 | Finding | Result | Script |
 |---------|--------|--------|
-| [Adversarial](benchmarks/README.md#finding-1--adversarial-100--0-fabrication) | 100% → 0% fabrication swing when the prompt demands out-of-scope ids | `adversarial.py` |
-| [Sweep](benchmarks/README.md#finding-2--sweep-aggregate-0--0-fabrication-across-all-models) | 0 ± 0 fabrication across 13 runs (3 models × up to 5 seeds) | `sweep.py` |
-| [Full-text premise](benchmarks/README.md#finding-3--full-text-nli-premise-lifts-support-substantially-but-noisily) | Support rate lifts with full-text NLI premise — but the number is noisy, so we report that honestly | `sweep.py --premise fulltext` |
-| [NLI calibration](benchmarks/README.md#finding-4--nli-threshold-calibration-deberta-v3-large-is-bimodal) | DeBERTa-v3-large is bimodal; threshold isn't the right knob | `threshold_calibration.py` |
-| [Multi-prompt](benchmarks/README.md#finding-5--multi-prompt-sweep-structural-guarantee-is-prompt-invariant) | 0% fab across 24 runs × 4 prompt shapes — guarantee is prompt-invariant | `multiprompt_sweep.py` |
+| [Adversarial](https://github.com/random-walks/citeformer/blob/main/benchmarks/README.md#finding-1--adversarial-100--0-fabrication) | 100% → 0% fabrication swing when the prompt demands out-of-scope ids | `adversarial.py` |
+| [Sweep](https://github.com/random-walks/citeformer/blob/main/benchmarks/README.md#finding-2--sweep-aggregate-0--0-fabrication-across-all-models) | 0 ± 0 fabrication across 13 runs (3 models × up to 5 seeds) | `sweep.py` |
+| [Full-text premise](https://github.com/random-walks/citeformer/blob/main/benchmarks/README.md#finding-3--full-text-nli-premise-lifts-support-substantially-but-noisily) | Support rate lifts with full-text NLI premise — but the number is noisy, so we report that honestly | `sweep.py --premise fulltext` |
+| [NLI calibration](https://github.com/random-walks/citeformer/blob/main/benchmarks/README.md#finding-4--nli-threshold-calibration-deberta-v3-large-is-bimodal) | DeBERTa-v3-large is bimodal; threshold isn't the right knob | `threshold_calibration.py` |
+| [Multi-prompt](https://github.com/random-walks/citeformer/blob/main/benchmarks/README.md#finding-5--multi-prompt-sweep-structural-guarantee-is-prompt-invariant) | 0% fab across 24 runs × 4 prompt shapes — guarantee is prompt-invariant | `multiprompt_sweep.py` |
 
 ## Composition, not reinvention
 
@@ -240,27 +240,27 @@ citeformer's value is the **composition**, not the parts. The heavy lifting live
 | **DeBERTa-v3-MNLI** (via transformers) | NLI entailment for `verify()` |
 | **typer** + **rich** | CLI + pretty output |
 
-The parts citeformer owns: citation grammar shape ([§10.1](docs/reference/contracts.md)), CSL-JSON source contract ([§10.2](docs/reference/contracts.md)), output pydantic models ([§10.3](docs/reference/contracts.md)), marker-to-reference coupling, the six bundled style formatters (APA 7, MLA 9, Chicago author-date, IEEE, Nature, Vancouver — [ADR-004](docs/decisions/004-citeproc-rewrite.md)), the BibTeX parser, and the orchestration loop. Everything else is a composition.
+The parts citeformer owns: citation grammar shape ([§10.1](https://citeformer.readthedocs.io/en/stable/reference/contracts.html#citation-marker-grammar)), CSL-JSON source contract ([§10.2](https://citeformer.readthedocs.io/en/stable/reference/contracts.html#source-metadata-shape)), output pydantic models ([§10.3](https://citeformer.readthedocs.io/en/stable/reference/contracts.html#output-schemas)), marker-to-reference coupling, the six bundled style formatters (APA 7, MLA 9, Chicago author-date, IEEE, Nature, Vancouver — [ADR-004](https://citeformer.readthedocs.io/en/stable/decisions/004-citeproc-rewrite.html)), the BibTeX parser, and the orchestration loop. Everything else is a composition.
 
 ## Examples
 
-The [`examples/`](examples/) directory contains eight runnable scripts, each a living report:
+The [`examples/`](https://github.com/random-walks/citeformer/tree/main/examples) directory contains eight runnable scripts, each a living report:
 
 | # | File | What it shows |
 |---|------|---------------|
-| 1 | [`01_quickstart_mock.py`](examples/01_quickstart_mock.py) | Shortest possible demo — no ML, no extras |
-| 2 | [`02_rag_with_hf_and_verify.py`](examples/02_rag_with_hf_and_verify.py) | Full RAG pipeline with HF + NLI verify |
-| 3 | [`03_standalone_rendering.py`](examples/03_standalone_rendering.py) | All six styles on the same CSL-JSON item |
-| 4 | [`04_fetch_and_render.py`](examples/04_fetch_and_render.py) | DOI → Crossref → rendered reference |
-| 5 | [`05_streaming.py`](examples/05_streaming.py) | Realtime chunk streaming via `cf.stream()` |
-| 6 | [`06_langchain_rag.py`](examples/06_langchain_rag.py) | LangChain `Document` → `Source` → citeformer |
-| 7 | [`07_llamaindex_rag.py`](examples/07_llamaindex_rag.py) | LlamaIndex `NodeWithScore` → `Source` |
-| 8 | [`08_literature_review.ipynb`](examples/08_literature_review.ipynb) | Full academic workflow notebook (arXiv → review → verify → APA-7) |
-| 9 | [`09_bibtex_source.py`](examples/09_bibtex_source.py) | BibTeX + Zotero ingest → APA-7 render (no network, no model) |
+| 1 | [`01_quickstart_mock.py`](https://github.com/random-walks/citeformer/blob/main/examples/01_quickstart_mock.py) | Shortest possible demo — no ML, no extras |
+| 2 | [`02_rag_with_hf_and_verify.py`](https://github.com/random-walks/citeformer/blob/main/examples/02_rag_with_hf_and_verify.py) | Full RAG pipeline with HF + NLI verify |
+| 3 | [`03_standalone_rendering.py`](https://github.com/random-walks/citeformer/blob/main/examples/03_standalone_rendering.py) | All six styles on the same CSL-JSON item |
+| 4 | [`04_fetch_and_render.py`](https://github.com/random-walks/citeformer/blob/main/examples/04_fetch_and_render.py) | DOI → Crossref → rendered reference |
+| 5 | [`05_streaming.py`](https://github.com/random-walks/citeformer/blob/main/examples/05_streaming.py) | Realtime chunk streaming via `cf.stream()` |
+| 6 | [`06_langchain_rag.py`](https://github.com/random-walks/citeformer/blob/main/examples/06_langchain_rag.py) | LangChain `Document` → `Source` → citeformer |
+| 7 | [`07_llamaindex_rag.py`](https://github.com/random-walks/citeformer/blob/main/examples/07_llamaindex_rag.py) | LlamaIndex `NodeWithScore` → `Source` |
+| 8 | [`08_literature_review.ipynb`](https://github.com/random-walks/citeformer/blob/main/examples/08_literature_review.ipynb) | Full academic workflow notebook (arXiv → review → verify → APA-7) |
+| 9 | [`09_bibtex_source.py`](https://github.com/random-walks/citeformer/blob/main/examples/09_bibtex_source.py) | BibTeX + Zotero ingest → APA-7 render (no network, no model) |
 
 ## Paper-shaped write-up
 
-A longer design + evaluation document is in [`PREPRINT.md`](PREPRINT.md). Eight sections covering motivation, related work, design, structural-guarantee evaluation (40-run sweep), NLI calibration findings (bimodal large vs under-confident base), known limitations, and roadmap.
+A longer design + evaluation document is in [`PREPRINT.md`](https://github.com/random-walks/citeformer/blob/main/PREPRINT.md). Eight sections covering motivation, related work, design, structural-guarantee evaluation (40-run sweep), NLI calibration findings (bimodal large vs under-confident base), known limitations, and roadmap.
 
 ## Is this for you?
 
@@ -277,7 +277,7 @@ A longer design + evaluation document is in [`PREPRINT.md`](PREPRINT.md). Eight 
 
 - You want a full agent framework — use LangChain / LlamaIndex and compose citeformer as the generation step ([examples 6 & 7](#examples) show how).
 - You need a TypeScript surface today — a sibling `citeformer-ts` may come later; not here yet.
-- You need a citation style outside the six bundled — you can plug in `citeproc-py` yourself, or contribute a `CitationFormatter` subclass (see [`.claude/skills/add-citation-format`](.claude/skills/add-citation-format/)).
+- You need a citation style outside the six bundled — you can plug in `citeproc-py` yourself, or contribute a `CitationFormatter` subclass (see [`.claude/skills/add-citation-format`](https://github.com/random-walks/citeformer/tree/main/.claude/skills/add-citation-format)).
 
 ## Documentation
 
@@ -285,13 +285,13 @@ A longer design + evaluation document is in [`PREPRINT.md`](PREPRINT.md). Eight 
 - **Guarantees**: [guarantees](https://citeformer.readthedocs.io/en/stable/guarantees.html) — what "bulletproof" actually covers.
 - **Architecture**: [reference/architecture](https://citeformer.readthedocs.io/en/stable/reference/architecture.html) — layers + phase plan + tiered enforcement.
 - **Contracts**: [reference/contracts](https://citeformer.readthedocs.io/en/stable/reference/contracts.html) — the three §10 invariants.
-- **ADRs**: [docs/decisions/](docs/decisions/) — 11 short architecture-decision records documenting major design choices.
-- **Benchmarks**: [benchmarks/README.md](benchmarks/README.md) — the five findings with reproduction commands.
+- **ADRs**: [docs/decisions/](https://citeformer.readthedocs.io/en/stable/decisions/index.html) — 11 short architecture-decision records documenting major design choices.
+- **Benchmarks**: [benchmarks/README.md](https://github.com/random-walks/citeformer/blob/main/benchmarks/README.md) — the five findings with reproduction commands.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Short version: bug-fix PRs welcome and bump patch; feature PRs should open an issue first. The three §10 contracts (grammar shape, CSL metadata, output schemas) are deliberate ceremonies — read [docs/reference/contracts.md](docs/reference/contracts.md) before touching them.
+See [CONTRIBUTING.md](https://github.com/random-walks/citeformer/blob/main/CONTRIBUTING.md). Short version: bug-fix PRs welcome and bump patch; feature PRs should open an issue first. The three §10 contracts (grammar shape, CSL metadata, output schemas) are deliberate ceremonies — read [docs/reference/contracts.md](https://citeformer.readthedocs.io/en/stable/reference/contracts.html) before touching them.
 
 ## License
 
-Apache-2.0. See [LICENSE](LICENSE).
+Apache-2.0. See [LICENSE](https://github.com/random-walks/citeformer/blob/main/LICENSE).

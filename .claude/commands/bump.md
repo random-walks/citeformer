@@ -1,5 +1,5 @@
 ---
-description: Bump version in _version.py and move [Unreleased] → [X.Y.Z] in CHANGELOG. Stops before commit.
+description: Bump version in _version.py + CITATION.cff and move [Unreleased] → [X.Y.Z] in CHANGELOG. Stops before commit.
 argument-hint: "[patch|minor|major]"
 ---
 
@@ -14,7 +14,11 @@ Bump the citeformer version. Usage: `/bump patch` (or `minor`, or `major`).
 5. Rename the `## [Unreleased]` section to `## [X.Y.Z] — YYYY-MM-DD` using today's date (UTC).
 6. Insert a new empty `## [Unreleased]` section above it.
 7. Update the compare link at the bottom: `[Unreleased]: .../compare/vX.Y.Z...HEAD` and add `[X.Y.Z]: .../releases/tag/vX.Y.Z`.
-8. Print a summary: old version, new version, dated entries.
+8. Update `CITATION.cff` at repo root:
+   - Replace the `version: ...` line with `version: X.Y.Z`.
+   - Replace the `date-released: ...` line with `date-released: YYYY-MM-DD` (same UTC date as CHANGELOG).
+   - Don't touch any other field. Validate with `cffconvert --validate -i CITATION.cff` if available; if not, just sanity-check that the file is still valid YAML.
+9. Print a summary: old version, new version, dated entries, and the three files touched (`_version.py`, `CHANGELOG.md`, `CITATION.cff`).
 
 ## Stop before committing
 

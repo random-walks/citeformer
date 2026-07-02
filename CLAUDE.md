@@ -11,8 +11,8 @@ One-screen brief for Claude Code working in this repo. Canonical wider guide is 
 Three §10 contracts (full detail: [`docs/reference/contracts.md`](docs/reference/contracts.md)). Touching any is a deliberate ceremony.
 
 1. **§10.1 — Citation marker grammar.** `cite-id ::= "[" <digits> "]"` (GBNF) + `required` / `quotes_only` / `auto` policies. Lives in `src/citeformer/grammar/`. Changing the marker shape or policy semantics = **major** bump.
-2. **§10.2 — `Source.metadata` CSL-JSON shape.** The shape consumed by the home-grown render layer (and still CSL-JSON compliant for external tooling). Additive fields = minor; renames or removals = major. Regression snapshot in `tests/unit/test_csl_rendering.py`.
-3. **§10.3 — Output schemas.** `GenerationResult` + `VerificationReport` pydantic models carry `schema_version: 1`. Any shape change bumps `schema_version`.
+2. **§10.2 — `Source.metadata` CSL-JSON shape.** The shape consumed by the home-grown render layer (and still CSL-JSON compliant for external tooling). Additive fields = minor; renames or removals = major. Regression snapshots in `tests/unit/test_render_csl.py` (4 core CSL types × 6 styles) and `tests/unit/test_csl_suite.py` (50-case fixture × 6 formatters = 300 snapshots).
+3. **§10.3 — Output schemas.** `GenerationResult` + `VerificationReport` pydantic models carry `schema_version` (currently `3`, pinned by `tests/integration/test_schemas.py`). Any shape change bumps `schema_version`.
 
 Before editing `src/citeformer/grammar/`, `src/citeformer/core.py`, or `src/citeformer/verify/report.py` — run `/contract-check` on your diff.
 
@@ -65,22 +65,28 @@ make release-check    # preflight for tag push
 
 ## Phase status
 
-v0.1.0 shipped to PyPI on 2026-04-24. Current branch is
-`feat/post-release-expansion` — patch-level additions (Gemini + Mistral
-backends, ALCE harness, GROBID extractor, PREPRINT). Phase breakdown in
+Current release: **v0.3.1** (PyPI, 2026-04-27; see
+`src/citeformer/_version.py` and `CHANGELOG.md`). Work happens on `main`
+via short-lived feature branches. Phase breakdown in
 [`docs/reference/architecture.md`](docs/reference/architecture.md).
 
 - **P0–P6** — scaffolding through NLI verification. ✅
 - **Polish** — REQUIRED progression fix (ADR-009), CLI, examples as
   living reports. ✅
-- **Expansion** — marker shapes (ADR-011), seven backends (HF / vLLM /
-  llama.cpp / OpenAI / Anthropic / Gemini / Mistral), six metadata
-  adapters (DOI / arXiv / PDF via pypdf or GROBID / URL / BibTeX /
-  Zotero), threshold calibration, multi-prompt + ALCE benchmarks,
+- **Expansion** — marker shapes (ADR-011), backends, metadata adapters
+  (DOI / arXiv / PDF via pypdf or GROBID / URL / BibTeX / Zotero),
+  threshold calibration, multi-prompt + ALCE benchmarks,
   literature-review notebook, HF Space demo. ✅
-- **P7** — v0.1.0 PyPI release. ✅
-- **Next** — v0.2 scope TBD. Candidate: full-ALCE reproducibility,
-  streaming refinements, per-chunk NLI during generation.
+- **P7** — v0.1.0 PyPI release (2026-04-24). ✅
+- **v0.2.0** — Gemini + Mistral backends, richer PDF extraction, ALCE
+  harness. ✅
+- **v0.3.0** — async surface end-to-end (ADRs 014–017), OpenRouter +
+  Fireworks + Together backends (ten backends total), token-usage on
+  results. ✅
+- **v0.3.1** — PyPI page link fixes, `CITATION.cff`, codecov upload
+  reliability. ✅
+- **Next** — scope TBD. Candidates: full-ALCE reproducibility, streaming
+  refinements, per-chunk NLI during generation.
 
 ## Versioning policy
 

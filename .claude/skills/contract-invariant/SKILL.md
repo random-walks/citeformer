@@ -12,7 +12,7 @@ Three files carry §10 contracts. Edits require a ceremony, not a silent commit.
 Changes the grammar shape (`cite-id` rule) or the semantics of a policy (`required` / `quotes_only` / `auto`).
 
 **Ceremony:**
-1. Regenerate `tests/unit/test_grammar_builder.py` snapshots via `pytest --regen-all tests/unit/test_grammar_builder.py`.
+1. Regenerate `tests/unit/test_grammar_builder.py` snapshots via `pytest --force-regen tests/unit/test_grammar_builder.py`.
 2. Classify the change:
    - Adding a new policy → **minor** bump.
    - Changing an existing policy's semantics → **major** bump.
@@ -22,10 +22,10 @@ Changes the grammar shape (`cite-id` rule) or the semantics of a policy (`requir
 
 ## §10.2 — `src/citeformer/core.py` (`Source.metadata` type) + `src/citeformer/render/csl.py`
 
-Changes the expected CSL-JSON shape that `Source.metadata` must conform to (and that `citeproc-py` consumes).
+Changes the expected CSL-JSON shape that `Source.metadata` must conform to (and that the home-grown formatters in `src/citeformer/render/formatters/` consume — see ADR-004).
 
 **Ceremony:**
-1. Regenerate `tests/unit/test_csl_rendering.py` snapshots (`pytest --regen-all tests/unit/test_csl_rendering.py`).
+1. Regenerate the CSL rendering snapshots: `tests/unit/test_render_csl.py` (4 core CSL types × 6 styles) and `tests/unit/test_csl_suite.py` (50-case fixture × 6 formatters = 300 snapshots) via `pytest --force-regen tests/unit/test_render_csl.py tests/unit/test_csl_suite.py`; check `tests/unit/test_render_styles.py` (name registry + classification) still passes.
 2. Classify:
    - Passing through a new optional CSL field → **minor**.
    - Renaming / removing a field we read → **major**.
@@ -33,11 +33,11 @@ Changes the expected CSL-JSON shape that `Source.metadata` must conform to (and 
 
 ## §10.3 — `GenerationResult` + `VerificationReport`
 
-Pydantic models with `schema_version: 1`. Any shape change bumps `schema_version` AND requires PR-description callout.
+Pydantic models carrying `schema_version` (currently `3`). Any shape change bumps `schema_version` AND requires PR-description callout.
 
 **Ceremony:**
-1. Bump `schema_version` on the owning model (1 → 2, etc.).
-2. Update `tests/integration/test_generation_result_schema.py` or `test_verification_report_schema.py`.
+1. Bump `schema_version` on the owning model (3 → 4, etc.).
+2. Update the canonical-instance snapshots in `tests/integration/test_schemas.py` (covers both models; regen via `pytest --force-regen tests/integration/test_schemas.py`).
 3. Document migration path in CHANGELOG if the change is breaking.
 4. CHANGELOG + PR template as above.
 

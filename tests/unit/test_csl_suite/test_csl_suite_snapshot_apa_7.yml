@@ -108,9 +108,9 @@
     48–55.
   case_id: magazine_article
   inline: (Nguyen, 2024)
-- bib: Ubik, B. (2026). citeformer.
+- bib: Doe, J. (2026). citeformer.
   case_id: software_with_version
-  inline: (Ubik, 2026)
+  inline: (Doe, 2026)
 - bib: 'Deng, J., Dong, W., & Socher, R. (2009). ImageNet: A Large-Scale Hierarchical
     Image Database. https://doi.org/10.1109/CVPR.2009.5206848'
   case_id: dataset_with_doi

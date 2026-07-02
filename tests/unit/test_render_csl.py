@@ -1,9 +1,10 @@
-"""Tests for `citeformer.render.csl` — bibliography rendering per style.
+"""Tests for `citeformer.render` — bibliography rendering per style.
 
 Snapshot-pins the rendered output for a canonical set of citations across all
-five bundled styles. A change to citeproc-py that shifts the output, or to any
-bundled `.csl` file, flags up as a snapshot diff — forcing a deliberate CSL
-refresh ceremony (see `docs/reference/architecture.md#bundled-csl-styles`).
+six home-grown formatters (APA 7, MLA 9, Chicago author-date, IEEE, Nature,
+Vancouver — see ADR-004, `docs/decisions/004-citeproc-rewrite.md`). A change
+to any formatter that shifts the output flags up as a snapshot diff — forcing
+a deliberate §10.2 refresh ceremony (see `docs/reference/contracts.md`).
 """
 
 from __future__ import annotations
@@ -39,10 +40,12 @@ def _canonical_sources() -> list[Source]:
                 "container-title": "Journal of Applied AI",
                 "volume": "12",
                 "issue": "3",
-                # Single page — citeproc-py 0.9.2 has a page-range formatter
-                # bug in Chicago's `minimal-two` style (UnboundLocalError in
-                # model.py). Single pages avoid that code path and render
-                # cleanly.
+                # Single page — historical: citeproc-py 0.9.2 had a Chicago
+                # page-range bug (UnboundLocalError), so this fixture used a
+                # single page. The home-grown formatters (ADR-004) don't have
+                # the bug; the fixture keeps the single page so the pinned
+                # snapshots stay stable. Page *ranges* are covered by
+                # test_csl_suite.py.
                 "page": "45",
                 "issued": {"date-parts": [[2023, 4]]},
                 "DOI": "10.1234/jaai.2023.12.3.45",
@@ -133,9 +136,8 @@ def test_render_references_inline_marker_reflects_style_format() -> None:
     assert "1845" in apa_refs[0].inline_marker
 
     ieee_refs = render_references(sources, cs, style_name="ieee")
-    # IEEE is numeric; citeproc returns empty inline (bracket prefix/suffix is
-    # on the <layout>, not the number itself). We accept that for v0.1; the
-    # assertion is just "not an author-year form".
+    # IEEE is numeric; the home-grown formatter's inline marker is the
+    # bracketed number ("[1]"), never an author-year form.
     assert "Poe" not in ieee_refs[0].inline_marker
 
 

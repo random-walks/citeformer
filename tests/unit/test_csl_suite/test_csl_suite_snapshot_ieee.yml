@@ -113,7 +113,7 @@
     pp. 48–55, 2024.'
   case_id: magazine_article
   inline: '[1]'
-- bib: '[1] B. Ubik "citeformer," 2026.'
+- bib: '[1] J. Doe "citeformer," 2026.'
   case_id: software_with_version
   inline: '[1]'
 - bib: '[1] J. Deng, W. Dong, and R. Socher "ImageNet: A Large-Scale Hierarchical

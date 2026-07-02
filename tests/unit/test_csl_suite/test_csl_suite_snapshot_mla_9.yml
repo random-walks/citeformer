@@ -110,9 +110,9 @@
     2024, pp. 48–55.
   case_id: magazine_article
   inline: (Nguyen)
-- bib: Ubik, Blaise. "citeformer." 2026.
+- bib: Doe, Jane. "citeformer." 2026.
   case_id: software_with_version
-  inline: (Ubik)
+  inline: (Doe)
 - bib: 'Deng, Jia, et al. "ImageNet: A Large-Scale Hierarchical Image Database." 2009.'
   case_id: dataset_with_doi
   inline: (Deng et al.)

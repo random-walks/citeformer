@@ -452,7 +452,7 @@ _CASES: list[tuple[str, dict]] = [
         {
             "id": "citeformer-v0-1",
             "type": "software",
-            "author": [{"family": "Ubik", "given": "Blaise"}],
+            "author": [{"family": "Doe", "given": "Jane"}],
             "title": "citeformer",
             "version": "0.1.0",
             "URL": "https://github.com/random-walks/citeformer",

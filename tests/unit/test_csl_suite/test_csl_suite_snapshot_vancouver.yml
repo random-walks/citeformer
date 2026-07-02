@@ -103,7 +103,7 @@
 - bib: 1. Nguyen T. Inside the Quiet Revolution of Structured Decoding. Wired. 2024:48–55.
   case_id: magazine_article
   inline: '[1]'
-- bib: 1. Ubik B. citeformer. 2026.
+- bib: 1. Doe J. citeformer. 2026.
   case_id: software_with_version
   inline: '[1]'
 - bib: '1. Deng J, Dong W, Socher R. ImageNet: A Large-Scale Hierarchical Image Database.

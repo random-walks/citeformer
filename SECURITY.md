@@ -13,7 +13,7 @@ citeformer is pre-1.0. Security fixes are applied to the latest released minor (
 
 **Please don't open a public GitHub issue.** Security reports go to the maintainer directly so that a patch can land before the problem is disclosed.
 
-- **Email**: <blaise@ubik.studio>
+- **Email**: <albisburdige@protonmail.com>
 - **Subject line**: `[security] citeformer — <short description>`
 
 Include in your report:

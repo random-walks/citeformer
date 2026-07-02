@@ -9,7 +9,7 @@ description = "A bulletproof way to generate verifiably cited text from language
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
-authors = [{ name = "Blaise Albis-Burdige", email = "blaise@ubik.studio" }]
+authors = [{ name = "Blaise Albis-Burdige", email = "albisburdige@protonmail.com" }]
 keywords = [
     "llm",
     "rag",

@@ -8,7 +8,7 @@ body:
       value: |
         Thanks for filing! A reproducible example goes a long way — if you can hand over a 20-line script that triggers the issue, we can usually have a fix out within a patch release.
 
-        **For security issues, please do NOT file here.** Email <blaise@ubik.studio> per [SECURITY.md](../SECURITY.md).
+        **For security issues, please do NOT file here.** Email <albisburdige@protonmail.com> per [SECURITY.md](../SECURITY.md).
   - type: input
     id: version
     attributes:

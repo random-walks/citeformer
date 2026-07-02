@@ -61,4 +61,4 @@ For security issues, follow the disclosure process in [SECURITY.md](SECURITY.md)
 
 ## Code of conduct
 
-This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md). Be kind. Assume good faith. If someone's being uncivil, email <blaise@ubik.studio>; we'll handle it.
+This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md). Be kind. Assume good faith. If someone's being uncivil, email <albisburdige@protonmail.com>; we'll handle it.

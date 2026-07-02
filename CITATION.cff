@@ -9,7 +9,7 @@ type: software
 authors:
   - family-names: Albis-Burdige
     given-names: Blaise
-    email: blaise@ubik.studio
+    email: albisburdige@protonmail.com
     website: https://blaiseab.com
 license: Apache-2.0
 repository-code: "https://github.com/random-walks/citeformer"
